@@ -55,12 +55,35 @@ header {
 #updateBtn:hover { background: #2563eb; transform: translateY(-1px); }
 #updateBtn:disabled { background: #94a3b8; cursor: not-allowed; }
 
+/* NÚT UPDATE MOBILE (FLOATING) */
+#mobileUpdateBtn {
+  display: none; /* Mặc định ẩn trên Desktop */
+  position: fixed;
+  right: 20px;
+  bottom: 30px;
+  width: 60px;
+  height: 60px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  z-index: 999;
+  cursor: pointer;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, background 0.2s;
+}
+#mobileUpdateBtn:active { transform: scale(0.9); background: #2563eb; }
+
 /* NÚT TOGGLE THEO YÊU CẦU MỚI */
 #toggleBtn {
-  background: transparent; /* Nền trong suốt */
-  color: #64748b;         /* Màu dấu + */
-  border: 1px solid transparent; /* Viền trong suốt */
-  font-size: 1.5rem;      /* Kích thước dấu + */
+  background: transparent; 
+  color: #64748b;         
+  border: 1px solid transparent; 
+  font-size: 1.5rem;      
   font-weight: 400;
   cursor: pointer;
   padding: 0 10px;
@@ -172,8 +195,13 @@ tr.newest { background: #eff6ff; }
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
 
+/* MOBILE RESPONSIVE */
 @media (max-width: 640px) {
   .grid { grid-template-columns: 1fr; }
+  header #updateBtn { display: none; } /* Ẩn nút trên header khi ở mobile */
+  #mobileUpdateBtn { display: flex; } /* Hiện nút lơ lửng */
+  .container { margin: 1rem auto; }
+  .card-value { font-size: 1.5rem; }
 }
 </style>
 </head>
@@ -183,6 +211,8 @@ tr.newest { background: #eff6ff; }
   <div class="brand">📊 XAU DASHBOARD</div>
   <button id="updateBtn" onclick="load()">UPDATE</button>
 </header>
+
+<button id="mobileUpdateBtn" onclick="load()">🔄</button>
 
 <div class="container">
   <div id="lastTime"></div>
@@ -225,7 +255,7 @@ tr.newest { background: #eff6ff; }
 
 <script>
 const API = "/api/gold";
-const HIST_API = "/api/history"; // API để lấy dữ liệu từ data/history.json
+const HIST_API = "/api/history"; 
 const elements = {
   usd: document.getElementById("usd"),
   xau: document.getElementById("xau"),
@@ -236,6 +266,7 @@ const elements = {
   historyTable: document.getElementById("history"),
   filterBox: document.getElementById("filterBox"),
   updateBtn: document.getElementById("updateBtn"),
+  mobileUpdateBtn: document.getElementById("mobileUpdateBtn"),
   toggleBtn: document.getElementById("toggleBtn")
 };
 
@@ -276,7 +307,7 @@ function updateChartRecord(gap) {
   const now = new Date();
   const totalMinutes = now.getHours() * 60 + now.getMinutes();
   const todayKey = now.toLocaleDateString('vi-VN');
-  if (totalMinutes >= 550 && totalMinutes <= 660) { // 9:10 - 11:00
+  if (totalMinutes >= 550 && totalMinutes <= 660) { 
     if (!chartData.find(item => item.date === todayKey)) {
       chartData.push({ date: todayKey, gap: gap });
       if (chartData.length > 30) chartData.shift();
@@ -298,26 +329,22 @@ async function fetchHistory() {
 }
 
 async function load() {
-  elements.updateBtn.disabled = true;
+  const btns = [elements.updateBtn, elements.mobileUpdateBtn];
+  btns.forEach(b => { if(b) b.disabled = true; });
   elements.updateBtn.innerText = "Updating...";
+  
   try {
     const res = await fetch(`${API}?t=${Date.now()}`);
     const d = await res.json();
-    
-    // Server hiện tại đã xử lý việc lưu vào file data/history.json khi gọi API
-    // Chúng ta chỉ cần fetch lại lịch sử mới nhất
     await fetchHistory();
-    
     renderMain(d);
     updateChartRecord(d.diff);
-    
     const time = new Date().toLocaleString('vi-VN');
     elements.lastTime.innerHTML = `🟢 Live Update: ${time}`;
     localStorage.setItem("lastData", JSON.stringify(d));
     localStorage.setItem("lastTime", time);
-    
   } catch(e) { alert("Error!"); } finally {
-    elements.updateBtn.disabled = false;
+    btns.forEach(b => { if(b) b.disabled = false; });
     elements.updateBtn.innerText = "UPDATE";
   }
 }
@@ -327,7 +354,6 @@ function renderMain(d) {
   elements.xau.innerText = fmtXAU.format(d.xau);
   elements.diff.innerText = fmtVND.format(d.diff);
   elements.percent.innerText = d.percent;
-  
   const key = "sjcMorning_" + new Date().toISOString().slice(0,10);
   let morning = localStorage.getItem(key) || localStorage.setItem(key, d.sjc) || d.sjc;
   const change = d.sjc - parseFloat(morning);
@@ -370,7 +396,6 @@ function resetFilter() {
 
 function clearAll() {
   if(confirm("Xác nhận xóa toàn bộ dữ liệu trên Server?")) {
-    // Lưu ý: Cần có endpoint API phía server để xử lý việc xóa file
     fetch('/api/history/clear', { method: 'POST' }).then(() => {
       localStorage.clear();
       location.reload();
@@ -383,8 +408,6 @@ const lastData = localStorage.getItem("lastData");
 if(lastData) renderMain(JSON.parse(lastData));
 const lastTimeSaved = localStorage.getItem("lastTime");
 elements.lastTime.innerHTML = lastTimeSaved ? `⚪ Last update: ${lastTimeSaved}` : "Ready";
-
-// Tải lịch sử ngay khi mở trang
 fetchHistory();
 </script>
 
