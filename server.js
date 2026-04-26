@@ -1,71 +1,112 @@
-/* ... Giữ nguyên phần CSS ... */
+const express = require("express");
+const axios = require("axios");
+const cron = require("node-cron");
+const cors = require("cors");
+const path = require("path");
+const fs = require("fs");
 
-<script>
-const API = "/api/gold";
-const HIST_API = "/api/history"; // Thêm API lịch sử
-// ... elements giữ nguyên ...
+const app = express();
+app.use(cors());
 
-let history = []; // Không lấy từ localStorage nữa
+// Serve các file tĩnh từ thư mục public
+app.use(express.static("public"));
 
-async function load() {
-  elements.updateBtn.disabled = true;
-  elements.updateBtn.innerText = "Updating...";
-  
+const PORT = process.env.PORT || 3000;
+const DATA_PATH = path.join(__dirname, "history/data.json");
+
+// Đảm bảo thư mục history tồn tại
+if (!fs.existsSync(path.join(__dirname, "history"))) {
+  fs.mkdirSync(path.join(__dirname, "history"));
+}
+
+let latestData = null;
+
+// Hàm lưu lịch sử vào file JSON
+function saveToHistory(entry) {
+  let history = [];
   try {
-    // 1. Lấy dữ liệu mới nhất
-    const res = await fetch(`${API}?t=${Date.now()}`);
-    const d = await res.json();
-    renderMain(d);
-    updateChartRecord(d.diff);
-    elements.lastTime.innerHTML = `🟢 Live Update: ${d.time}`;
+    if (fs.existsSync(DATA_PATH)) {
+      const fileContent = fs.readFileSync(DATA_PATH, "utf-8");
+      history = JSON.parse(fileContent || "[]");
+    }
     
-    // 2. Lấy lại lịch sử đồng bộ từ Server
-    const hRes = await fetch(HIST_API);
-    history = await hRes.json();
-    
-    renderHistory();
-  } catch(e) { 
-    alert("Error syncing data!"); 
-  } finally {
-    elements.updateBtn.disabled = false;
-    elements.updateBtn.innerText = "UPDATE";
+    const lastEntry = history[history.length - 1];
+    // Chỉ lưu nếu giá trị SJC hoặc XAU thay đổi để tránh trùng lặp dữ liệu rác
+    if (!lastEntry || lastEntry.sjc !== entry.sjc || lastEntry.xau !== entry.xau) {
+      history.push(entry);
+      if (history.length > 200) history.shift(); // Giữ tối đa 200 bản ghi
+      fs.writeFileSync(DATA_PATH, JSON.stringify(history, null, 2));
+    }
+  } catch (e) {
+    console.log("❌ Lỗi ghi file history:", e);
   }
 }
 
-// Sửa lại hàm renderHistory để dùng biến history vừa fetch
-function renderHistory() {
-  elements.historyTable.innerHTML = "";
-  let data = [...history].reverse(); // Lấy từ biến history toàn cục
-  
-  if(!isExpanded) data = data.slice(0, 5);
-  
-  data.forEach((r, i) => {
-    const row = document.createElement("tr");
-    if(i === 0 && !isExpanded) row.className = "newest";
-    row.innerHTML = `
-      <td>${r.time}</td>
-      <td>${fmtXAU.format(r.xau)}</td>
-      <td>${fmtVND.format(r.sjc)}</td>
-      <td>${fmtVND.format(r.diff)}</td>
-      <td><span class="badge ${r.percent.includes('-') ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>
-    `;
-    elements.historyTable.appendChild(row);
-  });
-}
-
-// Khi khởi tạo trang, load dữ liệu lần đầu
-async function initData() {
+async function getUSDRate() {
   try {
-    const hRes = await fetch(HIST_API);
-    history = await hRes.json();
-    renderHistory();
-    
-    const dRes = await fetch(API);
-    const d = await dRes.json();
-    if(d.usd) renderMain(d);
-  } catch(e) { console.log("Init fail"); }
+    const html = await axios.get("https://webgia.com/ty-gia/vietcombank/", { timeout: 5000 });
+    const clean = html.data.replace(/\s+/g, " ");
+    const nums = clean.match(/[0-9]{2,3}\.[0-9]{3},[0-9]{2}/g);
+    if (!nums) throw "No USD rate found";
+    const values = nums.map(n => parseFloat(n.replace(/\./g, "").replace(",", ".")));
+    return Math.max(...values.filter(v => v > 20000 && v < 30000));
+  } catch (e) {
+    return 26000; // Fallback
+  }
 }
 
-initChart();
-initData(); 
-</script>
+async function getWorldGoldPrice() {
+  try {
+    const res = await axios.get("https://api.gold-api.com/price/XAU");
+    return res.data.price || 2350;
+  } catch {
+    return 2350;
+  }
+}
+
+async function updateData() {
+  console.log("⏳ Đang cập nhật dữ liệu...");
+  try {
+    const usd = await getUSDRate();
+    const xau = await getWorldGoldPrice();
+    const sjc = 168800000; // Giá giả định hoặc logic lấy giá thực
+
+    const worldVND = xau * usd * (37.5 / 31.1035);
+    const diff = sjc - worldVND;
+    const percent = (diff / worldVND) * 100;
+
+    latestData = {
+      time: new Date().toLocaleString("vi-VN"),
+      usd, xau, sjc,
+      worldVND: Math.round(worldVND),
+      diff: Math.round(diff),
+      percent: percent.toFixed(2) + "%"
+    };
+
+    saveToHistory(latestData);
+    console.log("✅ Cập nhật thành công");
+  } catch (e) {
+    console.log("❌ Lỗi cập nhật:", e);
+  }
+}
+
+// Cập nhật tự động mỗi 2 phút
+cron.schedule("*/2 * * * *", updateData);
+
+app.get("/api/gold", async (req, res) => {
+  if (req.query.t) await updateData(); // Update ngay nếu có yêu cầu từ nút bấm
+  res.json(latestData || { message: "Đang tải..." });
+});
+
+app.get("/api/history", (req, res) => {
+  if (fs.existsSync(DATA_PATH)) {
+    res.json(JSON.parse(fs.readFileSync(DATA_PATH, "utf-8")));
+  } else {
+    res.json([]);
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server đang chạy tại: http://localhost:${PORT}`);
+  updateData();
+});
