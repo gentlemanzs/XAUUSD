@@ -1,138 +1,71 @@
-const express = require("express");
-const axios = require("axios");
-const cron = require("node-cron");
-const cors = require("cors");
-const path = require("path");
+/* ... Giữ nguyên phần CSS ... */
 
-const app = express();
-app.use(cors());
+<script>
+const API = "/api/gold";
+const HIST_API = "/api/history"; // Thêm API lịch sử
+// ... elements giữ nguyên ...
 
-/* 🔥 PORT FIX */
-const PORT = process.env.PORT || 3000;
+let history = []; // Không lấy từ localStorage nữa
 
-/* 🔥 SERVE FRONTEND */
-app.use(express.static("public"));
-
-let latestData = null;
-
-/* ===== CONFIG ===== */
-const CONFIG = {
-  TIMEOUT: 5000,
-  RETRY: 2
-};
-
-/* ===== HELPER FETCH ===== */
-async function fetchWithRetry(url) {
-  for (let i = 0; i < CONFIG.RETRY; i++) {
-    try {
-      const res = await axios.get(url, {
-        timeout: CONFIG.TIMEOUT,
-        headers: { "User-Agent": "Mozilla/5.0" }
-      });
-      return res.data;
-    } catch (e) {
-      console.log(`⚠️ Retry ${i + 1} fail: ${url}`);
-    }
-  }
-  return null;
-}
-
-/* ===== USD ===== */
-async function getUSDRate() {
+async function load() {
+  elements.updateBtn.disabled = true;
+  elements.updateBtn.innerText = "Updating...";
+  
   try {
-    console.log("🔎 Fetch USD từ webgia...");
-
-    const html = await fetchWithRetry("https://webgia.com/ty-gia/vietcombank/");
-    if (!html) throw "Fetch fail";
-
-    const clean = html.replace(/\s+/g, " ");
-
-    const nums = clean.match(/[0-9]{2,3}\.[0-9]{3},[0-9]{2}/g);
-
-    if (!nums || nums.length === 0) throw "Không tìm thấy số";
-
-    const values = nums.map(n =>
-      parseFloat(n.replace(/\./g, "").replace(",", "."))
-    );
-
-    const usdValues = values.filter(v => v > 20000 && v < 30000);
-
-    if (usdValues.length === 0) throw "Không có giá hợp lệ";
-
-    return Math.max(...usdValues);
-
-  } catch (e) {
-    console.log("❌ USD fallback");
-    return 26000;
+    // 1. Lấy dữ liệu mới nhất
+    const res = await fetch(`${API}?t=${Date.now()}`);
+    const d = await res.json();
+    renderMain(d);
+    updateChartRecord(d.diff);
+    elements.lastTime.innerHTML = `🟢 Live Update: ${d.time}`;
+    
+    // 2. Lấy lại lịch sử đồng bộ từ Server
+    const hRes = await fetch(HIST_API);
+    history = await hRes.json();
+    
+    renderHistory();
+  } catch(e) { 
+    alert("Error syncing data!"); 
+  } finally {
+    elements.updateBtn.disabled = false;
+    elements.updateBtn.innerText = "UPDATE";
   }
 }
 
-/* ===== XAU ===== */
-async function getWorldGoldPrice() {
+// Sửa lại hàm renderHistory để dùng biến history vừa fetch
+function renderHistory() {
+  elements.historyTable.innerHTML = "";
+  let data = [...history].reverse(); // Lấy từ biến history toàn cục
+  
+  if(!isExpanded) data = data.slice(0, 5);
+  
+  data.forEach((r, i) => {
+    const row = document.createElement("tr");
+    if(i === 0 && !isExpanded) row.className = "newest";
+    row.innerHTML = `
+      <td>${r.time}</td>
+      <td>${fmtXAU.format(r.xau)}</td>
+      <td>${fmtVND.format(r.sjc)}</td>
+      <td>${fmtVND.format(r.diff)}</td>
+      <td><span class="badge ${r.percent.includes('-') ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>
+    `;
+    elements.historyTable.appendChild(row);
+  });
+}
+
+// Khi khởi tạo trang, load dữ liệu lần đầu
+async function initData() {
   try {
-    const data = await fetchWithRetry("https://api.gold-api.com/price/XAU");
-
-    if (data && data.price) return data.price;
-
-    throw "API lỗi";
-  } catch {
-    return 2350;
-  }
+    const hRes = await fetch(HIST_API);
+    history = await hRes.json();
+    renderHistory();
+    
+    const dRes = await fetch(API);
+    const d = await dRes.json();
+    if(d.usd) renderMain(d);
+  } catch(e) { console.log("Init fail"); }
 }
 
-/* ===== SJC ===== */
-async function getSJCPrice() {
-  return 168800000;
-}
-
-/* ===== UPDATE ===== */
-async function updateData() {
-  console.log("\n⏳ Updating...");
-
-  try {
-    const usd = await getUSDRate();
-    const xau = await getWorldGoldPrice();
-    const sjc = await getSJCPrice();
-
-    const worldVND = xau * usd * (37.5 / 31.1035);
-    const diff = sjc - worldVND;
-    const percent = (diff / worldVND) * 100;
-
-    latestData = {
-      time: new Date(),
-      usd,
-      xau,
-      sjc,
-      worldVND: Math.round(worldVND),
-      diff: Math.round(diff),
-      percent: percent.toFixed(2) + "%"
-    };
-
-    console.log("✅ DONE");
-
-  } catch (e) {
-    console.log("❌ UPDATE ERROR:", e);
-  }
-}
-
-/* ===== CRON ===== */
-cron.schedule("*/2 * * * *", updateData);
-
-/* ===== API ===== */
-app.get("/api/gold", (req, res) => {
-  if (!latestData) {
-    return res.json({ message: "No data yet, please wait..." });
-  }
-  res.json(latestData);
-});
-
-/* ===== ROOT (serve index.html) ===== */
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/index.html"));
-});
-
-/* ===== START ===== */
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  updateData();
-});
+initChart();
+initData(); 
+</script>
