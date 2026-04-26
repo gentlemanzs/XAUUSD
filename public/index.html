@@ -35,31 +35,13 @@ header{
   align-items:center;
 }
 
-/* BUTTON */
 button{
   background:#3b82f6;
   color:white;
   border:none;
-  padding:8px 14px;
+  padding:8px 16px;
   border-radius:8px;
   cursor:pointer;
-}
-
-/* FLOAT BUTTON */
-#fabUpdate{
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  width:56px;
-  height:56px;
-  border-radius:50%;
-  background:#3b82f6;
-  color:white;
-  border:none;
-  font-size:22px;
-  box-shadow:0 6px 20px rgba(0,0,0,0.25);
-  z-index:999;
-  display:none;
 }
 
 /* LAYOUT */
@@ -132,23 +114,21 @@ tr.newest{background:#eef2ff;}
   border-radius:12px;
   border:1px solid var(--border);
 }
-
-/* MOBILE UI */
+/* ===== MOBILE ONLY (KHÔNG ẢNH HƯỞNG DESKTOP) ===== */
 @media (max-width:600px){
 
+  /* Ẩn nút Update trên header */
   header button{
     display:none;
   }
 
-  #fabUpdate{
-    display:block;
-  }
-
+  /* Grid thành 2 cột */
   .grid{
     grid-template-columns:repeat(2,1fr);
     gap:10px;
   }
 
+  /* Thu nhỏ card */
   .card{
     padding:10px;
   }
@@ -161,13 +141,40 @@ tr.newest{background:#eef2ff;}
     font-size:18px;
   }
 
+  /* Table nhỏ lại */
   th,td{
     font-size:12px;
     padding:6px;
   }
 
+  /* Chart thấp lại */
   canvas{
     max-height:200px;
+  }
+
+}
+
+/* ===== FLOAT UPDATE BUTTON ===== */
+#fabUpdate{
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  width:56px;
+  height:56px;
+  border-radius:50%;
+  background:#3b82f6;
+  color:white;
+  border:none;
+  font-size:22px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.25);
+  z-index:999;
+  display:none;
+}
+
+/* Chỉ hiện trên mobile */
+@media (max-width:600px){
+  #fabUpdate{
+    display:block;
   }
 }
 </style>
@@ -212,162 +219,179 @@ tr.newest{background:#eef2ff;}
 
 </div>
 
-<!-- FLOAT BUTTON -->
-<button id="fabUpdate" onclick="load()">🔄</button>
-
 <script>
 
-/* CONFIG */
-const API="/api/gold";
+/* ================== CONFIG ================== */
+const API = "/api/gold";
 
-/* DOM */
-const el={
-  usd:document.getElementById("usd"),
-  xau:document.getElementById("xau"),
-  sjc:document.getElementById("sjc"),
-  diff:document.getElementById("diff"),
-  percent:document.getElementById("percent"),
-  lastTime:document.getElementById("lastTime"),
-  historyTable:document.getElementById("historyTable")
+/* ================== DOM ================== */
+const el = {
+  usd: document.getElementById("usd"),
+  xau: document.getElementById("xau"),
+  sjc: document.getElementById("sjc"),
+  diff: document.getElementById("diff"),
+  percent: document.getElementById("percent"),
+  lastTime: document.getElementById("lastTime"),
+  historyTable: document.getElementById("historyTable")
 };
 
-/* STATE */
-let historyData=JSON.parse(localStorage.getItem("goldHistory")||"[]");
-let chartData=JSON.parse(localStorage.getItem("goldChart")||"[]");
+/* ================== STATE ================== */
+let historyData = JSON.parse(localStorage.getItem("goldHistory") || "[]");
+let chartData = JSON.parse(localStorage.getItem("goldChart") || "[]");
 
-const fmt=n=>Number(n).toLocaleString();
+/* ================== UTIL ================== */
+const fmt = n => Number(n).toLocaleString();
 
-/* MORNING */
+/* ================== MORNING ================== */
 function getMorning(v){
-  const key="sjc_"+new Date().toISOString().slice(0,10);
-  let val=localStorage.getItem(key);
+  const key = "sjc_" + new Date().toISOString().slice(0,10);
+
+  let val = localStorage.getItem(key);
+
   if(!val){
-    localStorage.setItem(key,v);
+    localStorage.setItem(key, v);
     return v;
   }
+
   return parseFloat(val);
 }
 
-/* MAIN */
+/* ================== RENDER MAIN ================== */
 function renderMain(d){
-  el.usd.innerText=fmt(d.usd);
-  el.xau.innerText=Number(d.xau).toFixed(1);
-  el.diff.innerText=fmt(d.diff);
-  el.percent.innerText=d.percent||"0%";
+  el.usd.innerText = fmt(d.usd);
+  el.xau.innerText = Number(d.xau).toFixed(1);
+  el.diff.innerText = fmt(d.diff);
+  el.percent.innerText = d.percent || "0%";
 
-  const morning=getMorning(d.sjc);
-  const change=d.sjc-morning;
-  const up=change>=0;
+  const morning = getMorning(d.sjc);
+  const change = d.sjc - morning;
+  const up = change >= 0;
 
-  el.sjc.innerHTML=`
+  el.sjc.innerHTML = `
     <div>${fmt(d.sjc)}</div>
-    <div class="sjc-sub ${up?'change-up':'change-down'}">
-      ${up?'▲':'▼'} ${fmt(Math.abs(change))}
+    <div class="sjc-sub ${up ? 'change-up' : 'change-down'}">
+      ${up ? '▲' : '▼'} ${fmt(Math.abs(change))}
     </div>
   `;
 }
 
-/* HISTORY */
+/* ================== HISTORY ================== */
 function renderHistory(){
-  el.historyTable.innerHTML="";
+  el.historyTable.innerHTML = "";
+
   historyData.slice(-5).reverse().forEach((r,i)=>{
-    const percent=r.percent||"0%";
-    const down=percent.includes("-");
-    const row=document.createElement("tr");
-    if(i===0) row.className="newest";
-    row.innerHTML=`
-      <td>${r.time||""}</td>
-      <td>${Number(r.xau||0).toFixed(1)}</td>
-      <td>${fmt(r.sjc||0)}</td>
-      <td>${fmt(r.diff||0)}</td>
-      <td class="${down?'badge-down':'badge-up'}">${percent}</td>
+    const percent = r.percent || "0%";
+    const down = percent.includes("-");
+
+    const row = document.createElement("tr");
+    if(i === 0) row.className = "newest";
+
+    row.innerHTML = `
+      <td>${r.time || ""}</td>
+      <td>${Number(r.xau || 0).toFixed(1)}</td>
+      <td>${fmt(r.sjc || 0)}</td>
+      <td>${fmt(r.diff || 0)}</td>
+      <td class="${down ? 'badge-down' : 'badge-up'}">${percent}</td>
     `;
+
     el.historyTable.appendChild(row);
   });
 }
 
-/* CHART */
+/* ================== CHART ================== */
 let chart;
 
 function initChart(){
-  const ctx=document.getElementById("chart");
+  const ctx = document.getElementById("chart");
+
   if(!ctx) return;
 
-  chart=new Chart(ctx,{
-    type:"line",
-    data:{
-      labels:chartData.map(i=>i.date),
-      datasets:[{
-        data:chartData.map(i=>i.gap),
-        borderColor:"#3b82f6",
-        tension:0.3
+  chart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: chartData.map(i => i.date),
+      datasets: [{
+        data: chartData.map(i => i.gap),
+        borderColor: "#3b82f6",
+        tension: 0.3
       }]
     },
-    options:{plugins:{legend:{display:false}}}
+    options: {
+      plugins: { legend: { display:false } }
+    }
   });
 }
 
+/* SAVE 1 LẦN / NGÀY */
 function saveChart(gap){
-  const now=new Date();
-  const min=now.getHours()*60+now.getMinutes();
+  const now = new Date();
+  const min = now.getHours()*60 + now.getMinutes();
 
-  if(min>=550 && min<=660){
-    const today=now.toLocaleDateString();
+  if(min >= 550 && min <= 660){
+    const today = now.toLocaleDateString();
 
-    if(!chartData.find(i=>i.date===today)){
-      chartData.push({date:today,gap});
-      if(chartData.length>30) chartData.shift();
+    if(!chartData.find(i => i.date === today)){
+      chartData.push({ date: today, gap });
 
-      localStorage.setItem("goldChart",JSON.stringify(chartData));
+      if(chartData.length > 30) chartData.shift();
+
+      localStorage.setItem("goldChart", JSON.stringify(chartData));
 
       if(chart){
-        chart.data.labels=chartData.map(i=>i.date);
-        chart.data.datasets[0].data=chartData.map(i=>i.gap);
+        chart.data.labels = chartData.map(i => i.date);
+        chart.data.datasets[0].data = chartData.map(i => i.gap);
         chart.update();
       }
     }
   }
 }
 
-/* LOAD */
+/* ================== LOAD ================== */
 async function load(){
   try{
-    const res=await fetch(API+"?t="+Date.now());
-    if(!res.ok) throw new Error("HTTP "+res.status);
+    const res = await fetch(API + "?t=" + Date.now());
 
-    const d=await res.json();
+    if(!res.ok){
+      throw new Error("HTTP " + res.status);
+    }
+
+    const d = await res.json();
 
     renderMain(d);
 
-    const time=new Date().toLocaleString();
-    el.lastTime.innerText="Updated: "+time;
+    const time = new Date().toLocaleString();
+    el.lastTime.innerText = "Updated: " + time;
 
     historyData.push({
       time,
-      xau:d.xau,
-      sjc:d.sjc,
-      diff:d.diff,
-      percent:d.percent||"0%"
+      xau: d.xau,
+      sjc: d.sjc,
+      diff: d.diff,
+      percent: d.percent || "0%"
     });
 
-    if(historyData.length>100) historyData.shift();
+    if(historyData.length > 100) historyData.shift();
 
-    localStorage.setItem("goldHistory",JSON.stringify(historyData));
+    localStorage.setItem("goldHistory", JSON.stringify(historyData));
 
     saveChart(d.diff);
     renderHistory();
 
   }catch(e){
-    console.error(e);
-    alert("Fetch failed: "+e.message);
+    console.error("LOAD ERROR:", e);
+    alert("Fetch failed: " + e.message);
   }
 }
 
-/* INIT */
+/* ================== INIT ================== */
 initChart();
+
+const lastData = localStorage.getItem("lastData");
+if(lastData) renderMain(JSON.parse(lastData));
+
 renderHistory();
 
 </script>
-
+<button id="fabUpdate" onclick="load()">🔄</button>
 </body>
 </html>
