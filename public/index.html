@@ -1,99 +1,118 @@
-const express = require("express");
-const axios = require("axios");
-const cron = require("node-cron");
-const cors = require("cors");
-const path = require("path");
-const fs = require("fs"); // Thêm thư viện quản lý file
-
-const app = express();
-app.use(cors());
-app.use(express.static("public"));
-
-const PORT = process.env.PORT || 3000;
-const DATA_PATH = path.join(__dirname, "history/data.json");
-
-// Đảm bảo thư mục history tồn tại
-if (!fs.existsSync(path.join(__dirname, "history"))) {
-  fs.mkdirSync(path.join(__dirname, "history"));
-}
-
-let latestData = null;
-
-/* ===== QUẢN LÝ FILE DATA.JSON ===== */
-function saveToHistory(entry) {
-  let history = [];
-  try {
-    if (fs.existsSync(DATA_PATH)) {
-      history = JSON.parse(fs.readFileSync(DATA_PATH, "utf-8"));
-    }
-    // Kiểm tra trùng lặp dựa trên giá SJC và XAU để tránh ghi log vô ích
-    const lastEntry = history[history.length - 1];
-    if (!lastEntry || lastEntry.sjc !== entry.sjc || lastEntry.xau !== entry.xau) {
-      history.push(entry);
-      if (history.length > 200) history.shift(); // Giữ tối đa 200 bản ghi
-      fs.writeFileSync(DATA_PATH, JSON.stringify(history, null, 2));
-    }
-  } catch (e) {
-    console.log("❌ Lỗi ghi file:", e);
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XAU Dashboard - Synced</title>
+<style>
+  :root {
+    --bg: #f8fafc; --header: #0f172a; --card: #ffffff;
+    --text: #1e293b; --sub-text: #64748b;
+    --border: #e2e8f0; --btn: #94a3b8; --btn-hover: #64748b;
   }
-}
+  body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--header); color: white; padding: 1rem 2rem; font-weight: bold; font-size: 1.2rem; }
+  .container { max-width: 1100px; margin: 20px auto; padding: 0 15px; }
+  
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
+  .card { background: var(--card); padding: 15px; border-radius: 10px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+  .card-label { font-size: 0.75rem; color: var(--sub-text); text-transform: uppercase; font-weight: bold; }
+  .card-val { font-size: 1.4rem; font-weight: 800; margin-top: 5px; }
 
-/* ... Các hàm getUSDRate, getWorldGoldPrice giữ nguyên ... */
-
-async function getSJCPrice() {
-  return 168800000; // Hoặc logic lấy giá thực
-}
-
-async function updateData() {
-  console.log("\n⏳ Updating...");
-  try {
-    const usd = await getUSDRate();
-    const xau = await getWorldGoldPrice();
-    const sjc = await getSJCPrice();
-
-    const worldVND = xau * usd * (37.5 / 31.1035);
-    const diff = sjc - worldVND;
-    const percent = (diff / worldVND) * 100;
-
-    latestData = {
-      time: new Date().toLocaleString("vi-VN"), // Định dạng thời gian tại server
-      usd, xau, sjc,
-      worldVND: Math.round(worldVND),
-      diff: Math.round(diff),
-      percent: percent.toFixed(2) + "%"
-    };
-
-    saveToHistory(latestData); // Lưu vào file json mỗi khi update thành công
-    console.log("✅ DONE");
-  } catch (e) {
-    console.log("❌ UPDATE ERROR:", e);
+  /* Nút Update dẹt nhỏ bên phải */
+  .action-bar { display: flex; justify-content: flex-end; margin-bottom: 20px; }
+  #updateBtn {
+    background: var(--btn); color: white; border: none; cursor: pointer;
+    padding: 5px 15px; border-radius: 5px; font-size: 0.7rem;
+    text-transform: uppercase; letter-spacing: 0.5px; transition: 0.2s;
   }
-}
+  #updateBtn:hover { background: var(--btn-hover); }
+  #updateBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* ===== API ===== */
-app.get("/api/gold", (req, res) => {
-  res.json(latestData || { message: "Loading..." });
-});
+  .history-sec { background: white; border-radius: 10px; border: 1px solid var(--border); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th { background: #f1f5f9; color: var(--sub-text); padding: 10px; text-align: right; }
+  td { padding: 10px; border-top: 1px solid var(--border); text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  .up { color: #10b981; } .down { color: #ef4444; }
+</style>
+</head>
+<body>
 
-// API mới để lấy lịch sử từ file json
-app.get("/api/history", (req, res) => {
-  try {
-    if (fs.existsSync(DATA_PATH)) {
-      const data = fs.readFileSync(DATA_PATH, "utf-8");
-      res.json(JSON.parse(data));
-    } else {
-      res.json([]);
-    }
-  } catch (e) {
-    res.status(500).json({ error: "Read error" });
+<header>📊 XAU DASHBOARD</header>
+
+<div class="container">
+  <div id="status" style="font-size: 0.8rem; color: var(--sub-text); margin-bottom: 10px;">Đang tải...</div>
+  
+  <div class="grid">
+    <div class="card"><div class="card-label">USD</div><div id="usd" class="card-val">--</div></div>
+    <div class="card"><div class="card-label">Global XAU</div><div id="xau" class="card-val">--</div></div>
+    <div class="card"><div class="card-label">SJC Gold</div><div id="sjc" class="card-val">--</div></div>
+    <div class="card"><div class="card-label">Gap (VND)</div><div id="gap" class="card-val">--</div></div>
+    <div class="card"><div class="card-label">Difference %</div><div id="pct" class="card-val">--</div></div>
+  </div>
+
+  <div class="action-bar">
+    <button id="updateBtn" onclick="refresh()">Update</button>
+  </div>
+
+  <div class="history-sec">
+    <table>
+      <thead>
+        <tr><th>Time</th><th>XAU</th><th>SJC</th><th>Gap</th><th>Status</th></tr>
+      </thead>
+      <tbody id="histBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const fmt = new Intl.NumberFormat('vi-VN');
+
+  async function refresh() {
+    const btn = document.getElementById('updateBtn');
+    btn.disabled = true;
+    btn.innerText = "Wait...";
+    try {
+      const res = await fetch('/api/gold?t=1');
+      const data = await res.json();
+      updateUI(data);
+      loadHistory();
+    } catch (e) { console.error("Lỗi cập nhật"); }
+    btn.disabled = false;
+    btn.innerText = "Update";
   }
-});
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/index.html"));
-});
+  function updateUI(d) {
+    if(!d.usd) return;
+    document.getElementById('usd').innerText = fmt.format(d.usd);
+    document.getElementById('xau').innerText = d.xau;
+    document.getElementById('sjc').innerText = fmt.format(d.sjc);
+    document.getElementById('gap').innerText = fmt.format(d.diff);
+    document.getElementById('pct').innerText = d.percent;
+    document.getElementById('status').innerText = "Cập nhật cuối: " + d.time;
+  }
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  updateData();
-});
+  async function loadHistory() {
+    try {
+      const res = await fetch('/api/history');
+      const list = await res.json();
+      const body = document.getElementById('histBody');
+      body.innerHTML = list.reverse().slice(0, 15).map(r => `
+        <tr>
+          <td>${r.time}</td>
+          <td>${r.xau}</td>
+          <td>${fmt.format(r.sjc)}</td>
+          <td>${fmt.format(r.diff)}</td>
+          <td class="${r.percent.includes('-') ? 'down' : 'up'}">${r.percent}</td>
+        </tr>
+      `).join('');
+    } catch (e) { }
+  }
+
+  // Khởi chạy khi mở trang
+  fetch('/api/gold').then(r => r.json()).then(updateUI);
+  loadHistory();
+</script>
+</body>
+</html>
