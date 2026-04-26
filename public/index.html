@@ -1,54 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XAU Dashboard</title>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- CHỈ HIỂN THỊ PHẦN ĐÃ SỬA / THÊM -->
 
 <style>
-:root{
-  --bg:#f8fafc;
-  --card:#ffffff;
-  --text:#1e293b;
-  --sub:#64748b;
-  --up:#10b981;
-  --down:#ef4444;
-  --border:#e2e8f0;
-}
 
-body{
-  margin:0;
-  font-family:-apple-system,system-ui;
-  background:var(--bg);
-  color:var(--text);
-}
-
-/* HEADER */
-header{
-  padding:14px 16px;
-  background:#ffffff;
-  border-bottom:1px solid var(--border);
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  position:sticky;
-  top:0;
-  z-index:10;
-}
-
-/* BUTTON */
-button{
-  background:#3b82f6;
-  color:white;
-  border:none;
-  padding:8px 14px;
-  border-radius:8px;
-  cursor:pointer;
-}
-
-/* FLOAT BUTTON */
+/* ===== FLOAT BUTTON ===== */
 #fabUpdate{
   position:fixed;
   bottom:20px;
@@ -62,311 +16,52 @@ button{
   font-size:22px;
   box-shadow:0 6px 20px rgba(0,0,0,0.25);
   z-index:999;
+  display:none;
 }
 
-/* LAYOUT */
-.container{
-  width:95%;
-  max-width:1200px;
-  margin:auto;
-}
-
-/* GRID */
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-  gap:14px;
-  margin-top:16px;
-}
-
-.card{
-  background:var(--card);
-  padding:14px;
-  border-radius:12px;
-  border:1px solid var(--border);
-}
-
-.card-title{
-  font-size:11px;
-  color:var(--sub);
-}
-
-.card-value{
-  font-size:22px;
-  font-weight:700;
-  margin-top:4px;
-}
-
-.sjc-sub{
-  font-size:12px;
-}
-
-.change-up{color:var(--up);}
-.change-down{color:var(--down);}
-
-/* TABLE */
-.table{
-  margin-top:16px;
-  background:white;
-  border-radius:12px;
-  border:1px solid var(--border);
-  overflow:hidden;
-}
-
-th,td{
-  padding:8px;
-  text-align:right;
-}
-
-th:first-child,td:first-child{
-  text-align:left;
-}
-
-tr.newest{background:#eef2ff;}
-
-.badge-up{color:var(--up);}
-.badge-down{color:var(--down);}
-
-/* CHART */
-.chart{
-  margin-top:16px;
-  padding:12px;
-  background:white;
-  border-radius:12px;
-  border:1px solid var(--border);
-}
-
-/* MOBILE */
+/* ===== MOBILE UI ===== */
 @media (max-width:600px){
 
+  /* Ẩn nút header */
   header button{
-    display:none; /* ẩn nút trên */
+    display:none;
   }
 
+  /* Hiện nút nổi */
+  #fabUpdate{
+    display:block;
+  }
+
+  /* Grid 2 cột */
   .grid{
     grid-template-columns:repeat(2,1fr);
     gap:10px;
   }
 
+  /* Card nhỏ lại */
   .card{
     padding:10px;
-  }
-
-  .card-value{
-    font-size:18px;
   }
 
   .card-title{
     font-size:10px;
   }
 
+  .card-value{
+    font-size:18px;
+  }
+
+  /* Table gọn */
   th,td{
     font-size:12px;
     padding:6px;
   }
 
+  /* Chart thấp lại */
   canvas{
     max-height:200px;
   }
+
 }
+
 </style>
-</head>
-
-<body>
-
-<header>
-  <div>📊 XAU Dashboard</div>
-  <button onclick="load()">Update</button>
-</header>
-
-<div class="container">
-
-<div id="lastTime" style="margin-top:10px;color:#64748b;"></div>
-
-<div class="grid">
-  <div class="card"><div class="card-title">USD</div><div id="usd" class="card-value">--</div></div>
-  <div class="card"><div class="card-title">XAU</div><div id="xau" class="card-value">--</div></div>
-  <div class="card"><div class="card-title">SJC</div><div id="sjc" class="card-value">--</div></div>
-  <div class="card"><div class="card-title">Gap</div><div id="diff" class="card-value">--</div></div>
-  <div class="card"><div class="card-title">%</div><div id="percent" class="card-value">--</div></div>
-</div>
-
-<h3 style="margin-top:16px;">Query History</h3>
-
-<div class="table">
-<table>
-<thead>
-<tr>
-<th>Time</th><th>XAU</th><th>SJC</th><th>Gap</th><th>%</th>
-</tr>
-</thead>
-<tbody id="historyTable"></tbody>
-</table>
-</div>
-
-<div class="chart">
-  <h4>📈 Gap Trend (9:10–11:00)</h4>
-  <canvas id="chart"></canvas>
-</div>
-
-</div>
-
-<!-- FLOAT BUTTON -->
-<button id="fabUpdate" onclick="load()">🔄</button>
-
-<script>
-
-/* CONFIG */
-const API="/api/gold";
-
-/* DOM */
-const el={
-  usd:usd,
-  xau:xau,
-  sjc:sjc,
-  diff:diff,
-  percent:percent,
-  lastTime:lastTime,
-  historyTable:historyTable
-};
-
-/* STATE */
-let historyData=JSON.parse(localStorage.getItem("goldHistory")||"[]");
-let chartData=JSON.parse(localStorage.getItem("goldChart")||"[]");
-
-const fmt=n=>Number(n).toLocaleString();
-
-/* MORNING */
-function getMorning(v){
-  const key="sjc_"+new Date().toISOString().slice(0,10);
-  let val=localStorage.getItem(key);
-  if(!val){
-    localStorage.setItem(key,v);
-    return v;
-  }
-  return parseFloat(val);
-}
-
-/* MAIN */
-function renderMain(d){
-  el.usd.innerText=fmt(d.usd);
-  el.xau.innerText=d.xau.toFixed(1);
-  el.diff.innerText=fmt(d.diff);
-  el.percent.innerText=d.percent||"0%";
-
-  const morning=getMorning(d.sjc);
-  const change=d.sjc-morning;
-  const up=change>=0;
-
-  el.sjc.innerHTML=`
-    <div>${fmt(d.sjc)}</div>
-    <div class="sjc-sub ${up?'change-up':'change-down'}">
-      ${up?'▲':'▼'} ${fmt(Math.abs(change))}
-    </div>
-  `;
-}
-
-/* HISTORY */
-function renderHistory(){
-  el.historyTable.innerHTML="";
-  historyData.slice(-5).reverse().forEach((r,i)=>{
-    const percent=r.percent||"0%";
-    const down=percent.includes("-");
-    const row=document.createElement("tr");
-    if(i===0) row.className="newest";
-    row.innerHTML=`
-      <td>${r.time||""}</td>
-      <td>${Number(r.xau||0).toFixed(1)}</td>
-      <td>${fmt(r.sjc||0)}</td>
-      <td>${fmt(r.diff||0)}</td>
-      <td class="${down?'badge-down':'badge-up'}">${percent}</td>
-    `;
-    el.historyTable.appendChild(row);
-  });
-}
-
-/* CHART */
-let chart;
-
-function initChart(){
-  const ctx=document.getElementById("chart");
-  if(!ctx) return;
-
-  chart=new Chart(ctx,{
-    type:"line",
-    data:{
-      labels:chartData.map(i=>i.date),
-      datasets:[{
-        data:chartData.map(i=>i.gap),
-        borderColor:"#3b82f6",
-        tension:0.3
-      }]
-    },
-    options:{plugins:{legend:{display:false}}}
-  });
-}
-
-function saveChart(gap){
-  const now=new Date();
-  const min=now.getHours()*60+now.getMinutes();
-
-  if(min>=550 && min<=660){
-    const today=now.toLocaleDateString();
-
-    if(!chartData.find(i=>i.date===today)){
-      chartData.push({date:today,gap});
-      if(chartData.length>30) chartData.shift();
-
-      localStorage.setItem("goldChart",JSON.stringify(chartData));
-
-      if(chart){
-        chart.data.labels=chartData.map(i=>i.date);
-        chart.data.datasets[0].data=chartData.map(i=>i.gap);
-        chart.update();
-      }
-    }
-  }
-}
-
-/* LOAD */
-async function load(){
-  try{
-    const res=await fetch(API+"?t="+Date.now());
-    if(!res.ok) throw new Error("HTTP "+res.status);
-
-    const d=await res.json();
-
-    renderMain(d);
-
-    const time=new Date().toLocaleString();
-    el.lastTime.innerText="Updated: "+time;
-
-    historyData.push({
-      time,
-      xau:d.xau,
-      sjc:d.sjc,
-      diff:d.diff,
-      percent:d.percent||"0%"
-    });
-
-    if(historyData.length>100) historyData.shift();
-
-    localStorage.setItem("goldHistory",JSON.stringify(historyData));
-
-    saveChart(d.diff);
-    renderHistory();
-
-  }catch(e){
-    console.error(e);
-    alert("Fetch failed: "+e.message);
-  }
-}
-
-/* INIT */
-initChart();
-renderHistory();
-
-</script>
-
-</body>
-</html>
