@@ -3,7 +3,24 @@ const axios = require("axios");
 const cron = require("node-cron");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
+const path = require("path");
 
+const DATA_FILE = path.join(__dirname, "data/history.json");
+
+/* READ FILE */
+function readHistory(){
+  try{
+    return JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
+  }catch{
+    return [];
+  }
+}
+
+/* WRITE FILE */
+function writeHistory(data){
+  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+}
 const app = express();
 app.use(cors());
 
