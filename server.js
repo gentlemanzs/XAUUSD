@@ -8,15 +8,17 @@ const fs = require("fs");
 const app = express();
 app.use(cors());
 
-// Serve các file tĩnh từ thư mục public
-app.use(express.static("public"));
+// Phục vụ các file tĩnh từ thư mục "public"
+app.use(express.static(path.join(__dirname, "public")));
 
+// Render cung cấp biến PORT qua biến môi trường
 const PORT = process.env.PORT || 3000;
-const DATA_PATH = path.join(__dirname, "history/data.json");
+const DATA_PATH = path.join(__dirname, "history", "data.json");
 
-// Đảm bảo thư mục history tồn tại
-if (!fs.existsSync(path.join(__dirname, "history"))) {
-  fs.mkdirSync(path.join(__dirname, "history"));
+// Đảm bảo thư mục history tồn tại để không bị lỗi khi ghi file
+const historyDir = path.join(__dirname, "history");
+if (!fs.existsSync(historyDir)) {
+  fs.mkdirSync(historyDir, { recursive: true });
 }
 
 let latestData = null;
@@ -31,27 +33,27 @@ function saveToHistory(entry) {
     }
     
     const lastEntry = history[history.length - 1];
-    // Chỉ lưu nếu giá trị SJC hoặc XAU thay đổi để tránh trùng lặp dữ liệu rác
+    // Tránh lưu dữ liệu trùng lặp nếu giá không đổi
     if (!lastEntry || lastEntry.sjc !== entry.sjc || lastEntry.xau !== entry.xau) {
       history.push(entry);
-      if (history.length > 200) history.shift(); // Giữ tối đa 200 bản ghi
+      if (history.length > 200) history.shift();
       fs.writeFileSync(DATA_PATH, JSON.stringify(history, null, 2));
     }
   } catch (e) {
-    console.log("❌ Lỗi ghi file history:", e);
+    console.error("❌ Lỗi ghi file history:", e);
   }
 }
 
 async function getUSDRate() {
   try {
-    const html = await axios.get("https://webgia.com/ty-gia/vietcombank/", { timeout: 5000 });
-    const clean = html.data.replace(/\s+/g, " ");
+    const res = await axios.get("https://webgia.com/ty-gia/vietcombank/", { timeout: 8000 });
+    const clean = res.data.replace(/\s+/g, " ");
     const nums = clean.match(/[0-9]{2,3}\.[0-9]{3},[0-9]{2}/g);
-    if (!nums) throw "No USD rate found";
+    if (!nums) throw new Error("No USD rate found");
     const values = nums.map(n => parseFloat(n.replace(/\./g, "").replace(",", ".")));
     return Math.max(...values.filter(v => v > 20000 && v < 30000));
   } catch (e) {
-    return 26000; // Fallback
+    return 25500; // Giá USD dự phòng
   }
 }
 
@@ -65,18 +67,18 @@ async function getWorldGoldPrice() {
 }
 
 async function updateData() {
-  console.log("⏳ Đang cập nhật dữ liệu...");
+  console.log("⏳ Đang fetch dữ liệu mới...");
   try {
     const usd = await getUSDRate();
     const xau = await getWorldGoldPrice();
-    const sjc = 168800000; // Giá giả định hoặc logic lấy giá thực
+    const sjc = 85000000; // Thay thế bằng logic lấy giá SJC thật nếu có
 
     const worldVND = xau * usd * (37.5 / 31.1035);
     const diff = sjc - worldVND;
     const percent = (diff / worldVND) * 100;
 
     latestData = {
-      time: new Date().toLocaleString("vi-VN"),
+      time: new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }),
       usd, xau, sjc,
       worldVND: Math.round(worldVND),
       diff: Math.round(diff),
@@ -84,29 +86,39 @@ async function updateData() {
     };
 
     saveToHistory(latestData);
-    console.log("✅ Cập nhật thành công");
+    console.log("✅ Cập nhật hoàn tất lúc:", latestData.time);
   } catch (e) {
-    console.log("❌ Lỗi cập nhật:", e);
+    console.error("❌ Lỗi trong quá trình update:", e.message);
   }
 }
 
-// Cập nhật tự động mỗi 2 phút
+// Chạy cron job mỗi 2 phút
 cron.schedule("*/2 * * * *", updateData);
 
+// API endpoints
 app.get("/api/gold", async (req, res) => {
-  if (req.query.t) await updateData(); // Update ngay nếu có yêu cầu từ nút bấm
-  res.json(latestData || { message: "Đang tải..." });
+  if (req.query.t) await updateData();
+  res.json(latestData || { message: "Đang khởi tạo dữ liệu..." });
 });
 
 app.get("/api/history", (req, res) => {
-  if (fs.existsSync(DATA_PATH)) {
-    res.json(JSON.parse(fs.readFileSync(DATA_PATH, "utf-8")));
-  } else {
+  try {
+    if (fs.existsSync(DATA_PATH)) {
+      const data = fs.readFileSync(DATA_PATH, "utf-8");
+      return res.json(JSON.parse(data));
+    }
     res.json([]);
+  } catch (e) {
+    res.status(500).json({ error: "Không thể đọc lịch sử" });
   }
 });
 
+// Trả về file index.html cho mọi request không phải API (hỗ trợ SPA nếu cần)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 app.listen(PORT, () => {
-  console.log(`🚀 Server đang chạy tại: http://localhost:${PORT}`);
+  console.log(`🚀 Server đang chạy trên port ${PORT}`);
   updateData();
 });
