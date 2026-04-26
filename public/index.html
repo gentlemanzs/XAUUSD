@@ -406,7 +406,6 @@ indicator.style = `
 `;
 document.body.appendChild(indicator);
 /* ===== PULL TO REFRESH (MOBILE) ===== */
-
 let startY = 0;
 let isPulling = false;
 
@@ -423,18 +422,25 @@ window.addEventListener("touchmove", (e) => {
   const currentY = e.touches[0].clientY;
   const diff = currentY - startY;
 
-  // kéo xuống đủ 80px
+  if (diff > 20) {
+    indicator.style.opacity = 1;
+    indicator.innerText = diff > 80 ? "Release to refresh" : "Pull to refresh";
+  }
+
   if (diff > 80) {
     isPulling = false;
+    indicator.innerText = "Updating...";
+    load();
 
-    console.log("🔄 Pull refresh");
-
-    load(); // 👉 gọi update của bạn
+    setTimeout(() => {
+      indicator.style.opacity = 0;
+    }, 1000);
   }
 });
 
 window.addEventListener("touchend", () => {
   isPulling = false;
+  indicator.style.opacity = 0;
 });
 </script>
 
