@@ -31,7 +31,29 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static("public"));
 
 let latestData = null;
+/* GET */
+app.get("/api/history", (req,res)=>{
+  res.json(readHistory());
+});
 
+/* POST */
+app.post("/api/history", express.json(), (req,res)=>{
+  const history = readHistory();
+
+  history.push(req.body);
+
+  if(history.length > 100) history.shift();
+
+  writeHistory(history);
+
+  res.json({ ok:true });
+});
+
+/* DELETE */
+app.delete("/api/history", (req,res)=>{
+  writeHistory([]);
+  res.json({ ok:true });
+});
 /* ===== CONFIG ===== */
 const CONFIG = {
   TIMEOUT: 5000,
