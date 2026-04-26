@@ -394,6 +394,48 @@ if(lastData) renderMain(JSON.parse(lastData));
 const lastTimeSaved = localStorage.getItem("lastTime");
 elements.lastTime.innerHTML = lastTimeSaved ? `⚪ Last update: ${lastTimeSaved}` : "Ready";
 fetchHistory();
+  const indicator = document.createElement("div");
+indicator.innerText = "↓ Pull to refresh";
+indicator.style = `
+  position:fixed;
+  top:10px;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:12px;
+  opacity:0;
+`;
+document.body.appendChild(indicator);
+/* ===== PULL TO REFRESH (MOBILE) ===== */
+
+let startY = 0;
+let isPulling = false;
+
+window.addEventListener("touchstart", (e) => {
+  if (window.scrollY === 0) {
+    startY = e.touches[0].clientY;
+    isPulling = true;
+  }
+});
+
+window.addEventListener("touchmove", (e) => {
+  if (!isPulling) return;
+
+  const currentY = e.touches[0].clientY;
+  const diff = currentY - startY;
+
+  // kéo xuống đủ 80px
+  if (diff > 80) {
+    isPulling = false;
+
+    console.log("🔄 Pull refresh");
+
+    load(); // 👉 gọi update của bạn
+  }
+});
+
+window.addEventListener("touchend", () => {
+  isPulling = false;
+});
 </script>
 
 </body>
