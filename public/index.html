@@ -175,6 +175,69 @@ tr.newest { background: #eff6ff; }
 @media (max-width: 640px) {
   .grid { grid-template-columns: 1fr; }
 }
+/* ===== MOBILE ONLY (KHÔNG ẢNH HƯỞNG DESKTOP) ===== */
+@media (max-width:600px){
+
+  /* Ẩn nút Update trên header */
+  header button{
+    display:none;
+  }
+
+  /* Grid thành 2 cột */
+  .grid{
+    grid-template-columns:repeat(2,1fr);
+    gap:10px;
+  }
+
+  /* Thu nhỏ card */
+  .card{
+    padding:10px;
+  }
+
+  .card-title{
+    font-size:10px;
+  }
+
+  .card-value{
+    font-size:18px;
+  }
+
+  /* Table nhỏ lại */
+  th,td{
+    font-size:12px;
+    padding:6px;
+  }
+
+  /* Chart thấp lại */
+  canvas{
+    max-height:200px;
+  }
+
+}
+
+/* ===== FLOAT UPDATE BUTTON ===== */
+#fabUpdate{
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  width:56px;
+  height:56px;
+  border-radius:50%;
+  background:#3b82f6;
+  color:white;
+  border:none;
+  font-size:22px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.25);
+  z-index:999;
+  display:none;
+}
+
+/* Chỉ hiện trên mobile */
+@media (max-width:600px){
+  #fabUpdate{
+    display:block;
+  }
+}
 </style>
 </head>
 <body>
@@ -373,6 +436,6 @@ const lastTimeSaved = localStorage.getItem("lastTime");
 elements.lastTime.innerHTML = lastTimeSaved ? `⚪ Last update: ${lastTimeSaved}` : "Ready";
 renderHistory();
 </script>
-
+<button id="fabUpdate" onclick="load()">🔄</button>
 </body>
 </html>
