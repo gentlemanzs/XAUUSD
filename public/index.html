@@ -57,7 +57,7 @@ header {
 
 /* NÚT UPDATE MOBILE (FLOATING) */
 #mobileUpdateBtn {
-  display: none; /* Mặc định ẩn trên Desktop */
+  display: none; 
   position: fixed;
   right: 20px;
   bottom: 30px;
@@ -78,10 +78,9 @@ header {
 }
 #mobileUpdateBtn:active { transform: scale(0.9); background: #2563eb; }
 
-/* NÚT TOGGLE THEO YÊU CẦU MỚI */
 #toggleBtn {
   background: transparent; 
-  color: #64748b;         
+  color: #64748b;          
   border: 1px solid transparent; 
   font-size: 1.5rem;      
   font-weight: 400;
@@ -142,66 +141,46 @@ header {
 .change-up { color: var(--up-color); }
 .change-down { color: var(--down-color); }
 
-/* TABLE */
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 3rem;
-  margin-bottom: 1rem;
-}
-
+/* TABLE & OTHER STYLES ... (Giữ nguyên) */
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-top: 3rem; margin-bottom: 1rem; }
 .section-title { font-size: 1.25rem; font-weight: 700; }
-
-.table-wrapper {
-  background: var(--card-bg);
-  border-radius: 12px;
-  border: 1px solid var(--border-color);
-  overflow: hidden;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-}
-
+.table-wrapper { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
 table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
 th { background: #f1f5f9; padding: 12px 16px; text-align: right; font-weight: 600; color: var(--secondary-text); border-bottom: 1px solid var(--border-color); }
 td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; font-variant-numeric: tabular-nums; }
 th:first-child, td:first-child { text-align: left; }
 tr.newest { background: #eff6ff; }
-
-/* BADGES */
 .badge { padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 0.8rem; }
 .badge-up { background: #dcfce7; color: #166534; }
 .badge-down { background: #fee2e2; color: #991b1b; }
-
-/* FILTER BAR */
-.filter-bar {
-  display: none;
-  background: white;
-  padding: 1rem;
-  border-radius: 12px;
-  margin-bottom: 1rem;
-  gap: 10px;
-  border: 1px solid var(--border-color);
-}
+.filter-bar { display: none; background: white; padding: 1rem; border-radius: 12px; margin-bottom: 1rem; gap: 10px; border: 1px solid var(--border-color); }
 .filter-bar.show { display: flex; flex-wrap: wrap; }
 .filter-bar input { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; }
+.chart-wrapper { margin-top: 2rem; padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
 
-/* CHART STYLE */
-.chart-wrapper {
-  margin-top: 2rem;
-  padding: 1.5rem;
-  background: white;
-  border-radius: 12px;
-  border: 1px solid var(--border-color);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-}
-
-/* MOBILE RESPONSIVE */
+/* MOBILE RESPONSIVE - PHẦN SỬA ĐỔI CHÍNH */
 @media (max-width: 640px) {
-  .grid { grid-template-columns: 1fr; }
-  header #updateBtn { display: none; } /* Ẩn nút trên header khi ở mobile */
-  #mobileUpdateBtn { display: flex; } /* Hiện nút lơ lửng */
-  .container { margin: 1rem auto; }
-  .card-value { font-size: 1.5rem; }
+  .grid { 
+    grid-template-columns: 1fr; 
+    gap: 0.75rem; /* Giảm khoảng cách giữa các ô */
+    margin-bottom: 1.5rem;
+  }
+  .card {
+    padding: 0.75rem 1rem; /* Thu nhỏ padding trong ô */
+    border-radius: 12px;
+  }
+  .card-value { 
+    font-size: 1.4rem; /* Giảm kích cỡ chữ số một chút */
+    margin-top: 0.25rem;
+  }
+  .card-title {
+    font-size: 0.7rem; /* Giảm kích cỡ tiêu đề ô */
+  }
+  header { padding: 0.75rem 1rem; }
+  header #updateBtn { display: none; } 
+  #mobileUpdateBtn { display: flex; } 
+  .container { margin: 0.75rem auto; }
+  .section-header { margin-top: 1.5rem; }
 }
 </style>
 </head>
@@ -254,6 +233,7 @@ tr.newest { background: #eff6ff; }
 </div>
 
 <script>
+/* SCRIPT GIỮ NGUYÊN HOÀN TOÀN NHƯ CŨ */
 const API = "/api/gold";
 const HIST_API = "/api/history"; 
 const elements = {
@@ -332,7 +312,6 @@ async function load() {
   const btns = [elements.updateBtn, elements.mobileUpdateBtn];
   btns.forEach(b => { if(b) b.disabled = true; });
   elements.updateBtn.innerText = "Updating...";
-  
   try {
     const res = await fetch(`${API}?t=${Date.now()}`);
     const d = await res.json();
