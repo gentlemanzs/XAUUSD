@@ -154,7 +154,7 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public/index.html"));
 });
 /* ===== HISTORY API ===== */
-
+app.get("/ping", (req,res)=>res.send("pong ok"));
 /* GET */
 app.get("/api/history", (req, res) => {
   res.json(readHistory());
