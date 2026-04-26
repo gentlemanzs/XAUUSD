@@ -3,6 +3,7 @@ const axios = require("axios");
 const cron = require("node-cron");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs"); // Thêm fs để quản lý file
 
 const app = express();
 app.use(cors());
@@ -12,6 +13,15 @@ const PORT = process.env.PORT || 3000;
 
 /* 🔥 SERVE FRONTEND */
 app.use(express.static("public"));
+
+/* 🔥 PATH CONFIG */
+const DATA_DIR = path.join(__dirname, "data");
+const DATA_FILE = path.join(DATA_DIR, "history.json");
+
+// Đảm bảo thư mục data tồn tại
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+}
 
 let latestData = null;
 
@@ -85,6 +95,31 @@ async function getSJCPrice() {
   return 168800000;
 }
 
+/* ===== SAVE HISTORY ===== */
+function saveHistory(entry) {
+  try {
+    let history = [];
+    if (fs.existsSync(DATA_FILE)) {
+      const fileData = fs.readFileSync(DATA_FILE, "utf-8");
+      history = JSON.parse(fileData || "[]");
+    }
+
+    // Kiểm tra bản ghi cuối cùng để tránh lưu trùng dữ liệu liên tục
+    const lastEntry = history[history.length - 1];
+    if (!lastEntry || lastEntry.sjc !== entry.sjc || lastEntry.xau !== entry.xau) {
+      history.push(entry);
+      
+      // Giữ lại tối đa 200 bản ghi để tránh file quá nặng
+      if (history.length > 200) history.shift();
+
+      fs.writeFileSync(DATA_FILE, JSON.stringify(history, null, 2));
+      console.log("💾 Đã lưu vào data/history.json");
+    }
+  } catch (e) {
+    console.log("❌ Lỗi lưu file history:", e);
+  }
+}
+
 /* ===== UPDATE ===== */
 async function updateData() {
   console.log("\n⏳ Updating...");
@@ -99,7 +134,7 @@ async function updateData() {
     const percent = (diff / worldVND) * 100;
 
     latestData = {
-      time: new Date(),
+      time: new Date().toLocaleString("vi-VN"), // Chuyển sang string để lưu json đẹp hơn
       usd,
       xau,
       sjc,
@@ -108,6 +143,7 @@ async function updateData() {
       percent: percent.toFixed(2) + "%"
     };
 
+    saveHistory(latestData); // Thực hiện lưu vào file
     console.log("✅ DONE");
 
   } catch (e) {
@@ -124,6 +160,16 @@ app.get("/api/gold", (req, res) => {
     return res.json({ message: "No data yet, please wait..." });
   }
   res.json(latestData);
+});
+
+// Thêm API để frontend có thể lấy lịch sử từ file
+app.get("/api/history", (req, res) => {
+  if (fs.existsSync(DATA_FILE)) {
+    const data = fs.readFileSync(DATA_FILE, "utf-8");
+    res.json(JSON.parse(data || "[]"));
+  } else {
+    res.json([]);
+  }
 });
 
 /* ===== ROOT (serve index.html) ===== */

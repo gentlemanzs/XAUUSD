@@ -225,6 +225,7 @@ tr.newest { background: #eff6ff; }
 
 <script>
 const API = "/api/gold";
+const HIST_API = "/api/history"; // API để lấy dữ liệu từ data/history.json
 const elements = {
   usd: document.getElementById("usd"),
   xau: document.getElementById("xau"),
@@ -241,9 +242,9 @@ const elements = {
 const fmtVND = new Intl.NumberFormat('vi-VN');
 const fmtXAU = new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-let history = JSON.parse(localStorage.getItem("goldHistory") || "[]");
+let history = []; 
 let chartData = JSON.parse(localStorage.getItem("goldChartData") || "[]");
-let filteredData = [...history];
+let filteredData = [];
 let myChart;
 let isExpanded = false;
 
@@ -287,26 +288,34 @@ function updateChartRecord(gap) {
   }
 }
 
+async function fetchHistory() {
+  try {
+    const res = await fetch(HIST_API);
+    history = await res.json();
+    filteredData = [...history];
+    renderHistory();
+  } catch(e) { console.error("Lỗi tải lịch sử từ server"); }
+}
+
 async function load() {
   elements.updateBtn.disabled = true;
   elements.updateBtn.innerText = "Updating...";
   try {
     const res = await fetch(`${API}?t=${Date.now()}`);
     const d = await res.json();
-    const time = new Date().toLocaleString('vi-VN');
-    const lastEntry = history[history.length - 1];
-    if(!lastEntry || lastEntry.sjc !== d.sjc || lastEntry.xau !== d.xau) {
-      history.push({ time, xau: d.xau, sjc: d.sjc, diff: d.diff, percent: d.percent });
-      if(history.length > 100) history.shift();
-      localStorage.setItem("goldHistory", JSON.stringify(history));
-    }
+    
+    // Server hiện tại đã xử lý việc lưu vào file data/history.json khi gọi API
+    // Chúng ta chỉ cần fetch lại lịch sử mới nhất
+    await fetchHistory();
+    
     renderMain(d);
     updateChartRecord(d.diff);
+    
+    const time = new Date().toLocaleString('vi-VN');
     elements.lastTime.innerHTML = `🟢 Live Update: ${time}`;
     localStorage.setItem("lastData", JSON.stringify(d));
     localStorage.setItem("lastTime", time);
-    filteredData = [...history];
-    renderHistory();
+    
   } catch(e) { alert("Error!"); } finally {
     elements.updateBtn.disabled = false;
     elements.updateBtn.innerText = "UPDATE";
@@ -360,9 +369,12 @@ function resetFilter() {
 }
 
 function clearAll() {
-  if(confirm("Clear all?")) {
-    localStorage.clear();
-    location.reload();
+  if(confirm("Xác nhận xóa toàn bộ dữ liệu trên Server?")) {
+    // Lưu ý: Cần có endpoint API phía server để xử lý việc xóa file
+    fetch('/api/history/clear', { method: 'POST' }).then(() => {
+      localStorage.clear();
+      location.reload();
+    });
   }
 }
 
@@ -371,7 +383,9 @@ const lastData = localStorage.getItem("lastData");
 if(lastData) renderMain(JSON.parse(lastData));
 const lastTimeSaved = localStorage.getItem("lastTime");
 elements.lastTime.innerHTML = lastTimeSaved ? `⚪ Last update: ${lastTimeSaved}` : "Ready";
-renderHistory();
+
+// Tải lịch sử ngay khi mở trang
+fetchHistory();
 </script>
 
 </body>
