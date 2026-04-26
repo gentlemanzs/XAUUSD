@@ -3,7 +3,30 @@ const axios = require("axios");
 const cron = require("node-cron");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
+const path = require("path");
 
+const DATA_FILE = path.join(__dirname, "data/history.json");
+
+/* đảm bảo file tồn tại */
+if (!fs.existsSync(DATA_FILE)) {
+  fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
+  fs.writeFileSync(DATA_FILE, "[]");
+}
+
+/* đọc file */
+function readHistory() {
+  try {
+    return JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
+  } catch {
+    return [];
+  }
+}
+
+/* ghi file */
+function writeHistory(data) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+}
 const app = express();
 app.use(cors());
 
@@ -130,7 +153,31 @@ app.get("/api/gold", (req, res) => {
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public/index.html"));
 });
+/* ===== HISTORY API ===== */
 
+/* GET */
+app.get("/api/history", (req, res) => {
+  res.json(readHistory());
+});
+
+/* POST */
+app.post("/api/history", express.json(), (req, res) => {
+  const history = readHistory();
+
+  history.push(req.body);
+
+  if (history.length > 100) history.shift();
+
+  writeHistory(history);
+
+  res.json({ ok: true });
+});
+
+/* DELETE */
+app.delete("/api/history", (req, res) => {
+  writeHistory([]);
+  res.json({ ok: true });
+});
 /* ===== START ===== */
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
