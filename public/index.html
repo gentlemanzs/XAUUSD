@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>XAU Dashboard</title>
+
+<style>
+body{
+  margin:0;
+  font-family:-apple-system,system-ui;
+  font-size:120%;
+  background:#f1f5f9;
+  color:#0f172a;
+  transition:0.3s;
+}
+
+/* HEADER */
+header{
+  padding:18px 28px;
+  background:#0f172a;
+  color:white;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+button{
+  background:linear-gradient(135deg,#64748b,#475569);
+  color:white;
+  border:none;
+  padding:8px 14px;
+  border-radius:8px;
+  cursor:pointer;
+}
+button:hover{
+  background:linear-gradient(135deg,#475569,#334155);
+}
+
+select{
+  padding:6px;
+  border-radius:6px;
+}
+
+.container{
+  width:95%;
+  margin:auto;
+}
+
+/* GRID */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:14px;
+  margin-top:24px;
+}
+
+.card{
+  border-radius:14px;
+  padding:16px;
+  color:white;
+}
+
+/* DEFAULT */
+body.default .card{
+  background:#e2e8f0;
+  color:#0f172a;
+}
+
+/* THEMES */
+body.ocean .card{ background:linear-gradient(135deg,#7dd3fc,#38bdf8);}
+body.mint .card{ background:linear-gradient(135deg,#6ee7b7,#34d399);}
+body.lavender .card{ background:linear-gradient(135deg,#c4b5fd,#a78bfa);}
+body.sand .card{ background:linear-gradient(135deg,#fde68a,#fcd34d);}
+body.forest .card{ background:linear-gradient(135deg,#4ade80,#22c55e);}
+
+body.night{
+  background:#020617;
+  color:white;
+}
+body.night .card{
+  background:linear-gradient(135deg,#334155,#1e293b);
+}
+
+.card-title{
+  font-size:14px;
+  opacity:0.9;
+}
+
+.card-value{
+  font-size:26px;
+  font-weight:700;
+  margin-top:8px;
+}
+
+/* TABLE */
+.table{
+  margin-top:12px;
+  background:white;
+  border-radius:12px;
+  border:1px solid #e2e8f0;
+  overflow:hidden;
+}
+
+th.time-col, td.time-col{
+  width:160px;
+  white-space:nowrap;
+}
+
+th{
+  padding:12px;
+  text-align:left;
+  color:#64748b;
+}
+
+td{
+  padding:12px;
+  border-top:1px solid #f1f5f9;
+}
+
+tr.newest{
+  background:#eef2ff;
+}
+
+.percent-up{color:#16a34a;}
+.percent-down{color:#f59e0b;}
+
+.section-title{
+  margin-top:24px;
+  font-weight:600;
+}
+
+/* FILTER */
+.filter{
+  display:none;
+  margin-top:12px;
+  gap:10px;
+}
+.filter.show{
+  display:flex;
+}
+
+/* ACTION */
+.action-bar{
+  display:flex;
+  justify-content:space-between;
+  margin-top:10px;
+}
+
+.show-more-wrap{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:10px;
+}
+
+#clearBtn{display:none;}
+</style>
+</head>
+
+<body class="default">
+
+<header>
+  <div>📊 XAU Dashboard</div>
+
+  <div style="display:flex;gap:10px;">
+    <button onclick="load()">Update</button>
+
+    <select onchange="changeTheme(this.value)">
+      <option value="default">Default</option>
+      <option value="ocean">Ocean</option>
+      <option value="mint">Mint</option>
+      <option value="lavender">Lavender</option>
+      <option value="sand">Sand</option>
+      <option value="night">Night</option>
+      <option value="forest">Forest</option>
+    </select>
+  </div>
+</header>
+
+<div class="container">
+
+<div id="lastTime"></div>
+
+<div class="grid">
+  <div class="card"><div class="card-title">💵 USD</div><div id="usd" class="card-value">--</div></div>
+  <div class="card"><div class="card-title">🌍 XAU</div><div id="xau" class="card-value">--</div></div>
+  <div class="card"><div class="card-title">🇻🇳 SJC</div><div id="sjc" class="card-value">--</div></div>
+  <div class="card"><div class="card-title">⚖️ Gap</div><div id="diff" class="card-value">--</div></div>
+  <div class="card"><div class="card-title">📊 %</div><div id="percent" class="card-value">--</div></div>
+</div>
+
+<div class="section-title">Query History</div>
+
+<div class="action-bar">
+  <div id="filterBox" class="filter">
+    <input type="date" id="filterDate">
+    <input type="text" id="searchInput" placeholder="Search time">
+    <button onclick="applyFilter()">Filter</button>
+    <button onclick="resetFilter()">Reset</button>
+  </div>
+
+  <button id="clearBtn" onclick="clearAll()">Clear All</button>
+</div>
+
+<div class="table">
+<table>
+<thead>
+<tr>
+  <th class="time-col">Time</th>
+  <th>XAU</th>
+  <th>SJC</th>
+  <th>Gap</th>
+  <th>%</th>
+</tr>
+</thead>
+<tbody id="history"></tbody>
+</table>
+</div>
+
+<div class="show-more-wrap">
+  <button onclick="toggleView()" id="toggleBtn">Show more</button>
+</div>
+
+</div>
+
+<script>
+const API="http://localhost:3000/api/gold";
+
+let history=JSON.parse(localStorage.getItem("goldHistory")||"[]");
+let filteredData=[...history];
+let showAll=false;
+
+function format(n){return Number(n).toLocaleString();}
+
+function renderMain(d){
+  usd.innerText=format(d.usd);
+  xau.innerText=d.xau.toFixed(1);
+  sjc.innerText=format(d.sjc);
+  diff.innerText=format(d.diff);
+  percent.innerText=d.percent;
+}
+
+function renderTime(t){
+  if(t) lastTime.innerText="Last updated: "+t;
+}
+
+/* 🔥 FIX QUAN TRỌNG */
+const lastData=localStorage.getItem("lastData");
+if(lastData){
+  const d=JSON.parse(lastData);
+  renderMain(d);
+}
+
+const lastTimeSaved=localStorage.getItem("lastTime");
+if(lastTimeSaved){
+  renderTime(lastTimeSaved);
+}
+
+async function load(){
+  const res=await fetch(API+"?t="+Date.now());
+  const d=await res.json();
+
+  renderMain(d);
+
+  const time=new Date().toLocaleString();
+  renderTime(time);
+
+  localStorage.setItem("lastData",JSON.stringify(d));
+  localStorage.setItem("lastTime",time);
+
+  history.push({
+    time,
+    xau:d.xau,
+    sjc:d.sjc,
+    diff:d.diff,
+    percent:d.percent
+  });
+
+  localStorage.setItem("goldHistory",JSON.stringify(history));
+
+  filteredData=[...history];
+  renderHistory();
+}
+
+function renderHistory(){
+  historyTable.innerHTML="";
+  let data=[...filteredData].reverse();
+  if(!showAll) data=data.slice(0,10);
+
+  data.forEach((r,i)=>{
+    const row=document.createElement("tr");
+    if(i===0) row.className="newest";
+
+    const pClass=r.percent.includes("-")?"percent-down":"percent-up";
+
+    row.innerHTML=`
+      <td class="time-col">${r.time}</td>
+      <td>${Number(r.xau).toFixed(1)}</td>
+      <td>${format(r.sjc)}</td>
+      <td>${format(r.diff)}</td>
+      <td class="${pClass}">${r.percent}</td>
+    `;
+    historyTable.appendChild(row);
+  });
+}
+
+function toggleView(){
+  showAll=!showAll;
+  toggleBtn.innerText=showAll?"Collapse":"Show more";
+  filterBox.classList.toggle("show", showAll);
+  clearBtn.style.display=showAll?"inline-block":"none";
+  renderHistory();
+}
+
+function applyFilter(){
+  const date=filterDate.value;
+  const key=searchInput.value.toLowerCase();
+
+  filteredData=history.filter(r=>{
+    return (!date||r.time.includes(date)) &&
+           (!key||r.time.toLowerCase().includes(key));
+  });
+
+  renderHistory();
+}
+
+function resetFilter(){
+  filteredData=[...history];
+  filterDate.value="";
+  searchInput.value="";
+  renderHistory();
+}
+
+function clearAll(){
+  if(confirm("Clear all history?")){
+    history=[];
+    filteredData=[];
+    localStorage.removeItem("goldHistory");
+    renderHistory();
+  }
+}
+
+function changeTheme(t){
+  document.body.className=t;
+  localStorage.setItem("theme",t);
+}
+
+const historyTable=document.getElementById("history");
+const filterBox=document.getElementById("filterBox");
+const clearBtn=document.getElementById("clearBtn");
+
+document.body.className=localStorage.getItem("theme")||"default";
+
+renderHistory();
+</script>
+
+</body>
+</html>
