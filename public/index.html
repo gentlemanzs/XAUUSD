@@ -3,63 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XAU Dashboard - Synced</title>
+<title>XAU Dashboard - Đồng bộ</title>
 <style>
   :root {
     --bg: #f8fafc; --header: #0f172a; --card: #ffffff;
     --text: #1e293b; --sub-text: #64748b;
     --border: #e2e8f0; --btn: #94a3b8; --btn-hover: #64748b;
   }
-  body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); }
-  header { background: var(--header); color: white; padding: 1rem 2rem; font-weight: bold; font-size: 1.2rem; }
-  .container { max-width: 1100px; margin: 20px auto; padding: 0 15px; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--header); color: white; padding: 1rem 2rem; font-weight: bold; }
+  .container { max-width: 1000px; margin: 20px auto; padding: 0 15px; }
   
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
-  .card { background: var(--card); padding: 15px; border-radius: 10px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-  .card-label { font-size: 0.75rem; color: var(--sub-text); text-transform: uppercase; font-weight: bold; }
-  .card-val { font-size: 1.4rem; font-weight: 800; margin-top: 5px; }
+  .card { background: var(--card); padding: 15px; border-radius: 10px; border: 1px solid var(--border); }
+  .card-label { font-size: 0.7rem; color: var(--sub-text); text-transform: uppercase; font-weight: bold; }
+  .card-val { font-size: 1.3rem; font-weight: 800; margin-top: 5px; }
 
   /* Nút Update dẹt nhỏ bên phải */
   .action-bar { display: flex; justify-content: flex-end; margin-bottom: 20px; }
   #updateBtn {
     background: var(--btn); color: white; border: none; cursor: pointer;
-    padding: 5px 15px; border-radius: 5px; font-size: 0.7rem;
-    text-transform: uppercase; letter-spacing: 0.5px; transition: 0.2s;
+    padding: 6px 16px; border-radius: 4px; font-size: 0.75rem;
+    text-transform: uppercase; transition: 0.3s;
   }
   #updateBtn:hover { background: var(--btn-hover); }
-  #updateBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+  #updateBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  .history-sec { background: white; border-radius: 10px; border: 1px solid var(--border); overflow: hidden; }
+  .history-sec { background: white; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-  th { background: #f1f5f9; color: var(--sub-text); padding: 10px; text-align: right; }
-  td { padding: 10px; border-top: 1px solid var(--border); text-align: right; }
+  th { background: #f1f5f9; color: var(--sub-text); padding: 12px; text-align: right; }
+  td { padding: 12px; border-top: 1px solid var(--border); text-align: right; }
   th:first-child, td:first-child { text-align: left; }
-  .up { color: #10b981; } .down { color: #ef4444; }
+  .up { color: #10b981; font-weight: bold; } .down { color: #ef4444; font-weight: bold; }
 </style>
 </head>
 <body>
 
-<header>📊 XAU DASHBOARD</header>
+<header>XAU GOLD TRACKER</header>
 
 <div class="container">
-  <div id="status" style="font-size: 0.8rem; color: var(--sub-text); margin-bottom: 10px;">Đang tải...</div>
+  <div id="status" style="font-size: 0.8rem; color: var(--sub-text); margin-bottom: 15px;">Đang kết nối server...</div>
   
   <div class="grid">
-    <div class="card"><div class="card-label">USD</div><div id="usd" class="card-val">--</div></div>
-    <div class="card"><div class="card-label">Global XAU</div><div id="xau" class="card-val">--</div></div>
-    <div class="card"><div class="card-label">SJC Gold</div><div id="sjc" class="card-val">--</div></div>
-    <div class="card"><div class="card-label">Gap (VND)</div><div id="gap" class="card-val">--</div></div>
-    <div class="card"><div class="card-label">Difference %</div><div id="pct" class="card-val">--</div></div>
+    <div class="card"><div class="card-label">Tỷ giá USD</div><div id="usd" class="card-val">--</div></div>
+    <div class="card"><div class="card-label">Vàng Thế Giới</div><div id="xau" class="card-val">--</div></div>
+    <div class="card"><div class="card-label">Vàng SJC</div><div id="sjc" class="card-val">--</div></div>
+    <div class="card"><div class="card-label">Chênh lệch</div><div id="gap" class="card-val">--</div></div>
+    <div class="card"><div class="card-label">% Chênh</div><div id="pct" class="card-val">--</div></div>
   </div>
 
   <div class="action-bar">
-    <button id="updateBtn" onclick="refresh()">Update</button>
+    <button id="updateBtn" onclick="refresh()">Update Now</button>
   </div>
 
   <div class="history-sec">
     <table>
       <thead>
-        <tr><th>Time</th><th>XAU</th><th>SJC</th><th>Gap</th><th>Status</th></tr>
+        <tr><th>Thời gian</th><th>XAU ($)</th><th>SJC (đ)</th><th>Chênh lệch</th><th>Trạng thái</th></tr>
       </thead>
       <tbody id="histBody"></tbody>
     </table>
@@ -72,15 +72,15 @@
   async function refresh() {
     const btn = document.getElementById('updateBtn');
     btn.disabled = true;
-    btn.innerText = "Wait...";
+    btn.innerText = "Đang tải...";
     try {
       const res = await fetch('/api/gold?t=1');
       const data = await res.json();
       updateUI(data);
-      loadHistory();
-    } catch (e) { console.error("Lỗi cập nhật"); }
+      await loadHistory();
+    } catch (e) { alert("Không thể cập nhật!"); }
     btn.disabled = false;
-    btn.innerText = "Update";
+    btn.innerText = "Update Now";
   }
 
   function updateUI(d) {
@@ -90,7 +90,7 @@
     document.getElementById('sjc').innerText = fmt.format(d.sjc);
     document.getElementById('gap').innerText = fmt.format(d.diff);
     document.getElementById('pct').innerText = d.percent;
-    document.getElementById('status').innerText = "Cập nhật cuối: " + d.time;
+    document.getElementById('status').innerText = "Cập nhật lần cuối: " + d.time;
   }
 
   async function loadHistory() {
@@ -98,7 +98,7 @@
       const res = await fetch('/api/history');
       const list = await res.json();
       const body = document.getElementById('histBody');
-      body.innerHTML = list.reverse().slice(0, 15).map(r => `
+      body.innerHTML = list.reverse().slice(0, 20).map(r => `
         <tr>
           <td>${r.time}</td>
           <td>${r.xau}</td>
@@ -107,10 +107,10 @@
           <td class="${r.percent.includes('-') ? 'down' : 'up'}">${r.percent}</td>
         </tr>
       `).join('');
-    } catch (e) { }
+    } catch (e) { console.error("Lỗi tải lịch sử"); }
   }
 
-  // Khởi chạy khi mở trang
+  // Khởi chạy
   fetch('/api/gold').then(r => r.json()).then(updateUI);
   loadHistory();
 </script>
