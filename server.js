@@ -29,7 +29,7 @@ function writeHistory(data) {
 }
 const app = express();
 app.use(cors());
-
+app.use(express.json());
 /* 🔥 PORT FIX */
 const PORT = process.env.PORT || 3000;
 
@@ -154,6 +154,56 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public/index.html"));
 });
 /* ===== HISTORY API ===== */
+
+/* GET */
+app.get("/api/history", (req, res) => {
+  res.json(readHistory());
+});
+
+/* POST */
+app.post("/api/history", express.json(), (req, res) => {
+  const history = readHistory();
+
+  history.push(req.body);
+
+  if (history.length > 100) history.shift();
+
+  writeHistory(history);
+
+  res.json({ ok: true });
+});
+
+/* DELETE */
+app.delete("/api/history", (req, res) => {
+  writeHistory([]);
+  res.json({ ok: true });
+});
+/* ===== HISTORY API ===== */
+
+const fs = require("fs");
+const path = require("path");
+
+const DATA_FILE = path.join(__dirname, "data/history.json");
+
+/* đảm bảo file tồn tại */
+if (!fs.existsSync(DATA_FILE)) {
+  fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
+  fs.writeFileSync(DATA_FILE, "[]");
+}
+
+/* đọc */
+function readHistory() {
+  try {
+    return JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
+  } catch {
+    return [];
+  }
+}
+
+/* ghi */
+function writeHistory(data) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+}
 
 /* GET */
 app.get("/api/history", (req, res) => {
