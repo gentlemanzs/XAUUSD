@@ -279,32 +279,37 @@ function saveChart(gap){
 /* LOAD */
 async function load(){
   try{
-    const res=await fetch(API+"?t="+Date.now());
-    const d=await res.json();
+    const res = await fetch(API + "?t=" + Date.now());
+
+    if(!res.ok){
+      throw new Error("HTTP " + res.status);
+    }
+
+    const d = await res.json();
 
     renderMain(d);
 
-    const time=new Date().toLocaleString();
-    el.lastTime.innerText="Updated: "+time;
+    const time = new Date().toLocaleString();
+    el.lastTime.innerText = "Updated: " + time;
 
     historyData.push({
       time,
-      xau:d.xau,
-      sjc:d.sjc,
-      diff:d.diff,
-      percent:d.percent||"0%"
+      xau: d.xau,
+      sjc: d.sjc,
+      diff: d.diff,
+      percent: d.percent || "0%"
     });
 
-    if(historyData.length>100) historyData.shift();
+    if(historyData.length > 100) historyData.shift();
 
-    localStorage.setItem("goldHistory",JSON.stringify(historyData));
+    localStorage.setItem("goldHistory", JSON.stringify(historyData));
 
     saveChart(d.diff);
     renderHistory();
 
   }catch(e){
-    console.error(e);
-    alert("Fetch failed");
+    console.error("LOAD ERROR:", e);
+    alert("Fetch failed: " + e.message);
   }
 }
 
