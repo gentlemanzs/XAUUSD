@@ -1,213 +1,99 @@
-<script>
-const API = "/api/gold";
-const elements = {
-  usd: document.getElementById("usd"),
-  xau: document.getElementById("xau"),
-  sjc: document.getElementById("sjc"),
-  diff: document.getElementById("diff"),
-  percent: document.getElementById("percent"),
-  lastTime: document.getElementById("lastTime"),
-  historyTable: document.getElementById("history"),
-  filterBox: document.getElementById("filterBox"),
-  updateBtn: document.getElementById("updateBtn"),
-  toggleBtn: document.getElementById("toggleBtn")
-};
+const express = require("express");
+const axios = require("axios");
+const cron = require("node-cron");
+const cors = require("cors");
+const path = require("path");
+const fs = require("fs"); // Thêm thư viện quản lý file
 
-const fmtVND = new Intl.NumberFormat('vi-VN');
-const fmtXAU = new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const app = express();
+app.use(cors());
+app.use(express.static("public"));
 
-let history = []; // ❗ KHÔNG dùng localStorage nữa
-let chartData = JSON.parse(localStorage.getItem("goldChartData") || "[]");
-let filteredData = [];
-let myChart;
-let isExpanded = false;
+const PORT = process.env.PORT || 3000;
+const DATA_PATH = path.join(__dirname, "history/data.json");
 
-/* ===== LOAD HISTORY ===== */
-async function loadHistory() {
+// Đảm bảo thư mục history tồn tại
+if (!fs.existsSync(path.join(__dirname, "history"))) {
+  fs.mkdirSync(path.join(__dirname, "history"));
+}
+
+let latestData = null;
+
+/* ===== QUẢN LÝ FILE DATA.JSON ===== */
+function saveToHistory(entry) {
+  let history = [];
   try {
-    const res = await fetch("/api/history");
-    history = await res.json();
-    filteredData = [...history];
-    renderHistory();
-  } catch (e) {
-    console.error("History load error:", e);
-  }
-}
-
-function initChart() {
-  const ctx = document.getElementById('gapChart').getContext('2d');
-  myChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: chartData.map(item => item.date),
-      datasets: [{
-        label: 'Gap (VND)',
-        data: chartData.map(item => item.gap),
-        borderColor: '#3b82f6',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        borderWidth: 2,
-        tension: 0.3,
-        fill: true
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: { y: { ticks: { callback: value => value.toLocaleString('vi-VN') } } }
+    if (fs.existsSync(DATA_PATH)) {
+      history = JSON.parse(fs.readFileSync(DATA_PATH, "utf-8"));
     }
-  });
-}
-
-function updateChartRecord(gap) {
-  const now = new Date();
-  const totalMinutes = now.getHours() * 60 + now.getMinutes();
-  const todayKey = now.toLocaleDateString('vi-VN');
-
-  if (totalMinutes >= 550 && totalMinutes <= 660) {
-    if (!chartData.find(item => item.date === todayKey)) {
-      chartData.push({ date: todayKey, gap });
-      if (chartData.length > 30) chartData.shift();
-      localStorage.setItem("goldChartData", JSON.stringify(chartData));
-
-      myChart.data.labels = chartData.map(item => item.date);
-      myChart.data.datasets[0].data = chartData.map(item => item.gap);
-      myChart.update();
-    }
-  }
-}
-
-async function load() {
-  elements.updateBtn.disabled = true;
-  elements.updateBtn.innerText = "Updating...";
-
-  try {
-    const res = await fetch(`${API}?t=${Date.now()}`);
-    const d = await res.json();
-
-    const time = new Date().toLocaleString('vi-VN');
-
+    // Kiểm tra trùng lặp dựa trên giá SJC và XAU để tránh ghi log vô ích
     const lastEntry = history[history.length - 1];
-
-    if (!lastEntry || lastEntry.sjc !== d.sjc || lastEntry.xau !== d.xau) {
-
-      /* ===== SAVE TO SERVER ===== */
-      await fetch("/api/history", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          time,
-          xau: d.xau,
-          sjc: d.sjc,
-          diff: d.diff,
-          percent: d.percent
-        })
-      });
-
-      await loadHistory(); // reload sync
+    if (!lastEntry || lastEntry.sjc !== entry.sjc || lastEntry.xau !== entry.xau) {
+      history.push(entry);
+      if (history.length > 200) history.shift(); // Giữ tối đa 200 bản ghi
+      fs.writeFileSync(DATA_PATH, JSON.stringify(history, null, 2));
     }
-
-    renderMain(d);
-    updateChartRecord(d.diff);
-
-    elements.lastTime.innerHTML = `🟢 Live Update: ${time}`;
-    localStorage.setItem("lastData", JSON.stringify(d));
-    localStorage.setItem("lastTime", time);
-
   } catch (e) {
-    console.error(e);
-    alert("Error!");
-  } finally {
-    elements.updateBtn.disabled = false;
-    elements.updateBtn.innerText = "UPDATE";
+    console.log("❌ Lỗi ghi file:", e);
   }
 }
 
-function renderMain(d) {
-  elements.usd.innerText = fmtVND.format(d.usd);
-  elements.xau.innerText = fmtXAU.format(d.xau);
-  elements.diff.innerText = fmtVND.format(d.diff);
-  elements.percent.innerText = d.percent;
+/* ... Các hàm getUSDRate, getWorldGoldPrice giữ nguyên ... */
 
-  const key = "sjcMorning_" + new Date().toISOString().slice(0,10);
-  let morning = localStorage.getItem(key) || localStorage.setItem(key, d.sjc) || d.sjc;
-
-  const change = d.sjc - parseFloat(morning);
-  const isUp = change >= 0;
-
-  elements.sjc.innerHTML =
-    `<div>${fmtVND.format(d.sjc)}</div>
-     <div class="sjc-sub ${isUp ? 'change-up' : 'change-down'}">
-       ${isUp ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}
-     </div>`;
+async function getSJCPrice() {
+  return 168800000; // Hoặc logic lấy giá thực
 }
 
-function renderHistory() {
-  elements.historyTable.innerHTML = "";
+async function updateData() {
+  console.log("\n⏳ Updating...");
+  try {
+    const usd = await getUSDRate();
+    const xau = await getWorldGoldPrice();
+    const sjc = await getSJCPrice();
 
-  let data = [...filteredData].reverse();
-  if (!isExpanded) data = data.slice(0, 5);
+    const worldVND = xau * usd * (37.5 / 31.1035);
+    const diff = sjc - worldVND;
+    const percent = (diff / worldVND) * 100;
 
-  data.forEach((r, i) => {
-    const row = document.createElement("tr");
+    latestData = {
+      time: new Date().toLocaleString("vi-VN"), // Định dạng thời gian tại server
+      usd, xau, sjc,
+      worldVND: Math.round(worldVND),
+      diff: Math.round(diff),
+      percent: percent.toFixed(2) + "%"
+    };
 
-    if (i === 0 && !isExpanded) row.className = "newest";
-
-    const percent = r.percent || "0%";
-
-    row.innerHTML =
-      `<td>${r.time}</td>
-       <td>${fmtXAU.format(r.xau)}</td>
-       <td>${fmtVND.format(r.sjc)}</td>
-       <td>${fmtVND.format(r.diff)}</td>
-       <td><span class="badge ${percent.includes('-') ? 'badge-down' : 'badge-up'}">${percent}</span></td>`;
-
-    elements.historyTable.appendChild(row);
-  });
-}
-
-function toggleView() {
-  isExpanded = !isExpanded;
-  elements.toggleBtn.innerText = isExpanded ? "−" : "+";
-  elements.filterBox.classList.toggle("show", isExpanded);
-  renderHistory();
-}
-
-function applyFilter() {
-  const date = document.getElementById("filterDate").value;
-  const key = document.getElementById("searchInput").value.toLowerCase();
-
-  filteredData = history.filter(r =>
-    (!date || r.time.includes(date)) &&
-    (!key || r.time.toLowerCase().includes(key))
-  );
-
-  renderHistory();
-}
-
-function resetFilter() {
-  document.getElementById("filterDate").value = "";
-  document.getElementById("searchInput").value = "";
-  filteredData = [...history];
-  renderHistory();
-}
-
-/* ===== CLEAR ALL ===== */
-async function clearAll() {
-  if (confirm("Clear all?")) {
-    await fetch("/api/history", { method: "DELETE" });
-    await loadHistory();
+    saveToHistory(latestData); // Lưu vào file json mỗi khi update thành công
+    console.log("✅ DONE");
+  } catch (e) {
+    console.log("❌ UPDATE ERROR:", e);
   }
 }
 
-/* INIT */
-initChart();
+/* ===== API ===== */
+app.get("/api/gold", (req, res) => {
+  res.json(latestData || { message: "Loading..." });
+});
 
-const lastData = localStorage.getItem("lastData");
-if (lastData) renderMain(JSON.parse(lastData));
+// API mới để lấy lịch sử từ file json
+app.get("/api/history", (req, res) => {
+  try {
+    if (fs.existsSync(DATA_PATH)) {
+      const data = fs.readFileSync(DATA_PATH, "utf-8");
+      res.json(JSON.parse(data));
+    } else {
+      res.json([]);
+    }
+  } catch (e) {
+    res.status(500).json({ error: "Read error" });
+  }
+});
 
-const lastTimeSaved = localStorage.getItem("lastTime");
-elements.lastTime.innerHTML =
-  lastTimeSaved ? `⚪ Last update: ${lastTimeSaved}` : "Ready";
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public/index.html"));
+});
 
-loadHistory(); // ❗ QUAN TRỌNG
-</script>
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  updateData();
+});
