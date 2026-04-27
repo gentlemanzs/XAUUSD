@@ -2,13 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>XAU Professional Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 :root {
   --bg-color: #f8fafc;
-  --header-bg: #0f172a;
+  
+  /* ĐÂY LÀ MÀU NỀN CỦA HEADER CHÚNG TA CẦN SỬ DỤNG */
+  --header-bg: #0f172a; 
+  
   --card-bg: #ffffff;
   --primary-text: #1e293b;
   --secondary-text: #64748b;
@@ -17,13 +20,18 @@
   --border-color: #e2e8f0;
 }
 
+/* SỬA ĐỔI 1: Đặt màu nền body trùng với màu Header */
 body {
   margin: 0;
   font-family: 'Inter', -apple-system, system-ui, sans-serif;
-  background: var(--bg-color);
+  
+  /* Thay đổi màu nền body để khi kéo xuống không bị lộ màu trắng */
+  background: var(--header-bg) !important; 
+  
   color: var(--primary-text);
 }
 
+/* SỬA ĐỔI 2: Cố định Header lên trên cùng */
 header {
   padding: 1rem 2rem;
   background: var(--header-bg);
@@ -31,9 +39,16 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: sticky;
+  
+  /* Chuyển sang position: fixed để nó luôn nằm trên cùng ngay cả khi kéo */
+  position: fixed; 
   top: 0;
-  z-index: 100;
+  left: 0;
+  width: 100%;
+  box-sizing: border-box; /* Đảm bảo padding không làm tràn chiều rộng */
+  
+  z-index: 1000; /* Đảm bảo nằm trên các Card */
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
 
 .brand { font-size: 1.25rem; font-weight: 700; }
@@ -48,12 +63,28 @@ header {
   cursor: pointer;
 }
 
-/* Ẩn nút mobile theo mặc định */
+/* Ẩn nút mobile */
 #mobileUpdateBtn {
-  display: none; 
+  display: none !important; 
 }
 
-.container { width: 95%; max-width: 1200px; margin: 2rem auto; }
+/* SỬA ĐỔI 3: Tạo khoảng trống phía trên cho Container để không bị Header che mất */
+.container { 
+  width: 95%; 
+  max-width: 1200px; 
+  margin: 2rem auto; 
+  
+  /* Thêm padding-top để nội dung bắt đầu dưới thanh fixed Header */
+  padding-top: 80px; 
+  
+  /* Đặt lại màu nền trắng cho khu vực nội dung chính */
+  background: var(--bg-color); 
+  border-radius: 16px; 
+  padding-left: 15px;
+  padding-right: 15px;
+  padding-bottom: 2rem;
+  box-sizing: border-box;
+}
 
 .grid {
   display: grid;
@@ -99,15 +130,15 @@ th:first-child, td:first-child { text-align: left; }
 
 /* MOBILE RESPONSIVE */
 @media (max-width: 640px) {
-  /* Ẩn nút update trên header của mobile */
+  header { padding: 0.75rem 1rem; }
   header #updateBtn { display: none; } 
-  
-  /* ĐẢM BẢO NÚT CẬP NHẬT NỔI (FLOAT) CŨNG BỊ ẨN */
-  #mobileUpdateBtn { display: none !important; } 
-
+  .container { 
+    margin: 0.75rem auto; 
+    padding-top: 70px; /* Nhỏ hơn một chút trên mobile */
+  }
+  .grid { grid-template-columns: 1fr; gap: 0.75rem; }
   .table-wrapper { overflow-x: auto; }
   table { min-width: 600px; }
-  .grid { grid-template-columns: 1fr; gap: 0.75rem; }
 }
 </style>
 </head>
@@ -146,14 +177,13 @@ th:first-child, td:first-child { text-align: left; }
   </div>
 
   <div class="chart-wrapper">
-    <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem;">📈 XAU-SJC Gap</div>
+    <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem;">📈 XAU-SJC Gap Trend</div>
     <canvas id="gapChart" style="max-height: 400px;"></canvas>
   </div>
 </div>
 
 <script>
-// Các phần Script bên dưới (load, renderMain, fetchHistory, updateChart, Pull-to-refresh) 
-// vẫn giữ nguyên như các bản trước để đảm bảo tính năng vuốt để reload vẫn hoạt động tốt.
+// Giữ nguyên toàn bộ phần Script của bạn
 const API = "/api/gold";
 const HIST_API = "/api/history"; 
 const elements = {
@@ -261,25 +291,25 @@ function toggleView() {
 
 load();
 
-/* ===== PULL TO REFRESH LOGIC (UPDATED) ===== */
+/* PULL TO REFRESH LOGIC */
 let startY = 0;
 let isPulling = false;
 const indicator = document.createElement("div");
 
 indicator.innerText = "↓ Pull to refresh";
-// CẬP NHẬT STYLE: Kích cỡ lớn hơn, màu nền trùng Header
+// Đặt màu nền và kích thước lớn hơn
 indicator.style = `
   position: fixed; 
   top: 20px; 
   left: 50%; 
   transform: translateX(-50%); 
-  font-size: 16px;              /* Tăng kích cỡ chữ */
+  font-size: 16px;              /* Lớn hơn */
   font-weight: 600;
   opacity: 0; 
   z-index: 2000; 
   background: #0f172a;          /* Trùng màu Header (#0f172a) */
   color: white; 
-  padding: 12px 24px;           /* Tăng khoảng cách đệm */
+  padding: 12px 24px;           /* Rộng hơn */
   border-radius: 30px; 
   box-shadow: 0 4px 15px rgba(0,0,0,0.3);
   transition: opacity 0.2s, transform 0.2s;
@@ -305,10 +335,10 @@ window.addEventListener("touchmove", (e) => {
     indicator.innerText = diff > 80 ? "Release to refresh" : "↓ Pull to refresh"; 
   }
   
-  if (diff > 100) { // Ngưỡng kéo để kích hoạt
+  if (diff > 100) { 
     isPulling = false;
     indicator.innerText = "🔄 Updating..."; 
-    load(); // Gọi hàm cập nhật dữ liệu của bạn
+    load();
     setTimeout(() => { indicator.style.opacity = 0; }, 1500);
   }
 });
