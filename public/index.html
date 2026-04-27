@@ -66,7 +66,7 @@ header {
   display: none; 
   position: fixed;
   right: 20px;
-  bottom: 100px; /* Nhích lên cao để tránh thanh điều hướng điện thoại */
+  bottom: 100px;
   width: 60px;
   height: 60px;
   background: #3b82f6;
@@ -80,9 +80,7 @@ header {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s;
 }
-#mobileUpdateBtn:active { transform: scale(0.9); }
 
 #toggleBtn {
   background: transparent; 
@@ -121,46 +119,40 @@ header {
 }
 
 .card.highlight { border-left: 4px solid #3b82f6; }
-.card-title { font-size: 0.75rem; color: var(--secondary-text); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; }
-.card-value { font-size: 1.875rem; font-weight: 800; margin-top: 0.5rem; font-variant-numeric: tabular-nums; }
+.card-title { font-size: 0.75rem; color: var(--secondary-text); text-transform: uppercase; font-weight: 700; }
+.card-value { font-size: 1.875rem; font-weight: 800; margin-top: 0.5rem; }
 
-.sjc-sub { font-size: 0.875rem; margin-top: 0.25rem; display: flex; align-items: center; gap: 4px; justify-content: flex-start; }
+/* Biến động giá lệch trái */
+.sjc-sub { 
+  font-size: 0.875rem; 
+  margin-top: 0.25rem; 
+  display: flex; 
+  align-items: center; 
+  gap: 4px; 
+  justify-content: flex-start; 
+}
+
 .change-up { color: var(--up-color); }
 .change-down { color: var(--down-color); }
 
 /* TABLE */
-.section-header { display: flex; justify-content: space-between; align-items: center; margin-top: 3rem; margin-bottom: 1rem; }
-.section-title { font-size: 1.25rem; font-weight: 700; }
-.table-wrapper { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+.table-wrapper { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; }
 table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
-th { background: #f1f5f9; padding: 12px 16px; text-align: right; font-weight: 600; color: var(--secondary-text); border-bottom: 1px solid var(--border-color); }
-td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; font-variant-numeric: tabular-nums; }
+th { background: #f1f5f9; padding: 12px 16px; text-align: right; color: var(--secondary-text); }
+td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; }
 th:first-child, td:first-child { text-align: left; }
 
 .badge { padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 0.8rem; }
 .badge-up { background: #dcfce7; color: #166534; }
 .badge-down { background: #fee2e2; color: #991b1b; }
 
-.filter-bar { display: none; background: white; padding: 1rem; border-radius: 12px; margin-bottom: 1rem; gap: 10px; border: 1px solid var(--border-color); }
-.filter-bar.show { display: flex; flex-wrap: wrap; }
-.chart-wrapper { margin-top: 2rem; padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-
-/* MOBILE RESPONSIVE - FIXED SCROLL & BUTTON */
 @media (max-width: 640px) {
-  .grid { grid-template-columns: 1fr; gap: 0.75rem; margin-bottom: 1.5rem; }
-  .card { padding: 0.75rem 1rem; border-radius: 12px; }
-  .card-value { font-size: 1.4rem; margin-top: 0.25rem; }
-  header { padding: 0.75rem 1rem; }
+  .grid { grid-template-columns: 1fr; gap: 0.75rem; }
+  .card { padding: 0.75rem 1rem; }
+  .card-value { font-size: 1.4rem; }
   header #updateBtn { display: none; } 
   #mobileUpdateBtn { display: flex; } 
-  .container { margin: 0.75rem auto; }
-  .section-header { margin-top: 1.5rem; }
-
-  /* Cho phép cuộn ngang bảng trên mobile */
-  .table-wrapper {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
+  .table-wrapper { overflow-x: auto; }
   table { min-width: 600px; }
 }
 </style>
@@ -185,15 +177,9 @@ th:first-child, td:first-child { text-align: left; }
     <div class="card"><div class="card-title">📊 DIFFERENCE %</div><div id="percent" class="card-value">--</div></div>
   </div>
 
-  <div class="section-header">
-    <div class="section-title">Query History</div>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <div style="font-size: 1.25rem; font-weight: 700;">Query History</div>
     <button onclick="toggleView()" id="toggleBtn">+</button>
-  </div>
-
-  <div id="filterBox" class="filter-bar">
-    <input type="date" id="filterDate">
-    <input type="text" id="searchInput" placeholder="Search...">
-    <button onclick="applyFilter()" style="background:#3b82f6; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Apply</button>
   </div>
 
   <div class="table-wrapper">
@@ -203,11 +189,6 @@ th:first-child, td:first-child { text-align: left; }
       </thead>
       <tbody id="history"></tbody>
     </table>
-  </div>
-
-  <div class="chart-wrapper">
-    <div class="section-title" style="margin-bottom: 1rem;">📈 XAU-SJC Gap</div>
-    <canvas id="gapChart" style="max-height: 400px;"></canvas>
   </div>
 </div>
 
@@ -222,7 +203,6 @@ const elements = {
   percent: document.getElementById("percent"),
   lastTime: document.getElementById("lastTime"),
   historyTable: document.getElementById("history"),
-  filterBox: document.getElementById("filterBox"),
   updateBtn: document.getElementById("updateBtn"),
   mobileUpdateBtn: document.getElementById("mobileUpdateBtn"),
   toggleBtn: document.getElementById("toggleBtn")
@@ -233,21 +213,23 @@ const fmtXAU = new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximu
 
 let historyData = []; 
 let isExpanded = false;
+let lastSJCValue = null; // Biến lưu giá SJC lần cuối để so sánh
 
 async function load() {
-  const btns = [elements.updateBtn, elements.mobileUpdateBtn];
-  btns.forEach(b => { if(b) b.disabled = true; });
   try {
     const res = await fetch(`${API}?t=${Date.now()}`);
     const d = await res.json();
+    
     renderMain(d);
-    await fetchHistory();
-    const time = new Date().toLocaleString('vi-VN');
-    elements.lastTime.innerHTML = `🟢 Live Update: ${time}`;
-    localStorage.setItem("lastData", JSON.stringify(d));
-    localStorage.setItem("lastTime", time);
-  } catch(e) { console.error("Update error"); }
-  finally { btns.forEach(b => { if(b) b.disabled = false; }); }
+    
+    // Chỉ cập nhật bảng lịch sử nếu giá SJC có sự thay đổi so với lần trước
+    if (lastSJCValue === null || d.sjc !== lastSJCValue) {
+      lastSJCValue = d.sjc;
+      await fetchHistory();
+    }
+    
+    elements.lastTime.innerHTML = `🟢 Live Update: ${new Date().toLocaleString('vi-VN')}`;
+  } catch(e) { console.error(e); }
 }
 
 function renderMain(d) {
@@ -256,7 +238,6 @@ function renderMain(d) {
   elements.diff.innerText = fmtVND.format(d.diff);
   elements.percent.innerText = d.percent;
 
-  // Logic so sánh giá sáng
   const key = "sjcMorning_" + new Date().toISOString().slice(0,10);
   let morning = localStorage.getItem(key) || localStorage.setItem(key, d.sjc) || d.sjc;
   const change = d.sjc - parseFloat(morning);
@@ -270,11 +251,9 @@ function renderMain(d) {
 }
 
 async function fetchHistory() {
-  try {
-    const res = await fetch(HIST_API);
-    historyData = await res.json();
-    renderHistory();
-  } catch(e) { console.error("History fetch error"); }
+  const res = await fetch(HIST_API);
+  historyData = await res.json();
+  renderHistory();
 }
 
 function renderHistory() {
@@ -283,13 +262,7 @@ function renderHistory() {
   if(!isExpanded) data = data.slice(0, 5);
   data.forEach(r => {
     const row = document.createElement("tr");
-    const statusClass = r.percent.includes('-') ? 'badge-down' : 'badge-up';
-    row.innerHTML = `
-      <td>${r.time}</td>
-      <td>${fmtXAU.format(r.xau)}</td>
-      <td>${fmtVND.format(r.sjc)}</td>
-      <td>${fmtVND.format(r.diff)}</td>
-      <td><span class="badge ${statusClass}">${r.percent}</span></td>`;
+    row.innerHTML = `<td>${r.time}</td><td>${fmtXAU.format(r.xau)}</td><td>${fmtVND.format(r.sjc)}</td><td>${fmtVND.format(r.diff)}</td><td><span class="badge ${r.percent.includes('-') ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>`;
     elements.historyTable.appendChild(row);
   });
 }
@@ -297,24 +270,18 @@ function renderHistory() {
 function toggleView() {
   isExpanded = !isExpanded;
   elements.toggleBtn.innerText = isExpanded ? "−" : "+";
-  elements.filterBox.classList.toggle("show", isExpanded);
   renderHistory();
 }
 
-// Khởi chạy
-const lastData = localStorage.getItem("lastData");
-if(lastData) renderMain(JSON.parse(lastData));
-fetchHistory();
 load();
 
-/* ===== PULL TO REFRESH (MOBILE) ===== */
-const indicator = document.createElement("div");
-indicator.innerText = "↓ Pull to refresh";
-indicator.style = "position:fixed; top:10px; left:50%; transform:translateX(-50%); font-size:12px; opacity:0; z-index:2000; background:rgba(0,0,0,0.6); color:white; padding:5px 12px; border-radius:20px; transition: opacity 0.2s;";
-document.body.appendChild(indicator);
-
+/* ===== PULL TO REFRESH ===== */
 let startY = 0;
 let isPulling = false;
+const indicator = document.createElement("div");
+indicator.innerText = "↓ Pull to refresh";
+indicator.style = "position:fixed; top:10px; left:50%; transform:translateX(-50%); font-size:12px; opacity:0; z-index:2000; background:rgba(0,0,0,0.5); color:white; padding:5px 10px; border-radius:20px; transition: opacity 0.2s;";
+document.body.appendChild(indicator);
 
 window.addEventListener("touchstart", (e) => {
   if (window.scrollY === 0) {
@@ -325,8 +292,7 @@ window.addEventListener("touchstart", (e) => {
 
 window.addEventListener("touchmove", (e) => {
   if (!isPulling) return;
-  const currentY = e.touches[0].clientY;
-  const diff = currentY - startY;
+  const diff = e.touches[0].clientY - startY;
   if (diff > 20) {
     indicator.style.opacity = 1;
     indicator.innerText = diff > 80 ? "Release to refresh" : "Pull to refresh";
@@ -335,13 +301,13 @@ window.addEventListener("touchmove", (e) => {
     isPulling = false;
     indicator.innerText = "Updating...";
     load();
-    setTimeout(() => { indicator.style.opacity = 0; }, 1500);
+    setTimeout(() => indicator.style.opacity = 0, 1000);
   }
 });
 
 window.addEventListener("touchend", () => {
   isPulling = false;
-  setTimeout(() => { indicator.style.opacity = 0; }, 500);
+  setTimeout(() => indicator.style.opacity = 0, 500);
 });
 </script>
 </body>
