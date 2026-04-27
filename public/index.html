@@ -233,12 +233,7 @@ async function fetchHistory() {
   } catch(e) { console.error(e); }
 }
 
-function renderHistory(data) {
-  elements.historyTable.innerHTML = "";
-  let displayData = [...data].reverse().slice(0, 5); 
-  displayData.forEach(r => {
-    const row = document.createElement("tr");
-    function formatVNTime(timeStr) {
+function formatVNTime(timeStr) {
   const d = new Date(timeStr);
   return d.toLocaleString('vi-VN', {
     timeZone: 'Asia/Ho_Chi_Minh'
@@ -247,9 +242,12 @@ function renderHistory(data) {
 
 function renderHistory(data) {
   elements.historyTable.innerHTML = "";
-  let displayData = [...data].reverse().slice(0, 5); 
+
+  let displayData = [...data].reverse().slice(0, 5);
+
   displayData.forEach(r => {
     const row = document.createElement("tr");
+
     row.innerHTML = `
       <td>${formatVNTime(r.time)}</td>
       <td>${fmtXAU.format(r.xau)}</td>
@@ -257,9 +255,7 @@ function renderHistory(data) {
       <td>${fmtVND.format(r.diff)}</td>
       <td><span class="badge ${r.percent.includes('-') ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>
     `;
-    elements.historyTable.appendChild(row);
-  });
-}
+
     elements.historyTable.appendChild(row);
   });
 }
@@ -313,10 +309,13 @@ function toggleFilterBox() {
 function applyFilter() {
   const selectedDate = elements.filterDate.value;
   if (!selectedDate) return;
+
   const filtered = historyData.filter(r => {
-    const parts = r.time.split(' ')[0].split('/');
-    return `${parts[2]}-${parts[1]}-${parts[0]}` === selectedDate;
+    const d = new Date(r.time);
+    const formatted = d.toISOString().slice(0, 10);
+    return formatted === selectedDate;
   });
+
   renderHistory(filtered);
   updateChart(filtered);
 }
