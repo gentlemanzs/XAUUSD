@@ -17,11 +17,13 @@
   --border-color: #e2e8f0;
 }
 
+/* CHỐNG LỘ NỀN TRẮNG KHI VUỐT */
 body {
   margin: 0;
   font-family: 'Inter', -apple-system, system-ui, sans-serif;
-  background: var(--header-bg) !important; /* Chống lộ nền trắng khi pull */
+  background: var(--header-bg) !important; 
   color: var(--primary-text);
+  overflow-x: hidden;
 }
 
 header {
@@ -38,7 +40,7 @@ header {
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
 
-.brand { font-size: 1.25rem; font-weight: 700; }
+.brand { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.025em; }
 
 #updateBtn {
   background: #3b82f6; color: white; border: none;
@@ -46,11 +48,11 @@ header {
 }
 
 .container { 
-  width: 95%; max-width: 1200px; margin: 0 auto; 
-  padding-top: 90px; /* Khoảng trống cho fixed header */
+  width: 100%; max-width: 1200px; margin: 0 auto; 
+  padding-top: 85px; 
   background: var(--bg-color); 
   min-height: 100vh;
-  padding-left: 15px; padding-right: 15px; padding-bottom: 2rem;
+  padding-left: 15px; padding-right: 15px; padding-bottom: 3rem;
   box-sizing: border-box;
 }
 
@@ -63,6 +65,7 @@ header {
 .card {
   background: var(--card-bg); border-radius: 16px;
   padding: 1.5rem; border: 1px solid var(--border-color);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 .card.highlight { border-left: 4px solid #3b82f6; }
 .card-title { font-size: 0.75rem; color: var(--secondary-text); text-transform: uppercase; font-weight: 700; }
@@ -76,42 +79,41 @@ header {
 .change-up { color: var(--up-color); }
 .change-down { color: var(--down-color); }
 
-/* FILTER STYLES */
+/* FILTER BOX */
 #filterBox {
-  display: none; /* Mặc định ẩn, hiện khi bấm nút + */
+  display: none;
   background: white; padding: 15px; border-radius: 12px;
-  border: 1px solid var(--border-color); margin-bottom: 1rem;
+  border: 1px solid var(--border-color); margin-bottom: 1.5rem;
   gap: 10px; align-items: center; flex-wrap: wrap;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 input[type="date"] {
-  padding: 8px; border-radius: 6px; border: 1px solid var(--border-color);
+  padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);
+  font-family: inherit;
 }
-.btn-filter {
-  background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;
-}
-.btn-clear {
-  background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;
-}
+.btn-filter { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+.btn-clear { background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; }
 
 .table-wrapper { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; margin-bottom: 2rem; }
 table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
-th { background: #f1f5f9; padding: 12px 16px; text-align: right; color: var(--secondary-text); }
+th { background: #f1f5f9; padding: 14px 16px; text-align: right; color: var(--secondary-text); }
 td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; }
 th:first-child, td:first-child { text-align: left; }
 
-.badge { padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 0.8rem; }
+.badge { padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 0.8rem; }
 .badge-up { background: #dcfce7; color: #166534; }
 .badge-down { background: #fee2e2; color: #991b1b; }
 
-.chart-wrapper { padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); }
+.chart-wrapper { padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); margin-top: 1rem; }
 
 @media (max-width: 640px) {
-  header { padding: 0.75rem 1rem; }
+  header { padding: 0.8rem 1.2rem; }
   header #updateBtn { display: none; } 
-  .container { padding-top: 70px; }
-  .grid { grid-template-columns: 1fr; gap: 0.75rem; }
+  .container { padding-top: 75px; }
+  .grid { grid-template-columns: 1fr; gap: 0.8rem; }
   .table-wrapper { overflow-x: auto; }
   table { min-width: 600px; }
+  .card-value { font-size: 1.5rem; }
 }
 </style>
 </head>
@@ -123,7 +125,7 @@ th:first-child, td:first-child { text-align: left; }
 </header>
 
 <div class="container">
-  <div id="lastTime" style="margin-bottom:1rem; font-size:0.875rem; color:#64748b;"></div>
+  <div id="lastTime" style="margin-bottom:1rem; font-size:0.875rem; color:#64748b; font-weight: 500;"></div>
 
   <div class="grid">
     <div class="card"><div class="card-title">💵 USD Exchange</div><div id="usd" class="card-value">--</div></div>
@@ -134,14 +136,14 @@ th:first-child, td:first-child { text-align: left; }
   </div>
 
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-    <div style="font-size: 1.25rem; font-weight: 700;">Query History</div>
-    <button onclick="toggleFilterBox()" id="toggleBtn" style="background:transparent; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;">+</button>
+    <div style="font-size: 1.2rem; font-weight: 700;">Query History</div>
+    <button onclick="toggleFilterBox()" id="toggleBtn" style="background:transparent; border:none; font-size:1.8rem; cursor:pointer; color:#64748b;">+</button>
   </div>
 
   <div id="filterBox">
     <input type="date" id="filterDate">
     <button class="btn-filter" onclick="applyFilter()">Apply</button>
-    <button class="btn-clear" onclick="clearFilter()">Clear All</button>
+    <button class="btn-clear" onclick="clearAllHistory()">Clear All</button>
   </div>
 
   <div class="table-wrapper">
@@ -155,7 +157,7 @@ th:first-child, td:first-child { text-align: left; }
 
   <div class="chart-wrapper">
     <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem;">📈 XAU-SJC Gap Trend</div>
-    <canvas id="gapChart" style="max-height: 400px;"></canvas>
+    <canvas id="gapChart" style="height: 350px;"></canvas>
   </div>
 </div>
 
@@ -171,7 +173,8 @@ const elements = {
   lastTime: document.getElementById("lastTime"),
   historyTable: document.getElementById("history"),
   filterBox: document.getElementById("filterBox"),
-  filterDate: document.getElementById("filterDate")
+  filterDate: document.getElementById("filterDate"),
+  toggleBtn: document.getElementById("toggleBtn")
 };
 
 const fmtVND = new Intl.NumberFormat('vi-VN');
@@ -186,11 +189,13 @@ async function load() {
     const res = await fetch(`${API}?t=${Date.now()}`);
     const d = await res.json();
     renderMain(d);
+    
+    // Chỉ cập nhật lịch sử khi giá SJC thay đổi
     if (lastSJCValue === null || d.sjc !== lastSJCValue) {
       lastSJCValue = d.sjc;
       await fetchHistory();
     }
-    elements.lastTime.innerHTML = `🟢 Live Update: ${new Date().toLocaleString('vi-VN')}`;
+    elements.lastTime.innerHTML = `🟢 Live: ${new Date().toLocaleString('vi-VN')}`;
   } catch(e) { console.error(e); }
 }
 
@@ -213,15 +218,16 @@ function renderMain(d) {
 }
 
 async function fetchHistory() {
-  const res = await fetch(HIST_API);
-  historyData = await res.json(); 
-  renderHistory(historyData);
-  updateChart(historyData);
+  try {
+    const res = await fetch(HIST_API);
+    historyData = await res.json(); 
+    renderHistory(historyData);
+    updateChart(historyData);
+  } catch(e) { console.error(e); }
 }
 
 function renderHistory(data) {
   elements.historyTable.innerHTML = "";
-  // Hiển thị mới nhất lên đầu (đảo ngược mảng copy)
   let displayData = [...data].reverse().slice(0, 10); 
   displayData.forEach(r => {
     const row = document.createElement("tr");
@@ -232,7 +238,6 @@ function renderHistory(data) {
 
 function updateChart(data) {
   const ctx = document.getElementById('gapChart').getContext('2d');
-  // Vẽ từ cũ đến mới (trái sang phải)
   const labels = data.map(r => r.time.split(' ')[1] || r.time);
   const gaps = data.map(r => r.diff / 1000000);
 
@@ -246,49 +251,64 @@ function updateChart(data) {
         data: gaps,
         borderColor: '#3b82f6',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        borderWidth: 3, fill: true, tension: 0.3
+        borderWidth: 3, fill: true, tension: 0.3, pointRadius: 4
       }]
     },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    options: { 
+      responsive: true, 
+      maintainAspectRatio: false, 
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: false } }
+    }
   });
 }
 
-/* LOGIC BỘ LỌC ĐÃ KHÔI PHỤC */
 function toggleFilterBox() {
   const isHidden = elements.filterBox.style.display === "none" || elements.filterBox.style.display === "";
   elements.filterBox.style.display = isHidden ? "flex" : "none";
-  document.getElementById("toggleBtn").innerText = isHidden ? "−" : "+";
+  elements.toggleBtn.innerText = isHidden ? "−" : "+";
 }
 
 function applyFilter() {
-  const selectedDate = elements.filterDate.value; // YYYY-MM-DD
+  const selectedDate = elements.filterDate.value;
   if (!selectedDate) return;
-  
-  // Lọc dữ liệu dựa trên ngày (giả định định dạng r.time là DD/MM/YYYY HH:mm:ss)
   const filtered = historyData.filter(r => {
-    const parts = r.time.split(' ')[0].split('/'); // [DD, MM, YYYY]
-    const rDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-    return rDate === selectedDate;
+    const parts = r.time.split(' ')[0].split('/');
+    return `${parts[2]}-${parts[1]}-${parts[0]}` === selectedDate;
   });
-  
   renderHistory(filtered);
   updateChart(filtered);
 }
 
-function clearFilter() {
-  elements.filterDate.value = "";
-  renderHistory(historyData);
-  updateChart(historyData);
+async function clearAllHistory() {
+  if (confirm("Xác nhận XÓA SẠCH toàn bộ lịch sử truy vấn?")) {
+    try {
+      const res = await fetch(HIST_API, { method: 'DELETE' });
+      if (res.ok) {
+        historyData = [];
+        renderHistory([]);
+        updateChart([]);
+        elements.filterDate.value = "";
+        alert("Đã xóa sạch!");
+      }
+    } catch(e) { alert("Lỗi kết nối server."); }
+  }
 }
 
 load();
 
-/* PULL TO REFRESH LOGIC (Giữ nguyên bản màu Header) */
+/* PULL TO REFRESH LOGIC */
 let startY = 0;
 let isPulling = false;
 const indicator = document.createElement("div");
 indicator.innerText = "↓ Pull to refresh";
-indicator.style = "position:fixed; top:20px; left:50%; transform:translateX(-50%); font-size:16px; font-weight:600; opacity:0; z-index:2000; background:#0f172a; color:white; padding:12px 24px; border-radius:30px; box-shadow:0 4px 15px rgba(0,0,0,0.3); transition:opacity 0.2s, transform 0.2s; pointer-events:none;";
+indicator.style = `
+  position:fixed; top:20px; left:50%; transform:translateX(-50%); 
+  font-size:16px; font-weight:600; opacity:0; z-index:2000; 
+  background:#0f172a; color:white; padding:12px 24px; border-radius:30px; 
+  box-shadow:0 4px 15px rgba(0,0,0,0.3); transition:opacity 0.2s, transform 0.2s; 
+  pointer-events:none;
+`;
 document.body.appendChild(indicator);
 
 window.addEventListener("touchstart", (e) => { if (window.scrollY === 0) { startY = e.touches[0].clientY; isPulling = true; } });
