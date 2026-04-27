@@ -66,10 +66,10 @@ header {
   display: none; 
   position: fixed;
   right: 20px;
-  bottom: 400px;
+  bottom: 100px; /* Nhích lên cao để không vướng thanh điều hướng */
   width: 60px;
   height: 60px;
-  background: transparent;
+  background: #3b82f6;
   color: white;
   border: none;
   border-radius: 50%;
@@ -80,9 +80,7 @@ header {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s, background 0.2s;
 }
-#mobileUpdateBtn:active { transform: scale(0.9); background: #2563eb; }
 
 #toggleBtn {
   background: transparent; 
@@ -92,12 +90,7 @@ header {
   font-weight: 400;
   cursor: pointer;
   padding: 0 10px;
-  transition: color 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
-#toggleBtn:hover { color: #1e293b; }
 
 .container { width: 95%; max-width: 1200px; margin: 2rem auto; }
 
@@ -127,76 +120,47 @@ header {
 }
 
 .card.highlight { border-left: 4px solid #3b82f6; }
+.card-title { font-size: 0.75rem; color: var(--secondary-text); text-transform: uppercase; font-weight: 700; }
+.card-value { font-size: 1.875rem; font-weight: 800; margin-top: 0.5rem; }
 
-.card-title { 
-  font-size: 0.75rem; 
-  color: var(--secondary-text); 
-  text-transform: uppercase; 
-  font-weight: 700;
-  letter-spacing: 0.05em;
+/* TABLE */
+.table-wrapper { 
+  background: var(--card-bg); 
+  border-radius: 12px; 
+  border: 1px solid var(--border-color); 
+  overflow: hidden; 
 }
-
-.card-value { 
-  font-size: 1.875rem; 
-  font-weight: 800; 
-  margin-top: 0.5rem; 
-  font-variant-numeric: tabular-nums;
-}
-
-.sjc-sub { font-size: 0.875rem; margin-top: 0.25rem; display: flex; align-items: center; gap: 4px; }
-.change-up { color: var(--up-color); }
-.change-down { color: var(--down-color); }
-
-/* TABLE & OTHER STYLES */
-.section-header { display: flex; justify-content: space-between; align-items: center; margin-top: 3rem; margin-bottom: 1rem; }
-.section-title { font-size: 1.25rem; font-weight: 700; }
-.table-wrapper { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
 table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
-th { background: #f1f5f9; padding: 12px 16px; text-align: right; font-weight: 600; color: var(--secondary-text); border-bottom: 1px solid var(--border-color); }
-td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; font-variant-numeric: tabular-nums; }
+th { background: #f1f5f9; padding: 12px 16px; text-align: right; color: var(--secondary-text); }
+td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; }
 th:first-child, td:first-child { text-align: left; }
-tr.newest { background: #eff6ff; }
-.badge { padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 0.8rem; }
-.badge-up { background: #dcfce7; color: #166534; }
-.badge-down { background: #fee2e2; color: #991b1b; }
-.filter-bar { display: none; background: white; padding: 1rem; border-radius: 12px; margin-bottom: 1rem; gap: 10px; border: 1px solid var(--border-color); }
-.filter-bar.show { display: flex; flex-wrap: wrap; }
-.filter-bar input { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; }
-.chart-wrapper { margin-top: 2rem; padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
 
-/* MOBILE RESPONSIVE - PHẦN SỬA ĐỔI */
+/* MOBILE RESPONSIVE */
 @media (max-width: 640px) {
-  .grid { 
-    grid-template-columns: 1fr; 
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-  }
-  .card {
-    padding: 0.75rem 1rem;
-    border-radius: 12px;
-  }
-  .card-value { 
-    font-size: 1.4rem;
-    margin-top: 0.25rem;
-  }
-  .card-title {
-    font-size: 0.7rem;
-  }
+  .grid { grid-template-columns: 1fr; gap: 0.75rem; margin-bottom: 1.5rem; }
+  .card { padding: 0.75rem 1rem; border-radius: 12px; }
+  .card-value { font-size: 1.4rem; margin-top: 0.25rem; }
+  .card-title { font-size: 0.7rem; }
+  
   header { padding: 0.75rem 1rem; }
   header #updateBtn { display: none; } 
   #mobileUpdateBtn { display: flex; } 
   .container { margin: 0.75rem auto; }
-  .section-header { margin-top: 1.5rem; }
 
-  /* FIX TABLE SCROLL MOBILE */
+  /* Thanh cuộn ngang cho bảng trên điện thoại */
   .table-wrapper {
-    overflow-x: auto; /* Cho phép cuộn ngang */
-    -webkit-overflow-scrolling: touch; /* Cuộn mượt hơn trên iOS */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
-  table {
-    min-width: 600px; /* Ép bảng có độ rộng tối thiểu để không bị dồn chữ */
-  }
+  table { min-width: 600px; }
 }
+
+.badge { padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 0.8rem; }
+.badge-up { background: #dcfce7; color: #166534; }
+.badge-down { background: #fee2e2; color: #991b1b; }
+.filter-bar { display: none; background: white; padding: 1rem; border-radius: 12px; gap: 10px; border: 1px solid var(--border-color); }
+.filter-bar.show { display: flex; flex-wrap: wrap; }
+.chart-wrapper { margin-top: 2rem; padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); }
 </style>
 </head>
 <body>
@@ -219,17 +183,15 @@ tr.newest { background: #eff6ff; }
     <div class="card"><div class="card-title">📊 DIFFERENCE %</div><div id="percent" class="card-value">--</div></div>
   </div>
 
-  <div class="section-header">
-    <div class="section-title">Query History</div>
+  <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <div style="font-size: 1.25rem; font-weight: 700;">Query History</div>
     <button onclick="toggleView()" id="toggleBtn">+</button>
   </div>
 
   <div id="filterBox" class="filter-bar">
     <input type="date" id="filterDate">
-    <input type="text" id="searchInput" placeholder="Search by time...">
-    <button onclick="applyFilter()" style="background:#3b82f6; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Apply</button>
-    <button onclick="resetFilter()" style="background:#94a3b8; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Reset</button>
-    <button onclick="clearAll()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; margin-left: auto;">Clear All</button>
+    <input type="text" id="searchInput" placeholder="Search...">
+    <button onclick="applyFilter()" style="background:#3b82f6; color:white; border:none; padding:8px 16px; border-radius:6px;">Apply</button>
   </div>
 
   <div class="table-wrapper">
@@ -242,13 +204,12 @@ tr.newest { background: #eff6ff; }
   </div>
 
   <div class="chart-wrapper">
-    <div class="section-title" style="margin-bottom: 1rem;">📈 XAU-SJC Gap </div>
+    <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem;">📈 XAU-SJC Gap</div>
     <canvas id="gapChart" style="max-height: 400px;"></canvas>
   </div>
 </div>
 
 <script>
-/* PHẦN SCRIPT GIỮ NGUYÊN HOÀN TOÀN */
 const API = "/api/gold";
 const HIST_API = "/api/history"; 
 const elements = {
@@ -268,79 +229,17 @@ const elements = {
 const fmtVND = new Intl.NumberFormat('vi-VN');
 const fmtXAU = new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-let history = []; 
-let chartData = JSON.parse(localStorage.getItem("goldChartData") || "[]");
-let filteredData = [];
-let myChart;
+let historyData = []; 
 let isExpanded = false;
 
-function initChart() {
-  const ctx = document.getElementById('gapChart').getContext('2d');
-  myChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: chartData.map(item => item.date),
-      datasets: [{
-        label: 'Gap (VND)',
-        data: chartData.map(item => item.gap),
-        borderColor: '#3b82f6',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        borderWidth: 2,
-        tension: 0.3,
-        fill: true
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: { y: { ticks: { callback: value => value.toLocaleString('vi-VN') } } }
-    }
-  });
-}
-
-function updateChartRecord(gap) {
-  const now = new Date();
-  const totalMinutes = now.getHours() * 60 + now.getMinutes();
-  const todayKey = now.toLocaleDateString('vi-VN');
-  if (totalMinutes >= 550 && totalMinutes <= 660) { 
-    if (!chartData.find(item => item.date === todayKey)) {
-      chartData.push({ date: todayKey, gap: gap });
-      if (chartData.length > 30) chartData.shift();
-      localStorage.setItem("goldChartData", JSON.stringify(chartData));
-      myChart.data.labels = chartData.map(item => item.date);
-      myChart.data.datasets[0].data = chartData.map(item => item.gap);
-      myChart.update();
-    }
-  }
-}
-
-async function fetchHistory() {
-  try {
-    const res = await fetch(HIST_API);
-    history = await res.json();
-    filteredData = [...history];
-    renderHistory();
-  } catch(e) { console.error("Lỗi tải lịch sử từ server"); }
-}
-
 async function load() {
-  const btns = [elements.updateBtn, elements.mobileUpdateBtn];
-  btns.forEach(b => { if(b) b.disabled = true; });
-  elements.updateBtn.innerText = "Updating...";
   try {
     const res = await fetch(`${API}?t=${Date.now()}`);
     const d = await res.json();
-    await fetchHistory();
     renderMain(d);
-    updateChartRecord(d.diff);
-    const time = new Date().toLocaleString('vi-VN');
-    elements.lastTime.innerHTML = `🟢 Live Update: ${time}`;
-    localStorage.setItem("lastData", JSON.stringify(d));
-    localStorage.setItem("lastTime", time);
-  } catch(e) { alert("Error!"); } finally {
-    btns.forEach(b => { if(b) b.disabled = false; });
-    elements.updateBtn.innerText = "UPDATE";
-  }
+    await fetchHistory();
+    elements.lastTime.innerHTML = `🟢 Live Update: ${new Date().toLocaleString('vi-VN')}`;
+  } catch(e) { console.error(e); }
 }
 
 function renderMain(d) {
@@ -348,20 +247,21 @@ function renderMain(d) {
   elements.xau.innerText = fmtXAU.format(d.xau);
   elements.diff.innerText = fmtVND.format(d.diff);
   elements.percent.innerText = d.percent;
-  const key = "sjcMorning_" + new Date().toISOString().slice(0,10);
-  let morning = localStorage.getItem(key) || localStorage.setItem(key, d.sjc) || d.sjc;
-  const change = d.sjc - parseFloat(morning);
-  const isUp = change >= 0;
-  elements.sjc.innerHTML = `<div>${fmtVND.format(d.sjc)}</div><div class="sjc-sub ${isUp ? 'change-up' : 'change-down'}">${isUp ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}</div>`;
+  elements.sjc.innerText = fmtVND.format(d.sjc);
+}
+
+async function fetchHistory() {
+  const res = await fetch(HIST_API);
+  historyData = await res.json();
+  renderHistory();
 }
 
 function renderHistory() {
   elements.historyTable.innerHTML = "";
-  let data = [...filteredData].reverse();
+  let data = [...historyData].reverse();
   if(!isExpanded) data = data.slice(0, 5);
-  data.forEach((r, i) => {
+  data.forEach(r => {
     const row = document.createElement("tr");
-    if(i === 0 && !isExpanded) row.className = "newest";
     row.innerHTML = `<td>${r.time}</td><td>${fmtXAU.format(r.xau)}</td><td>${fmtVND.format(r.sjc)}</td><td>${fmtVND.format(r.diff)}</td><td><span class="badge ${r.percent.includes('-') ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>`;
     elements.historyTable.appendChild(row);
   });
@@ -374,35 +274,46 @@ function toggleView() {
   renderHistory();
 }
 
-function applyFilter() {
-  const date = document.getElementById("filterDate").value;
-  const key = document.getElementById("searchInput").value.toLowerCase();
-  filteredData = history.filter(r => (!date || r.time.includes(date)) && (!key || r.time.toLowerCase().includes(key)));
-  renderHistory();
-}
-
-function resetFilter() {
-  document.getElementById("filterDate").value = "";
-  document.getElementById("searchInput").value = "";
-  filteredData = [...history];
-  renderHistory();
-}
-
-function clearAll() {
-  if(confirm("Xác nhận xóa toàn bộ dữ liệu trên Server?")) {
-    fetch('/api/history/clear', { method: 'POST' }).then(() => {
-      localStorage.clear();
-      location.reload();
-    });
-  }
-}
-
-initChart();
-const lastData = localStorage.getItem("lastData");
-if(lastData) renderMain(JSON.parse(lastData));
-const lastTimeSaved = localStorage.getItem("lastTime");
-elements.lastTime.innerHTML = lastTimeSaved ? `⚪ Last update: ${lastTimeSaved}` : "Ready";
+// KHỞI TẠO BẢN ĐỒ (CHART) VÀ DỮ LIỆU BAN ĐẦU
 fetchHistory();
+load();
+
+/* ===== PULL TO REFRESH (MOBILE) ===== */
+const indicator = document.createElement("div");
+indicator.innerText = "↓ Pull to refresh";
+indicator.style = "position:fixed; top:10px; left:50%; transform:translateX(-50%); font-size:12px; opacity:0; z-index:2000; background:rgba(0,0,0,0.5); color:white; padding:5px 10px; border-radius:20px; transition: opacity 0.2s;";
+document.body.appendChild(indicator);
+
+let startY = 0;
+let isPulling = false;
+
+window.addEventListener("touchstart", (e) => {
+  if (window.scrollY === 0) {
+    startY = e.touches[0].clientY;
+    isPulling = true;
+  }
+});
+
+window.addEventListener("touchmove", (e) => {
+  if (!isPulling) return;
+  const currentY = e.touches[0].clientY;
+  const diff = currentY - startY;
+  if (diff > 20) {
+    indicator.style.opacity = 1;
+    indicator.innerText = diff > 80 ? "Release to refresh" : "Pull to refresh";
+  }
+  if (diff > 80) {
+    isPulling = false;
+    indicator.innerText = "Updating...";
+    load();
+    setTimeout(() => { indicator.style.opacity = 0; }, 1000);
+  }
+});
+
+window.addEventListener("touchend", () => {
+  isPulling = false;
+  setTimeout(() => { indicator.style.opacity = 0; }, 500);
+});
 </script>
 
 </body>
