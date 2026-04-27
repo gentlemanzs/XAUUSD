@@ -13,9 +13,10 @@ app.use(express.json());
 const PORT = process.env.PORT || 8080;
 const MONGO_URI = process.env.MONGO_URI;
 
+/* --- KẾT NỐI DATABASE --- */
 mongoose.connect(MONGO_URI)
-  .then(() => console.log("✅ [Database] Connected"))
-  .catch(err => console.error("❌ [Database] Error:", err.message));
+  .then(() => console.log("✅ [Database] Đã thông suốt!"))
+  .catch(err => console.error("❌ [Database] Lỗi kết nối:", err.message));
 
 const historySchema = new mongoose.Schema({
   time: String,
@@ -34,22 +35,29 @@ let latestData = null;
 
 async function fetchWithRetry(url) {
   try {
-    const res = await axios.get(url, { timeout: 10000, headers: { "User-Agent": "Mozilla/5.0" } });
+    const res = await axios.get(url, { 
+      timeout: 10000, 
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" } 
+    });
     return res.data;
   } catch (e) { return null; }
 }
 
-/* 1. LẤY TỶ GIÁ USD (Vietcombank Bán ra) */
+/* --- 1. LẤY TỶ GIÁ USD (BÁN RA CHUẨN) --- */
 async function getUSDRate() {
   try {
     const html = await fetchWithRetry("https://webgia.com/ty-gia/vietcombank/");
+    if (!html) throw "Fail HTML";
     const clean = html.replace(/\s+/g, " ");
+    // Tìm cụm "USD", sau đó bỏ qua cột "Mua", lấy cột "Bán" (con số thứ 3)
     const match = clean.match(/USD.*?([0-9]{2}\.[0-9]{3}).*?([0-9]{2}\.[0-9]{3}).*?([0-9]{2}\.[0-9]{3})/);
-    return match ? parseFloat(match[3].replace(".", "")) : 26368;
+    const rate = match ? parseFloat(match[3].replace(".", "")) : 26368;
+    console.log(`💵 Tỷ giá USD: ${rate}`);
+    return rate;
   } catch (e) { return 26368; }
 }
 
-/* 2. LẤY GIÁ VÀNG THẾ GIỚI (USD/Ounce) */
+/* --- 2. LẤY GIÁ VÀNG THẾ GIỚI --- */
 async function getWorldGoldPrice() {
   try {
     const data = await fetchWithRetry("https://api.gold-api.com/price/XAU");
@@ -57,64 +65,70 @@ async function getWorldGoldPrice() {
   } catch { return 2350; }
 }
 
-/* 3. LẤY GIÁ VÀNG SJC (VND/Lượng) */
+/* --- 3. LẤY GIÁ VÀNG SJC (CHÍNH XÁC DÒNG SJC TP.HCM) --- */
 async function getSJCPrice() {
   try {
     const html = await fetchWithRetry("https://webgia.com/gia-vang/sjc/");
-    const clean = html.replace(/\s+/g, " ");
-    const match = clean.match(/SJC TP\.HCM.*?([0-9]{2}\.[0-9]{3}\.[0-9]{3}).*?([0-9]{2}\.[0-9]{3}\.[0-9]{3})/);
-    return match ? parseInt(match[2].replace(/\./g, "")) : 83000000;
-  } catch (e) { return 83000000; }
+    if (!html) throw "Fail HTML";
+    
+    // Bước quan trọng: Loại bỏ tất cả tag HTML để lấy text thuần
+    const text = html.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ');
+    
+    // Tìm đoạn chứa "SJC TP.HCM", sau đó lấy 2 con số có dạng 8x.xxx.xxx đứng gần nhất
+    const match = text.match(/SJC TP\.HCM.*?([0-9]{2}\.[0-9]{3}\.[0-9]{3}).*?([0-9]{2}\.[0-9]{3}\.[0-9]{3})/);
+    
+    if (match && match[2]) {
+      const sellPrice = parseInt(match[2].replace(/\./g, ""));
+      console.log(`🧈 Giá SJC (Bán): ${sellPrice}`);
+      return sellPrice;
+    }
+    throw "Không tìm thấy giá SJC";
+  } catch (e) {
+    console.log("❌ Lỗi cào SJC:", e);
+    return 84000000; // Giá fallback gần đúng nhất hiện tại
+  }
 }
 
-/* --- LOGIC TÍNH TOÁN MARKET GAP CHUẨN --- */
+/* --- LOGIC CẬP NHẬT & TÍNH TOÁN MARKET GAP --- */
 async function updateData() {
   try {
-    const usd = await getUSDRate();
-    const xau = await getWorldGoldPrice();
-    const sjc = await getSJCPrice();
-
-    // CÔNG THỨC: 1 troy ounce = 0.82942 lượng -> 1 lượng = 1.20565 ounce
-    // Giá thế giới quy đổi (VND/Lượng) = Giá thế giới (oz) * 1.20565 * Tỷ giá USD
+    const [usd, xau, sjc] = await Promise.all([getUSDRate(), getWorldGoldPrice(), getSJCPrice()]);
+    
+    // 1 lượng = 1.20565 ounce
     const worldVND = xau * 1.20565 * usd;
     
-    // Chênh lệch (Gap) = Giá SJC - Giá thế giới quy đổi
+    // Market Gap = SJC - Thế giới quy đổi
     const diff = sjc - worldVND;
-    
-    // Phần trăm chênh lệch
     const percent = (diff / worldVND) * 100;
 
     latestData = {
       time: new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }),
-      usd: Number(usd),
-      xau: Number(xau),
-      sjc: Number(sjc),
+      usd, xau, sjc,
       worldVND: Math.round(worldVND),
-      diff: Math.round(diff), // Con số này sẽ hiện ở ô Market Gap
+      diff: Math.round(diff), // Đây là con số quan trọng ở mục Market Gap
       percent: percent.toFixed(2) + "%"
     };
 
-    console.log(`[Tính toán] SJC: ${sjc} | TG Quy đổi: ${Math.round(worldVND)} | Gap: ${Math.round(diff)}`);
+    console.log(`📊 Kết quả: SJC(${sjc}) - TG(${Math.round(worldVND)}) = Gap(${Math.round(diff)})`);
 
-    // Lưu vào Database
     if (mongoose.connection.readyState === 1) {
       await History.create(latestData);
       const count = await History.countDocuments();
-      if (count > 100) await History.findOneAndDelete({}, { sort: { createdAt: 1 } });
+      if (count > 150) await History.findOneAndDelete({}, { sort: { createdAt: 1 } });
     }
-  } catch (e) { console.error("Update Error:", e); }
+  } catch (e) { console.error("❌ Lỗi Update:", e); }
 }
 
 cron.schedule("*/2 * * * *", updateData);
 
-app.get("/api/gold", (req, res) => res.json(latestData || { message: "Wait..." }));
+app.get("/api/gold", (req, res) => res.json(latestData || { message: "Khởi tạo..." }));
 app.get("/api/history", async (req, res) => {
   const data = await History.find().sort({ createdAt: -1 }).limit(100);
   res.json(data.reverse());
 });
 app.delete("/api/history", async (req, res) => {
   await History.deleteMany({});
-  res.json({ message: "Cleared" });
+  res.json({ message: "Đã xóa lịch sử" });
 });
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public/index.html")));
 
