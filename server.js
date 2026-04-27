@@ -3,23 +3,23 @@ const axios = require("axios");
 const cron = require("node-cron");
 const cors = require("cors");
 const path = require("path");
-const mongoose = require("mongoose"); // Thêm mongoose
-require("dotenv").config(); // Hỗ trợ đọc file .env nếu chạy local
+const mongoose = require("mongoose");
+require("dotenv").config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-/* 🔥 PORT & MONGODB CONFIG */
-const PORT = process.env.PORT || 3000;
-const MONGO_URI = process.env.MONGO_URI; 
+/* --- CẤU HÌNH HỆ THỐNG --- */
+const PORT = process.env.PORT || 8080;
+const MONGO_URI = process.env.MONGO_URI;
 
-/* 🔥 CONNECT MONGODB */
+/* --- KẾT NỐI MONGODB --- */
 mongoose.connect(MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected!"))
-  .catch(err => console.error("❌ MongoDB Connection Error:", err));
+  .catch(err => console.error("❌ Lỗi kết nối MongoDB:", err));
 
-/* 🔥 DEFINE SCHEMA (Cấu trúc dữ liệu) */
+/* --- SCHEMA DỮ LIỆU --- */
 const historySchema = new mongoose.Schema({
   time: String,
   usd: Number,
@@ -28,55 +28,48 @@ const historySchema = new mongoose.Schema({
   worldVND: Number,
   diff: Number,
   percent: String,
-  createdAt: { type: Date, default: Date.now } // Dùng để sắp xếp chính xác
+  createdAt: { type: Date, default: Date.now }
 });
-
 const History = mongoose.model("History", historySchema);
 
-/* 🔥 SERVE FRONTEND */
 app.use(express.static("public"));
 
 let latestData = null;
 
-/* ===== CONFIG ===== */
-const CONFIG = {
-  TIMEOUT: 8000,
-  RETRY: 2
-};
-
-/* ===== HELPER FETCH ===== */
+/* --- HELPER FETCH --- */
 async function fetchWithRetry(url) {
-  for (let i = 0; i < CONFIG.RETRY; i++) {
-    try {
-      const res = await axios.get(url, {
-        timeout: CONFIG.TIMEOUT,
-        headers: { "User-Agent": "Mozilla/5.0" }
-      });
-      return res.data;
-    } catch (e) {
-      console.log(`⚠️ Retry ${i + 1} fail: ${url}`);
-    }
+  try {
+    const res = await axios.get(url, {
+      timeout: 10000,
+      headers: { "User-Agent": "Mozilla/5.0" }
+    });
+    return res.data;
+  } catch (e) {
+    console.error(`⚠️ Lỗi tải URL: ${url}`);
+    return null;
   }
-  return null;
 }
 
-/* ===== USD RATE ===== */
+/* --- 1. CÀO TỶ GIÁ USD (VIETCOMBANK) --- */
 async function getUSDRate() {
   try {
     const html = await fetchWithRetry("https://webgia.com/ty-gia/vietcombank/");
-    if (!html) throw "Fetch fail";
+    if (!html) throw "Fail HTML";
     const clean = html.replace(/\s+/g, " ");
-    const nums = clean.match(/[0-9]{2,3}\.[0-9]{3},[0-9]{2}/g);
-    if (!nums) throw "Không tìm thấy số";
-    const values = nums.map(n => parseFloat(n.replace(/\./g, "").replace(",", ".")));
-    const usdValues = values.filter(v => v > 20000 && v < 30000);
-    return Math.max(...usdValues);
+    const nums = clean.match(/[0-9]{2}\.[0-9]{3}/g); // Tìm dạng 25.xxx
+    if (!nums) throw "Không thấy USD";
+    
+    // Lấy giá trị bán ra (thường là con số cao nhất trong nhóm 25.xxx)
+    const values = nums.map(n => parseFloat(n.replace(".", "")));
+    const usdRate = Math.max(...values);
+    console.log(`💵 USD: ${usdRate}`);
+    return usdRate;
   } catch (e) {
-    return 25450; // Giá dự phòng
+    return 25450;
   }
 }
 
-/* ===== WORLD GOLD (XAU) ===== */
+/* --- 2. CÀO GIÁ VÀNG THẾ GIỚI (XAU) --- */
 async function getWorldGoldPrice() {
   try {
     const data = await fetchWithRetry("https://api.gold-api.com/price/XAU");
@@ -86,31 +79,43 @@ async function getWorldGoldPrice() {
   }
 }
 
-/* ===== SJC PRICE (Cần cập nhật logic cào thật ở đây) ===== */
+/* --- 3. CÀO GIÁ VÀNG SJC --- */
 async function getSJCPrice() {
-  // Tạm thời để giá cứng hoặc bạn có thể cào từ web giá tương tự USD
-  return 89000000; 
-}
-
-/* ===== SAVE TO MONGODB ===== */
-async function saveHistory(entry) {
   try {
-    // Lấy bản ghi cuối cùng trong DB để so sánh
-    const lastEntry = await History.findOne().sort({ createdAt: -1 });
-
-    // Chỉ lưu nếu giá SJC hoặc giá Thế giới thay đổi
-    if (!lastEntry || lastEntry.sjc !== entry.sjc || lastEntry.xau !== entry.xau) {
-      await History.create(entry);
-      console.log("💾 Đã lưu lịch sử vào MongoDB Atlas");
-    }
+    const html = await fetchWithRetry("https://webgia.com/gia-vang/sjc/");
+    if (!html) throw "Fail HTML";
+    const clean = html.replace(/\s+/g, " ");
+    // Tìm số dạng 8x.xxx.xxx
+    const nums = clean.match(/[0-9]{2}\.[0-9]{3}\.[0-9]{3}/g);
+    if (!nums) throw "Không thấy SJC";
+    
+    const values = nums.map(n => parseInt(n.replace(/\./g, "")));
+    // Lấy giá Bán ra (thường là giá trị lớn thứ 2 hoặc thứ 4 trong danh sách cào được)
+    const sjcPrice = values[1] || values[0]; 
+    console.log(`🧈 SJC: ${sjcPrice}`);
+    return sjcPrice;
   } catch (e) {
-    console.error("❌ Lỗi lưu MongoDB:", e);
+    return 89000000;
   }
 }
 
-/* ===== UPDATE MAIN LOGIC ===== */
+/* --- LƯU LỊCH SỬ --- */
+async function saveHistory(entry) {
+  try {
+    const lastEntry = await History.findOne().sort({ createdAt: -1 });
+    // Chỉ lưu nếu giá SJC hoặc XAU thay đổi để tránh trùng lặp
+    if (!lastEntry || lastEntry.sjc !== entry.sjc || lastEntry.xau !== entry.xau) {
+      await History.create(entry);
+      console.log("💾 Đã ghi nhận lịch sử mới.");
+    }
+  } catch (e) {
+    console.error("❌ Lỗi MongoDB:", e.message);
+  }
+}
+
+/* --- CẬP NHẬT TỔNG THỂ --- */
 async function updateData() {
-  console.log("\n⏳ Updating Data...");
+  console.log(`\n[${new Date().toLocaleTimeString()}] Đang cập nhật...`);
   try {
     const [usd, xau, sjc] = await Promise.all([
       getUSDRate(),
@@ -133,41 +138,33 @@ async function updateData() {
     };
 
     await saveHistory(latestData);
-    console.log("✅ Update hoàn tất");
   } catch (e) {
-    console.log("❌ UPDATE ERROR:", e);
+    console.log("❌ Lỗi Update:", e);
   }
 }
 
-/* ===== CRON (2 phút/lần) ===== */
+/* --- CHU KỲ & ROUTING --- */
 cron.schedule("*/2 * * * *", updateData);
 
-/* ===== API ENDPOINTS ===== */
-
-// 1. Lấy giá hiện tại
 app.get("/api/gold", (req, res) => {
-  res.json(latestData || { message: "Đang khởi tạo dữ liệu..." });
+  res.json(latestData || { message: "Vui lòng đợi khởi tạo..." });
 });
 
-// 2. Lấy lịch sử từ MongoDB (Giới hạn 100 bản ghi mới nhất)
 app.get("/api/history", async (req, res) => {
   try {
-    const data = await History.find()
-      .sort({ createdAt: -1 })
-      .limit(100);
-    res.json(data.reverse()); // Đảo ngược lại để vẽ biểu đồ từ cũ đến mới
+    const data = await History.find().sort({ createdAt: -1 }).limit(100);
+    res.json(data.reverse());
   } catch (e) {
-    res.status(500).json({ error: "Lỗi lấy dữ liệu" });
+    res.status(500).send("Lỗi server");
   }
 });
 
-// 3. Xóa lịch sử (Dùng cho nút Clear trên giao diện)
 app.delete("/api/history", async (req, res) => {
   try {
     await History.deleteMany({});
-    res.json({ message: "Đã xóa sạch lịch sử" });
+    res.json({ message: "Đã xóa lịch sử thành công." });
   } catch (e) {
-    res.status(500).json({ error: "Lỗi khi xóa" });
+    res.status(500).send("Lỗi xóa");
   }
 });
 
@@ -175,8 +172,7 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public/index.html"));
 });
 
-/* ===== START SERVER ===== */
 app.listen(PORT, () => {
-  console.log(`🚀 Server đang chạy tại Port: ${PORT}`);
-  updateData(); // Chạy ngay lập tức khi khởi động
+  console.log(`🚀 Server running on port ${PORT}`);
+  updateData();
 });
