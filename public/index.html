@@ -178,18 +178,24 @@ let lastSJCValue = null;
 let myChart = null;
 
 async function load() {
+  const btns = [elements.updateBtn, elements.mobileUpdateBtn];
+  btns.forEach(b => { if(b) b.disabled = true; });
+  elements.updateBtn.innerText = "Updating...";
   try {
     const res = await fetch(`${API}?t=${Date.now()}`);
     const d = await res.json();
+    await fetchHistory();
     renderMain(d);
-    if (lastSJCValue === null || d.sjc !== lastSJCValue) {
-      lastSJCValue = d.sjc;
-      await fetchHistory();
-    }
-    elements.lastTime.innerHTML = `🟢 Live: ${new Date().toLocaleString('vi-VN')}`;
-  } catch(e) { console.error(e); }
+    updateChartRecord(d.diff);
+    const time = new Date().toLocaleString('vi-VN');
+    elements.lastTime.innerHTML = `🟢 Live Update: ${time}`;    elements.lastTime.innerHTML = `🟢 Live Update: ${time}`;
+    localStorage.setItem("lastData", JSON.stringify(d));
+    localStorage.setItem("lastTime", time);
+  } catch(e) { alert("Error!"); } finally {
+    btns.forEach(b => { if(b) b.disabled = false; });
+    elements.updateBtn.innerText = "UPDATE";
+  }
 }
-
 function renderMain(d) {
   elements.usd.innerText = fmtVND.format(d.usd);
   elements.xau.innerText = fmtXAU.format(d.xau);
