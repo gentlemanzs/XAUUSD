@@ -6,6 +6,7 @@
 <title>XAU Professional Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
+/* --- PHỤC HỒI TOÀN BỘ CSS GỐC CỦA BẠN --- */
 :root {
   --bg-color: #f8fafc;
   --header-bg: #0f172a; 
@@ -63,6 +64,7 @@ header {
 .card {
   background: var(--card-bg); border-radius: 16px;
   padding: 1.5rem; border: 1px solid var(--border-color);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 .card.highlight { border-left: 4px solid #3b82f6; }
 .card-title { font-size: 0.75rem; color: var(--secondary-text); text-transform: uppercase; font-weight: 700; }
@@ -72,7 +74,7 @@ header {
 .change-up { color: var(--up-color); }
 .change-down { color: var(--down-color); }
 
-/* Badge styles for history table */
+/* Badge cho bảng lịch sử */
 .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
 .badge-up { background: #dcfce7; color: #166534; }
 .badge-down { background: #fee2e2; color: #991b1b; }
@@ -160,9 +162,7 @@ th:first-child, td:first-child { text-align: left; }
 </div>
 
 <script>
-/* LƯU Ý: Nếu bạn chạy frontend này trên một domain khác (như GitHub Pages), 
-   hãy thay "" bằng link Render của bạn (ví dụ: https://gold-api.onrender.com)
-*/
+// Logic API
 const BASE_URL = ""; 
 const API = `${BASE_URL}/api/gold`;
 const HIST_API = `${BASE_URL}/api/history`; 
@@ -184,25 +184,19 @@ const fmtVND = new Intl.NumberFormat('vi-VN');
 const fmtXAU = new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 let historyData = []; 
-let lastSJCValue = null; 
 let myChart = null;
 
 async function load() {
   try {
     const res = await fetch(`${API}?t=${Date.now()}`);
     const d = await res.json();
-    if(d.message) return console.log(d.message);
-
     renderMain(d);
     
-    // Tự động cập nhật lịch sử khi thấy có dữ liệu mới
-    if (lastSJCValue !== d.sjc) {
-      lastSJCValue = d.sjc;
-      await fetchHistory();
-    }
+    // Luôn fetch lịch sử mỗi khi nhấn Update để đảm bảo đồng bộ
+    await fetchHistory();
     
     elements.lastTime.innerHTML = `🟢 Live Atlas: ${new Date().toLocaleString('vi-VN')}`;
-  } catch(e) { console.error("Lỗi load dữ liệu:", e); }
+  } catch(e) { console.error(e); }
 }
 
 function renderMain(d) {
@@ -211,7 +205,6 @@ function renderMain(d) {
   elements.diff.innerText = fmtVND.format(d.diff);
   elements.percent.innerText = d.percent;
 
-  // So sánh với giá sáng lưu ở LocalStorage của trình duyệt hiện tại
   const key = "sjcMorning_" + new Date().toISOString().slice(0,10);
   let morning = localStorage.getItem(key) || localStorage.setItem(key, d.sjc) || d.sjc;
   const change = d.sjc - parseFloat(morning);
@@ -226,33 +219,26 @@ async function fetchHistory() {
     historyData = await res.json(); 
     renderHistory(historyData);
     updateChart(historyData);
-  } catch(e) { console.error("Lỗi fetch history:", e); }
+  } catch(e) { console.error(e); }
 }
 
 function renderHistory(data) {
   elements.historyTable.innerHTML = "";
-  // Hiển thị 20 bản ghi mới nhất lên bảng
-  let displayData = [...data].reverse().slice(0, 20); 
+  // Đảo ngược để hiện tin mới nhất lên đầu bảng
+  let displayData = [...data].reverse().slice(0, 15); 
   displayData.forEach(r => {
-    const isDown = r.percent.includes('-');
     const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${r.time}</td>
-      <td>${fmtXAU.format(r.xau)}</td>
-      <td>${fmtVND.format(r.sjc)}</td>
-      <td>${fmtVND.format(r.diff)}</td>
-      <td><span class="badge ${isDown ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>
-    `;
+    row.innerHTML = `<td>${r.time}</td><td>${fmtXAU.format(r.xau)}</td><td>${fmtVND.format(r.sjc)}</td><td>${fmtVND.format(r.diff)}</td><td><span class="badge ${r.percent.includes('-') ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>`;
     elements.historyTable.appendChild(row);
   });
 }
 
 function updateChart(data) {
-  const ctx = document.getElementById('gapChart').getContext('2d');
-  // Lấy nhãn là giờ:phút
+  const canvas = document.getElementById('gapChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
   const labels = data.map(r => r.time.split(' ')[1] || r.time);
-  const gaps = data.map(r => r.diff / 1000000); // Đơn vị Triệu đồng
-
+  const gaps = data.map(r => r.diff / 1000000);
   if (myChart) myChart.destroy();
   myChart = new Chart(ctx, {
     type: 'line',
@@ -275,7 +261,6 @@ function updateChart(data) {
       }
     }
   });
-  // Cuộn biểu đồ về cuối
   const scroller = document.querySelector('.chart-scroll-container');
   setTimeout(() => { scroller.scrollLeft = scroller.scrollWidth; }, 100);
 }
@@ -287,12 +272,10 @@ function toggleFilterBox() {
 }
 
 function applyFilter() {
-  const selectedDate = elements.filterDate.value; // Format: YYYY-MM-DD
+  const selectedDate = elements.filterDate.value;
   if (!selectedDate) return;
-  
   const filtered = historyData.filter(r => {
-    // r.time có dạng "DD/MM/YYYY, HH:mm:ss"
-    const datePart = r.time.split(',')[0].trim(); // "DD/MM/YYYY"
+    const datePart = r.time.split(',')[0].trim();
     const [d, m, y] = datePart.split('/');
     return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}` === selectedDate;
   });
@@ -301,32 +284,23 @@ function applyFilter() {
 }
 
 async function clearAllHistory() {
-  if (!confirm("Bạn có chắc chắn muốn xóa TOÀN BỘ lịch sử trên MongoDB Atlas?")) return;
+  if (!confirm("Xóa sạch dữ liệu trên MongoDB?")) return;
   try {
-    const res = await fetch(HIST_API, { method: 'DELETE' });
-    const result = await res.json();
-    alert(result.message);
-    historyData = []; 
-    renderHistory([]); 
-    updateChart([]);
-  } catch(e) { alert("Lỗi khi xóa dữ liệu"); }
+    await fetch(HIST_API, { method: 'DELETE' });
+    fetchHistory();
+  } catch(e) { console.error(e); }
 }
 
-// Khởi chạy
 load();
-// Tự động làm mới mỗi 1 phút
-setInterval(load, 60000);
+setInterval(load, 120000); // 2 phút tự refresh
 
-/* ===== PULL TO REFRESH LOGIC ===== */
+// --- PULL TO REFRESH LOGIC GỐC ---
 let startY = 0; let isPulling = false;
 const indicator = document.createElement("div");
 indicator.style = `position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-100px); opacity:0; z-index:2000; background:#0f172a; color:white; padding:10px 20px; border-radius:30px; box-shadow:0 4px 15px rgba(0,0,0,0.3); transition: opacity 0.2s; pointer-events:none; display:flex; align-items:center; justify-content:center; gap: 8px;`;
 document.body.appendChild(indicator);
 
-window.addEventListener("touchstart", (e) => { 
-  if (window.scrollY <= 1) { startY = e.touches[0].clientY; isPulling = true; } 
-}, { passive: false });
-
+window.addEventListener("touchstart", (e) => { if (window.scrollY <= 1) { startY = e.touches[0].clientY; isPulling = true; } }, { passive: false });
 window.addEventListener("touchmove", (e) => {
   if (!isPulling) return;
   const diff = e.touches[0].clientY - startY;
@@ -343,17 +317,11 @@ window.addEventListener("touchend", (e) => {
   if (!isPulling) return;
   const diff = e.changedTouches[0].clientY - startY;
   if (diff > 100) {
-    indicator.innerHTML = `<span>🔄</span> <span style="font-size: 14px; font-weight:600;">Refreshed</span>`;
+    indicator.innerHTML = `<span>🔄</span> <span style="font-size: 14px; font-weight:600;">Updating...</span>`;
     indicator.style.transform = `translateX(-50%) translateY(40px) rotate(0deg)`;
     load();
-    setTimeout(() => {
-      indicator.style.opacity = "0";
-      indicator.style.transform = `translateX(-50%) translateY(-100px)`;
-    }, 1000);
-  } else {
-    indicator.style.opacity = "0";
-    indicator.style.transform = `translateX(-50%) translateY(-100px)`;
-  }
+    setTimeout(() => { indicator.style.opacity = "0"; indicator.style.transform = `translateX(-50%) translateY(-100px)`; }, 1500);
+  } else { indicator.style.opacity = "0"; indicator.style.transform = `translateX(-50%) translateY(-100px)`; }
   isPulling = false;
 });
 </script>
