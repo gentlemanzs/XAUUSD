@@ -3,25 +3,34 @@ const axios = require("axios");
 const cron = require("node-cron");
 const cors = require("cors");
 const path = require("path");
-const fs = require("fs"); // Thêm fs để quản lý file
+const mongoose = require("mongoose");
 
 const app = express();
 app.use(cors());
 
-/* 🔥 PORT FIX */
+/* ===== PORT ===== */
 const PORT = process.env.PORT || 3000;
 
-/* 🔥 SERVE FRONTEND */
+/* ===== SERVE FRONTEND ===== */
 app.use(express.static("public"));
 
-/* 🔥 PATH CONFIG */
-const DATA_DIR = path.join(__dirname, "data");
-const DATA_FILE = path.join(DATA_DIR, "history.json");
+/* ===== CONNECT MONGODB ===== */
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch(err => console.error("❌ MongoDB error:", err));
 
-// Đảm bảo thư mục data tồn tại
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
+/* ===== SCHEMA ===== */
+const HistorySchema = new mongoose.Schema({
+  time: String,
+  usd: Number,
+  xau: Number,
+  sjc: Number,
+  worldVND: Number,
+  diff: Number,
+  percent: String
+}, { timestamps: true });
+
+const History = mongoose.model("History", HistorySchema);
 
 let latestData = null;
 
@@ -50,29 +59,20 @@ async function fetchWithRetry(url) {
 /* ===== USD ===== */
 async function getUSDRate() {
   try {
-    console.log("🔎 Fetch USD từ webgia...");
-
     const html = await fetchWithRetry("https://webgia.com/ty-gia/vietcombank/");
     if (!html) throw "Fetch fail";
 
     const clean = html.replace(/\s+/g, " ");
-
     const nums = clean.match(/[0-9]{2,3}\.[0-9]{3},[0-9]{2}/g);
-
-    if (!nums || nums.length === 0) throw "Không tìm thấy số";
 
     const values = nums.map(n =>
       parseFloat(n.replace(/\./g, "").replace(",", "."))
     );
 
     const usdValues = values.filter(v => v > 20000 && v < 30000);
-
-    if (usdValues.length === 0) throw "Không có giá hợp lệ";
-
     return Math.max(...usdValues);
 
-  } catch (e) {
-    console.log("❌ USD fallback");
+  } catch {
     return 26000;
   }
 }
@@ -81,10 +81,7 @@ async function getUSDRate() {
 async function getWorldGoldPrice() {
   try {
     const data = await fetchWithRetry("https://api.gold-api.com/price/XAU");
-
-    if (data && data.price) return data.price;
-
-    throw "API lỗi";
+    return data?.price || 2350;
   } catch {
     return 2350;
   }
@@ -95,28 +92,24 @@ async function getSJCPrice() {
   return 168800000;
 }
 
-/* ===== SAVE HISTORY ===== */
-function saveHistory(entry) {
+/* ===== SAVE HISTORY (MongoDB) ===== */
+async function saveHistory(entry) {
   try {
-    let history = [];
-    if (fs.existsSync(DATA_FILE)) {
-      const fileData = fs.readFileSync(DATA_FILE, "utf-8");
-      history = JSON.parse(fileData || "[]");
-    }
+    const last = await History.findOne().sort({ createdAt: -1 });
 
-    // Kiểm tra bản ghi cuối cùng để tránh lưu trùng dữ liệu liên tục
-    const lastEntry = history[history.length - 1];
-    if (!lastEntry || lastEntry.sjc !== entry.sjc || lastEntry.xau !== entry.xau) {
-      history.push(entry);
-      
-      // Giữ lại tối đa 200 bản ghi để tránh file quá nặng
-      if (history.length > 200) history.shift();
+    if (!last || last.sjc !== entry.sjc || last.xau !== entry.xau) {
+      await History.create(entry);
+      console.log("💾 Saved to MongoDB");
 
-      fs.writeFileSync(DATA_FILE, JSON.stringify(history, null, 2));
-      console.log("💾 Đã lưu vào data/history.json");
+      // Giữ tối đa 200 record
+      const count = await History.countDocuments();
+      if (count > 200) {
+        const oldest = await History.findOne().sort({ createdAt: 1 });
+        if (oldest) await History.deleteOne({ _id: oldest._id });
+      }
     }
   } catch (e) {
-    console.log("❌ Lỗi lưu file history:", e);
+    console.log("❌ Mongo save error:", e);
   }
 }
 
@@ -134,7 +127,7 @@ async function updateData() {
     const percent = (diff / worldVND) * 100;
 
     latestData = {
-      time: new Date().toLocaleString("vi-VN"), // Chuyển sang string để lưu json đẹp hơn
+      time: new Date().toLocaleString("vi-VN"),
       usd,
       xau,
       sjc,
@@ -143,7 +136,7 @@ async function updateData() {
       percent: percent.toFixed(2) + "%"
     };
 
-    saveHistory(latestData); // Thực hiện lưu vào file
+    await saveHistory(latestData);
     console.log("✅ DONE");
 
   } catch (e) {
@@ -162,17 +155,23 @@ app.get("/api/gold", (req, res) => {
   res.json(latestData);
 });
 
-// Thêm API để frontend có thể lấy lịch sử từ file
-app.get("/api/history", (req, res) => {
-  if (fs.existsSync(DATA_FILE)) {
-    const data = fs.readFileSync(DATA_FILE, "utf-8");
-    res.json(JSON.parse(data || "[]"));
-  } else {
+/* ===== HISTORY FROM MONGO ===== */
+app.get("/api/history", async (req, res) => {
+  try {
+    const data = await History.find().sort({ createdAt: 1 });
+    res.json(data);
+  } catch {
     res.json([]);
   }
 });
 
-/* ===== ROOT (serve index.html) ===== */
+/* ===== DELETE HISTORY ===== */
+app.delete("/api/history", async (req, res) => {
+  await History.deleteMany({});
+  res.json({ message: "Deleted" });
+});
+
+/* ===== ROOT ===== */
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public/index.html"));
 });
