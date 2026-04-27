@@ -48,10 +48,9 @@ header {
 
 .container { 
   width: 100%; max-width: 1200px; margin: 0 auto; 
-  padding-top: 85px; 
+  padding: 85px 15px 3rem 15px;
   background: var(--bg-color); 
   min-height: 100vh;
-  padding: 85px 15px 3rem 15px;
   box-sizing: border-box;
 }
 
@@ -89,18 +88,14 @@ th { background: #f1f5f9; padding: 14px 16px; text-align: right; color: var(--se
 td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; }
 th:first-child, td:first-child { text-align: left; }
 
-/* FIX BIỂU ĐỒ MOBILE */
 .chart-card {
   padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color);
 }
 .chart-scroll-container {
-  width: 100%;
-  overflow-x: auto; /* Cho phép trượt ngang */
-  margin-top: 1rem;
+  width: 100%; overflow-x: auto; margin-top: 1rem;
 }
 .chart-inner-wrapper {
-  min-width: 800px; /* Ép biểu đồ rộng ít nhất 800px để không bị nén */
-  height: 350px;
+  min-width: 800px; height: 350px;
 }
 
 @media (max-width: 640px) {
@@ -156,7 +151,6 @@ th:first-child, td:first-child { text-align: left; }
         <canvas id="gapChart"></canvas>
       </div>
     </div>
-    <p style="font-size: 0.75rem; color: #94a3b8; text-align: center; margin-top: 10px;">(Vuốt ngang để xem lịch sử đầy đủ)</p>
   </div>
 </div>
 
@@ -229,10 +223,8 @@ function renderHistory(data) {
 
 function updateChart(data) {
   const ctx = document.getElementById('gapChart').getContext('2d');
-  // Dữ liệu từ trái (cũ) qua phải (mới)
   const labels = data.map(r => r.time.split(' ')[1] || r.time);
   const gaps = data.map(r => r.diff / 1000000);
-
   if (myChart) myChart.destroy();
   myChart = new Chart(ctx, {
     type: 'line',
@@ -243,12 +235,11 @@ function updateChart(data) {
         data: gaps,
         borderColor: '#3b82f6',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        borderWidth: 3, fill: true, tension: 0.3, pointRadius: 4, hitRadius: 10
+        borderWidth: 3, fill: true, tension: 0.3, pointRadius: 4
       }]
     },
     options: { 
-      responsive: true, 
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: { 
         y: { beginAtZero: false, ticks: { callback: v => v + 'M' } },
@@ -256,8 +247,6 @@ function updateChart(data) {
       }
     }
   });
-
-  // Tự động cuộn về cuối biểu đồ (dữ liệu mới nhất) khi load xong
   const scroller = document.querySelector('.chart-scroll-container');
   setTimeout(() => { scroller.scrollLeft = scroller.scrollWidth; }, 100);
 }
@@ -282,45 +271,58 @@ function applyFilter() {
 async function clearAllHistory() {
   if (!confirm("Xóa toàn bộ lịch sử?")) return;
   try {
-    historyData = [];
-    renderHistory([]);
-    updateChart([]);
+    historyData = []; renderHistory([]); updateChart([]);
     await fetch(HIST_API, { method: 'DELETE' });
-    alert("Đã xóa!");
   } catch(e) { console.error("Error"); }
 }
 
 load();
 
-/* PULL TO REFRESH */
+/* ===== PULL TO REFRESH - TIN TINH GIẢN ===== */
 let startY = 0; let isPulling = false;
 const indicator = document.createElement("div");
-indicator.innerText = "↓ Pull to refresh";
-indicator.style = "position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-100px); font-size:16px; font-weight:600; opacity:0; z-index:2000; background:#0f172a; color:white; padding:12px 24px; border-radius:30px; box-shadow:0 4px 15px rgba(0,0,0,0.3); transition: opacity 0.2s; pointer-events:none; display:flex; align-items:center; gap:8px;";
+
+indicator.style = `
+  position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-100px); 
+  opacity:0; z-index:2000; background:#0f172a; color:white; padding:10px 20px; 
+  border-radius:30px; box-shadow:0 4px 15px rgba(0,0,0,0.3); transition: opacity 0.2s; 
+  pointer-events:none; display:flex; align-items:center; justify-content:center; gap: 8px;
+`;
 document.body.appendChild(indicator);
 
-window.addEventListener("touchstart", (e) => { if (window.scrollY <= 1) { startY = e.touches[0].clientY; isPulling = true; } }, { passive: false });
+window.addEventListener("touchstart", (e) => { 
+  if (window.scrollY <= 1) { startY = e.touches[0].clientY; isPulling = true; } 
+}, { passive: false });
+
 window.addEventListener("touchmove", (e) => {
   if (!isPulling) return;
   const diff = e.touches[0].clientY - startY;
   if (diff > 0 && window.scrollY <= 1) {
     if (e.cancelable) e.preventDefault(); 
     indicator.style.opacity = "1";
+    // Chỉ hiện icon khi đang kéo
+    indicator.innerHTML = `<span style="font-size: 20px;">🔄</span>`;
     const moveY = Math.min(diff / 2, 60); 
-    indicator.style.transform = `translateX(-50%) translateY(${moveY}px)`;
-    indicator.innerText = diff > 100 ? "🚀 Release to update" : "↓ Pull to refresh";
+    indicator.style.transform = `translateX(-50%) translateY(${moveY}px) rotate(${diff * 2}deg)`;
   }
 }, { passive: false });
+
 window.addEventListener("touchend", (e) => {
   if (!isPulling) return;
   const diff = e.changedTouches[0].clientY - startY;
   if (diff > 100) {
-    indicator.innerHTML = "🔄 Updating...";
-    indicator.style.transform = `translateX(-50%) translateY(40px)`;
+    // Khi buông tay và đủ lực kéo -> Hiện chữ Updating
+    indicator.innerHTML = `<span style="font-size: 18px;">🔄</span> <span style="font-size: 14px; font-weight:600;">Updating...</span>`;
+    indicator.style.transform = `translateX(-50%) translateY(40px) rotate(0deg)`;
+    
     load();
-    setTimeout(() => { indicator.style.opacity = "0"; indicator.style.transform = `translateX(-50%) translateY(-100px)`; }, 1500);
+    setTimeout(() => {
+      indicator.style.opacity = "0";
+      indicator.style.transform = `translateX(-50%) translateY(-100px)`;
+    }, 1500);
   } else {
-    indicator.style.opacity = "0"; indicator.style.transform = `translateX(-50%) translateY(-100px)`;
+    indicator.style.opacity = "0";
+    indicator.style.transform = `translateX(-50%) translateY(-100px)`;
   }
   isPulling = false;
 });
