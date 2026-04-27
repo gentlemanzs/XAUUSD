@@ -8,20 +8,23 @@ const mongoose = require("mongoose");
 const app = express();
 app.use(cors());
 
-/* ===== PORT ===== */
 const PORT = process.env.PORT || 3000;
-
-/* ===== SERVE FRONTEND ===== */
 app.use(express.static("public"));
 
-/* ===== CONNECT MONGODB ===== */
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch(err => console.error("❌ MongoDB error:", err));
+/* ===== CONNECT MONGO ===== */
+mongoose.connect(process.env.MONGO_URI, {
+  serverSelectionTimeoutMS: 5000
+})
+.then(() => console.log("✅ MongoDB connected"))
+.catch(err => {
+  console.error("❌ MongoDB error:", err);
+  process.exit(1);
+});
 
 /* ===== SCHEMA ===== */
 const HistorySchema = new mongoose.Schema({
   time: String,
+  date: String, // yyyy-mm-dd
   usd: Number,
   xau: Number,
   sjc: Number,
@@ -34,44 +37,31 @@ const History = mongoose.model("History", HistorySchema);
 
 let latestData = null;
 
-/* ===== CONFIG ===== */
-const CONFIG = {
-  TIMEOUT: 5000,
-  RETRY: 2
-};
+/* ===== HELPER ===== */
+function getToday() {
+  return new Date().toISOString().slice(0, 10);
+}
 
-/* ===== HELPER FETCH ===== */
+/* ===== FETCH ===== */
 async function fetchWithRetry(url) {
-  for (let i = 0; i < CONFIG.RETRY; i++) {
-    try {
-      const res = await axios.get(url, {
-        timeout: CONFIG.TIMEOUT,
-        headers: { "User-Agent": "Mozilla/5.0" }
-      });
-      return res.data;
-    } catch (e) {
-      console.log(`⚠️ Retry ${i + 1} fail: ${url}`);
-    }
+  try {
+    const res = await axios.get(url, { timeout: 5000 });
+    return res.data;
+  } catch {
+    return null;
   }
-  return null;
 }
 
 /* ===== USD ===== */
 async function getUSDRate() {
   try {
     const html = await fetchWithRetry("https://webgia.com/ty-gia/vietcombank/");
-    if (!html) throw "Fetch fail";
-
     const clean = html.replace(/\s+/g, " ");
     const nums = clean.match(/[0-9]{2,3}\.[0-9]{3},[0-9]{2}/g);
-
     const values = nums.map(n =>
       parseFloat(n.replace(/\./g, "").replace(",", "."))
     );
-
-    const usdValues = values.filter(v => v > 20000 && v < 30000);
-    return Math.max(...usdValues);
-
+    return Math.max(...values.filter(v => v > 20000 && v < 30000));
   } catch {
     return 26000;
   }
@@ -89,34 +79,44 @@ async function getWorldGoldPrice() {
 
 /* ===== SJC ===== */
 async function getSJCPrice() {
-  return 168800000;
+  return 168800000; // production: thay bằng API thật
 }
 
-/* ===== SAVE HISTORY (MongoDB) ===== */
+/* ===== SAVE LOGIC ===== */
 async function saveHistory(entry) {
   try {
+    const today = getToday();
+
+    // record đầu ngày
+    const firstToday = await History.findOne({ date: today }).sort({ createdAt: 1 });
+
+    // record cuối cùng
     const last = await History.findOne().sort({ createdAt: -1 });
 
-    if (!last || last.sjc !== entry.sjc || last.xau !== entry.xau) {
+    // ✔ lưu nếu:
+    // 1. chưa có record hôm nay (giá đầu ngày)
+    // 2. SJC thay đổi
+    if (!firstToday || !last || last.sjc !== entry.sjc) {
       await History.create(entry);
-      console.log("💾 Saved to MongoDB");
+      console.log("💾 Saved:", entry.sjc);
 
-      // Giữ tối đa 200 record
+      // giữ max 200 record
       const count = await History.countDocuments();
       if (count > 200) {
         const oldest = await History.findOne().sort({ createdAt: 1 });
         if (oldest) await History.deleteOne({ _id: oldest._id });
       }
+    } else {
+      console.log("⏭ Skip (no change)");
     }
+
   } catch (e) {
-    console.log("❌ Mongo save error:", e);
+    console.log("❌ Save error:", e);
   }
 }
 
 /* ===== UPDATE ===== */
 async function updateData() {
-  console.log("\n⏳ Updating...");
-
   try {
     const usd = await getUSDRate();
     const xau = await getWorldGoldPrice();
@@ -128,6 +128,7 @@ async function updateData() {
 
     latestData = {
       time: new Date().toLocaleString("vi-VN"),
+      date: getToday(),
       usd,
       xau,
       sjc,
@@ -137,7 +138,6 @@ async function updateData() {
     };
 
     await saveHistory(latestData);
-    console.log("✅ DONE");
 
   } catch (e) {
     console.log("❌ UPDATE ERROR:", e);
@@ -149,35 +149,21 @@ cron.schedule("*/2 * * * *", updateData);
 
 /* ===== API ===== */
 app.get("/api/gold", (req, res) => {
-  if (!latestData) {
-    return res.json({ message: "No data yet, please wait..." });
-  }
-  res.json(latestData);
+  res.json(latestData || {});
 });
 
-/* ===== HISTORY FROM MONGO ===== */
 app.get("/api/history", async (req, res) => {
-  try {
-    const data = await History.find().sort({ createdAt: 1 });
-    res.json(data);
-  } catch {
-    res.json([]);
-  }
+  const data = await History.find().sort({ createdAt: -1 });
+  res.json(data);
 });
 
-/* ===== DELETE HISTORY ===== */
 app.delete("/api/history", async (req, res) => {
   await History.deleteMany({});
-  res.json({ message: "Deleted" });
-});
-
-/* ===== ROOT ===== */
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/index.html"));
+  res.json({ ok: true });
 });
 
 /* ===== START ===== */
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log("🚀 Server running on", PORT);
   updateData();
 });
