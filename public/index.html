@@ -109,6 +109,20 @@ th:first-child, td:first-child { text-align: left; }
   .grid { grid-template-columns: 1fr; gap: 0.8rem; }
   .card-value { font-size: 1.5rem; }
 }
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(5, 1fr); /* ép đúng 5 cột */
+    gap: 1rem; /* có thể giảm nhẹ */
+  }
+
+  .card {
+    padding: 1rem; /* giảm padding để gọn hơn */
+  }
+
+  .card-value {
+    font-size: 1.5rem; /* giảm nhẹ chữ */
+  }
+}
 </style>
 </head>
 <body>
