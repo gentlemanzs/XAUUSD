@@ -6,7 +6,6 @@
 <title>XAU Professional Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-/* --- GIỮ NGUYÊN 100% CSS GỐC CỦA BẠN --- */
 :root {
   --bg-color: #f8fafc;
   --header-bg: #0f172a; 
@@ -73,11 +72,6 @@ header {
 .change-up { color: var(--up-color); }
 .change-down { color: var(--down-color); }
 
-/* Badge cho bảng lịch sử */
-.badge { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
-.badge-up { background: #dcfce7; color: #166534; }
-.badge-down { background: #fee2e2; color: #991b1b; }
-
 #filterBox {
   display: none; background: white; padding: 15px; border-radius: 12px;
   border: 1px solid var(--border-color); margin-bottom: 1.5rem;
@@ -131,7 +125,7 @@ th:first-child, td:first-child { text-align: left; }
   </div>
 
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-    <div style="font-size: 1.2rem; font-weight: 700;">Query History (Atlas)</div>
+    <div style="font-size: 1.2rem; font-weight: 700;">Query History</div>
     <button onclick="toggleFilterBox()" id="toggleBtn" style="background:transparent; border:none; font-size:1.8rem; cursor:pointer; color:#64748b;">+</button>
   </div>
 
@@ -161,7 +155,6 @@ th:first-child, td:first-child { text-align: left; }
 </div>
 
 <script>
-/* LOGIC KẾT NỐI API */
 const API = "/api/gold";
 const HIST_API = "/api/history"; 
 const elements = {
@@ -181,6 +174,7 @@ const fmtVND = new Intl.NumberFormat('vi-VN');
 const fmtXAU = new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 let historyData = []; 
+let lastSJCValue = null; 
 let myChart = null;
 
 async function load() {
@@ -188,12 +182,12 @@ async function load() {
     const res = await fetch(`${API}?t=${Date.now()}`);
     const d = await res.json();
     renderMain(d);
-    
-    // Luôn lấy lịch sử mỗi khi load
-    await fetchHistory();
-    
-    elements.lastTime.innerHTML = `🟢 Live Atlas: ${new Date().toLocaleString('vi-VN')}`;
-  } catch(e) { console.error("Lỗi:", e); }
+    if (lastSJCValue === null || d.sjc !== lastSJCValue) {
+      lastSJCValue = d.sjc;
+      await fetchHistory();
+    }
+    elements.lastTime.innerHTML = `🟢 Live: ${new Date().toLocaleString('vi-VN')}`;
+  } catch(e) { console.error(e); }
 }
 
 function renderMain(d) {
@@ -201,7 +195,6 @@ function renderMain(d) {
   elements.xau.innerText = fmtXAU.format(d.xau);
   elements.diff.innerText = fmtVND.format(d.diff);
   elements.percent.innerText = d.percent;
-  
   const key = "sjcMorning_" + new Date().toISOString().slice(0,10);
   let morning = localStorage.getItem(key) || localStorage.setItem(key, d.sjc) || d.sjc;
   const change = d.sjc - parseFloat(morning);
@@ -223,8 +216,7 @@ function renderHistory(data) {
   let displayData = [...data].reverse().slice(0, 15); 
   displayData.forEach(r => {
     const row = document.createElement("tr");
-    const badgeClass = r.percent && r.percent.includes('-') ? 'badge-down' : 'badge-up';
-    row.innerHTML = `<td>${r.time}</td><td>${fmtXAU.format(r.xau)}</td><td>${fmtVND.format(r.sjc)}</td><td>${fmtVND.format(r.diff)}</td><td><span class="badge ${badgeClass}">${r.percent}</span></td>`;
+    row.innerHTML = `<td>${r.time}</td><td>${fmtXAU.format(r.xau)}</td><td>${fmtVND.format(r.sjc)}</td><td>${fmtVND.format(r.diff)}</td><td><span class="badge ${r.percent.includes('-') ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>`;
     elements.historyTable.appendChild(row);
   });
 }
@@ -251,7 +243,7 @@ function updateChart(data) {
       plugins: { legend: { display: false } },
       scales: { 
         y: { beginAtZero: false, ticks: { callback: v => v + 'M' } },
-        x: { ticks: { autoSkip: true, maxTicksLimit: 10 } }
+        x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
       }
     }
   });
@@ -269,51 +261,69 @@ function applyFilter() {
   const selectedDate = elements.filterDate.value;
   if (!selectedDate) return;
   const filtered = historyData.filter(r => {
-    const datePart = r.time.split(',')[0].trim();
-    const [d, m, y] = datePart.split('/');
-    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}` === selectedDate;
+    const parts = r.time.split(' ')[0].split('/');
+    return `${parts[2]}-${parts[1]}-${parts[0]}` === selectedDate;
   });
   renderHistory(filtered);
   updateChart(filtered);
 }
 
 async function clearAllHistory() {
-  if (!confirm("Xóa toàn bộ lịch sử trên MongoDB?")) return;
+  if (!confirm("Xóa toàn bộ lịch sử?")) return;
   try {
+    historyData = []; renderHistory([]); updateChart([]);
     await fetch(HIST_API, { method: 'DELETE' });
-    await fetchHistory();
-  } catch(e) { console.error(e); }
+  } catch(e) { console.error("Error"); }
 }
 
 load();
 
-/* --- PULL TO REFRESH --- */
+/* ===== PULL TO REFRESH - TIN TINH GIẢN ===== */
 let startY = 0; let isPulling = false;
 const indicator = document.createElement("div");
-indicator.style = `position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-100px); opacity:0; z-index:2000; background:#0f172a; color:white; padding:10px 20px; border-radius:30px; box-shadow:0 4px 15px rgba(0,0,0,0.3); transition: opacity 0.2s; pointer-events:none; display:flex; align-items:center; justify-content:center; gap: 8px;`;
+
+indicator.style = `
+  position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-100px); 
+  opacity:0; z-index:2000; background:#0f172a; color:white; padding:10px 20px; 
+  border-radius:30px; box-shadow:0 4px 15px rgba(0,0,0,0.3); transition: opacity 0.2s; 
+  pointer-events:none; display:flex; align-items:center; justify-content:center; gap: 8px;
+`;
 document.body.appendChild(indicator);
 
-window.addEventListener("touchstart", (e) => { if (window.scrollY <= 1) { startY = e.touches[0].clientY; isPulling = true; } }, { passive: false });
+window.addEventListener("touchstart", (e) => { 
+  if (window.scrollY <= 1) { startY = e.touches[0].clientY; isPulling = true; } 
+}, { passive: false });
+
 window.addEventListener("touchmove", (e) => {
   if (!isPulling) return;
   const diff = e.touches[0].clientY - startY;
   if (diff > 0 && window.scrollY <= 1) {
     if (e.cancelable) e.preventDefault(); 
     indicator.style.opacity = "1";
-    indicator.innerHTML = `<span>🔄</span>`;
+    // Chỉ hiện icon khi đang kéo
+    indicator.innerHTML = `<span style="font-size: 20px;">🔄</span>`;
     const moveY = Math.min(diff / 2, 60); 
     indicator.style.transform = `translateX(-50%) translateY(${moveY}px) rotate(${diff * 2}deg)`;
   }
 }, { passive: false });
+
 window.addEventListener("touchend", (e) => {
   if (!isPulling) return;
   const diff = e.changedTouches[0].clientY - startY;
   if (diff > 100) {
-    indicator.innerHTML = `<span>🔄</span> <span style="font-size: 14px; font-weight:600;">Updating...</span>`;
+    // Khi buông tay và đủ lực kéo -> Hiện chữ Updating
+    indicator.innerHTML = `<span style="font-size: 18px;">🔄</span> <span style="font-size: 14px; font-weight:600;">Updating...</span>`;
     indicator.style.transform = `translateX(-50%) translateY(40px) rotate(0deg)`;
+    
     load();
-    setTimeout(() => { indicator.style.opacity = "0"; indicator.style.transform = `translateX(-50%) translateY(-100px)`; }, 1500);
-  } else { indicator.style.opacity = "0"; indicator.style.transform = `translateX(-50%) translateY(-100px)`; }
+    setTimeout(() => {
+      indicator.style.opacity = "0";
+      indicator.style.transform = `translateX(-50%) translateY(-100px)`;
+    }, 1500);
+  } else {
+    indicator.style.opacity = "0";
+    indicator.style.transform = `translateX(-50%) translateY(-100px)`;
+  }
   isPulling = false;
 });
 </script>

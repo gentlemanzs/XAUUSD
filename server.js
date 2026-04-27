@@ -3,137 +3,181 @@ const axios = require("axios");
 const cron = require("node-cron");
 const cors = require("cors");
 const path = require("path");
-const mongoose = require("mongoose");
-require("dotenv").config();
+const fs = require("fs"); // Thêm fs để quản lý file
 
 const app = express();
 app.use(cors());
-app.use(express.json());
 
-const PORT = process.env.PORT || 8080;
-const MONGO_URI = process.env.MONGO_URI;
+/* 🔥 PORT FIX */
+const PORT = process.env.PORT || 3000;
 
-/* --- KẾT NỐI DATABASE (THÊM TIMEOUT ĐỂ TRÁNH TREO) --- */
-mongoose.connect(MONGO_URI, { 
-    serverSelectionTimeoutMS: 5000,
-    connectTimeoutMS: 10000 
-})
-.then(() => console.log("✅ [DB] Connected!"))
-.catch(err => console.error("❌ [DB] Connection Error: Kiểm tra lại MONGO_URI trên Railway!"));
-
-const historySchema = new mongoose.Schema({
-  time: String,
-  usd: Number,
-  xau: Number,
-  sjc: Number,
-  worldVND: Number,
-  diff: Number,
-  percent: String,
-  createdAt: { type: Date, default: Date.now }
-});
-const History = mongoose.model("History", historySchema);
-
+/* 🔥 SERVE FRONTEND */
 app.use(express.static("public"));
+
+/* 🔥 PATH CONFIG */
+const DATA_DIR = path.join(__dirname, "data");
+const DATA_FILE = path.join(DATA_DIR, "history.json");
+
+// Đảm bảo thư mục data tồn tại
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
 let latestData = null;
 
-/* --- HELPER CÀO DỮ LIỆU --- */
-async function fetchSource(url) {
-  try {
-    const res = await axios.get(url, {
-      timeout: 15000,
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }
-    });
-    return res.data.replace(/\s+/g, " "); // Làm sạch khoảng trắng rác
-  } catch (e) { return null; }
-}
+/* ===== CONFIG ===== */
+const CONFIG = {
+  TIMEOUT: 5000,
+  RETRY: 2
+};
 
-/* --- 1. CÀO USD (CHÍNH XÁC CỘT BÁN) --- */
-async function getUSDRate() {
-  const html = await fetchSource("https://webgia.com/ty-gia/vietcombank/");
-  if (!html) return 26368;
-  // Tìm khối USD và bốc 3 số XX.XXX đầu tiên sau nó (Mua/CK/Bán)
-  const match = html.match(/USD.*?([0-9]{2}\.[0-9]{3}).*?([0-9]{2}\.[0-9]{3}).*?([0-9]{2}\.[0-9]{3})/);
-  if (match && match[3]) {
-    const rate = parseFloat(match[3].replace(".", ""));
-    console.log(`💵 USD (Bán): ${rate}`);
-    return rate;
+/* ===== HELPER FETCH ===== */
+async function fetchWithRetry(url) {
+  for (let i = 0; i < CONFIG.RETRY; i++) {
+    try {
+      const res = await axios.get(url, {
+        timeout: CONFIG.TIMEOUT,
+        headers: { "User-Agent": "Mozilla/5.0" }
+      });
+      return res.data;
+    } catch (e) {
+      console.log(`⚠️ Retry ${i + 1} fail: ${url}`);
+    }
   }
-  return 26368;
+  return null;
 }
 
-/* --- 2. GIÁ VÀNG THẾ GIỚI --- */
+/* ===== USD ===== */
+async function getUSDRate() {
+  try {
+    console.log("🔎 Fetch USD từ webgia...");
+
+    const html = await fetchWithRetry("https://webgia.com/ty-gia/vietcombank/");
+    if (!html) throw "Fetch fail";
+
+    const clean = html.replace(/\s+/g, " ");
+
+    const nums = clean.match(/[0-9]{2,3}\.[0-9]{3},[0-9]{2}/g);
+
+    if (!nums || nums.length === 0) throw "Không tìm thấy số";
+
+    const values = nums.map(n =>
+      parseFloat(n.replace(/\./g, "").replace(",", "."))
+    );
+
+    const usdValues = values.filter(v => v > 20000 && v < 30000);
+
+    if (usdValues.length === 0) throw "Không có giá hợp lệ";
+
+    return Math.max(...usdValues);
+
+  } catch (e) {
+    console.log("❌ USD fallback");
+    return 26000;
+  }
+}
+
+/* ===== XAU ===== */
 async function getWorldGoldPrice() {
   try {
-    const res = await axios.get("https://api.gold-api.com/price/XAU");
-    return parseFloat(res.data.price);
-  } catch { return 2350; }
-}
+    const data = await fetchWithRetry("https://api.gold-api.com/price/XAU");
 
-/* --- 3. CÀO SJC (CHÍNH XÁC SJC TP.HCM - CỘT BÁN) --- */
-async function getSJCPrice() {
-  const html = await fetchSource("https://webgia.com/gia-vang/sjc/");
-  if (!html) return 84000000;
-  // Bóc tách đúng dòng SJC TP.HCM
-  const match = html.match(/SJC TP\.HCM.*?([0-9]{2}\.[0-9]{3}\.[0-9]{3}).*?([0-9]{2}\.[0-9]{3}\.[0-9]{3})/);
-  if (match && match[2]) {
-    const price = parseInt(match[2].replace(/\./g, ""));
-    console.log(`🧈 SJC (Bán): ${price}`);
-    return price;
+    if (data && data.price) return data.price;
+
+    throw "API lỗi";
+  } catch {
+    return 2350;
   }
-  return 84000000;
 }
 
-/* --- LOGIC CẬP NHẬT & TÍNH TOÁN MARKET GAP --- */
-async function updateData() {
-  console.log(`\n--- Update @ ${new Date().toLocaleTimeString()} ---`);
-  try {
-    const [usd, xau, sjc] = await Promise.all([getUSDRate(), getWorldGoldPrice(), getSJCPrice()]);
+/* ===== SJC ===== */
+async function getSJCPrice() {
+  return 168800000;
+}
 
-    // Công thức chuẩn: (Thế giới * 1.20565 * USD)
-    const worldVND = xau * 1.20565 * usd;
+/* ===== SAVE HISTORY ===== */
+function saveHistory(entry) {
+  try {
+    let history = [];
+    if (fs.existsSync(DATA_FILE)) {
+      const fileData = fs.readFileSync(DATA_FILE, "utf-8");
+      history = JSON.parse(fileData || "[]");
+    }
+
+    // Kiểm tra bản ghi cuối cùng để tránh lưu trùng dữ liệu liên tục
+    const lastEntry = history[history.length - 1];
+    if (!lastEntry || lastEntry.sjc !== entry.sjc || lastEntry.xau !== entry.xau) {
+      history.push(entry);
+      
+      // Giữ lại tối đa 200 bản ghi để tránh file quá nặng
+      if (history.length > 200) history.shift();
+
+      fs.writeFileSync(DATA_FILE, JSON.stringify(history, null, 2));
+      console.log("💾 Đã lưu vào data/history.json");
+    }
+  } catch (e) {
+    console.log("❌ Lỗi lưu file history:", e);
+  }
+}
+
+/* ===== UPDATE ===== */
+async function updateData() {
+  console.log("\n⏳ Updating...");
+
+  try {
+    const usd = await getUSDRate();
+    const xau = await getWorldGoldPrice();
+    const sjc = await getSJCPrice();
+
+    const worldVND = xau * usd * (37.5 / 31.1035);
     const diff = sjc - worldVND;
     const percent = (diff / worldVND) * 100;
 
     latestData = {
-      time: new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }),
-      usd, xau, sjc,
+      time: new Date().toLocaleString("vi-VN"), // Chuyển sang string để lưu json đẹp hơn
+      usd,
+      xau,
+      sjc,
       worldVND: Math.round(worldVND),
-      diff: Math.round(diff), // Đây là Market Gap
+      diff: Math.round(diff),
       percent: percent.toFixed(2) + "%"
     };
 
-    console.log(`📊 GAP: ${latestData.diff.toLocaleString()} VND`);
+    saveHistory(latestData); // Thực hiện lưu vào file
+    console.log("✅ DONE");
 
-    // Ghi vào MongoDB nếu kết nối OK
-    if (mongoose.connection.readyState === 1) {
-      await History.create(latestData);
-      const count = await History.countDocuments();
-      if (count > 200) await History.findOneAndDelete({}, { sort: { createdAt: 1 } });
-    }
-  } catch (e) { console.error("❌ Lỗi Update:", e.message); }
+  } catch (e) {
+    console.log("❌ UPDATE ERROR:", e);
+  }
 }
 
-/* --- API ROUTES --- */
+/* ===== CRON ===== */
 cron.schedule("*/2 * * * *", updateData);
 
-app.get("/api/gold", (req, res) => res.json(latestData || { message: "Đang tải..." }));
-
-app.get("/api/history", async (req, res) => {
-  try {
-    const data = await History.find().sort({ createdAt: -1 }).limit(100);
-    res.json(data.reverse());
-  } catch (e) { res.status(500).send("DB Error"); }
+/* ===== API ===== */
+app.get("/api/gold", (req, res) => {
+  if (!latestData) {
+    return res.json({ message: "No data yet, please wait..." });
+  }
+  res.json(latestData);
 });
 
-app.delete("/api/history", async (req, res) => {
-  try {
-    await History.deleteMany({});
-    res.json({ message: "DB Cleared" });
-  } catch (e) { res.status(500).send("Error"); }
+// Thêm API để frontend có thể lấy lịch sử từ file
+app.get("/api/history", (req, res) => {
+  if (fs.existsSync(DATA_FILE)) {
+    const data = fs.readFileSync(DATA_FILE, "utf-8");
+    res.json(JSON.parse(data || "[]"));
+  } else {
+    res.json([]);
+  }
 });
 
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public/index.html")));
+/* ===== ROOT (serve index.html) ===== */
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public/index.html"));
+});
 
+/* ===== START ===== */
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   updateData();
