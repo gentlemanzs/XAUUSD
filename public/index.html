@@ -305,17 +305,27 @@ window.addEventListener("touchmove", (e) => {
   const diff = e.touches[0].clientY - startY;
   if (diff > 0 && window.scrollY <= 1) {
     if (e.cancelable) e.preventDefault(); 
-    indicator.style.opacity = "1";
+    const rotate = diff * 2; // càng kéo càng xoay nhanh
+indicator.style.opacity = "1";
+
+const moveY = Math.min(diff / 2, 60);
+indicator.style.transform = `
+  translateX(-50%) 
+  translateY(${moveY}px) 
+  rotate(${rotate}deg)
+`;
     const moveY = Math.min(diff / 2, 60); 
     indicator.style.transform = `translateX(-50%) translateY(${moveY}px)`;
-    indicator.innerText = diff > 100 ? "🚀 Release to update" : "↓ Pull to refresh";
+    indicator.innerHTML = "⟳";
+indicator.style.fontSize = "28px";
+indicator.style.transition = "transform 0.1s linear, opacity 0.2s";
   }
 }, { passive: false });
 window.addEventListener("touchend", (e) => {
   if (!isPulling) return;
   const diff = e.changedTouches[0].clientY - startY;
   if (diff > 100) {
-    indicator.innerHTML = "🔄 Updating...";
+    indicator.innerHTML = "🚀 Updating...";
     indicator.style.transform = `translateX(-50%) translateY(40px)`;
     load();
     setTimeout(() => { indicator.style.opacity = "0"; indicator.style.transform = `translateX(-50%) translateY(-100px)`; }, 1500);
