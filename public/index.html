@@ -198,7 +198,9 @@ async function load() {
 })}`;
   } catch(e) { console.error(e); }
 }
-
+function parseVNTime(timeStr) {
+  return new Date(timeStr + ' GMT+7');
+}
 function renderMain(d) {
   elements.usd.innerText = fmtVND.format(d.usd);
   elements.xau.innerText = fmtXAU.format(d.xau);
@@ -221,7 +223,7 @@ async function fetchHistory() {
 }
 
 function formatVNTime(timeStr) {
-  const d = new Date(timeStr);
+  const d = parseVNTime(timeStr);
 
   // Nếu parse được → dùng luôn
   if (!isNaN(d)) {
@@ -258,7 +260,7 @@ function updateChart(data) {
   const ctx = document.getElementById('gapChart').getContext('2d');
   // Dữ liệu từ trái (cũ) qua phải (mới)
   const labels = data.map(r => {
-  const d = new Date(r.time);
+  const d = parseVNTime(r.time);
 
   // Nếu parse được
   if (!isNaN(d)) {
@@ -314,7 +316,7 @@ function applyFilter() {
   if (!selectedDate) return;
 
   const filtered = historyData.filter(r => {
-    const d = new Date(r.time);
+    const d = parseVNTime(r.time);
     const formatted = d.toLocaleDateString('sv-SE', {
   timeZone: 'Asia/Ho_Chi_Minh'
 });
