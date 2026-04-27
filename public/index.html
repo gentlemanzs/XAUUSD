@@ -2,20 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>XAU Professional Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png">
-<link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
-
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="XAU">
-<meta name="theme-color" content="#0f172a">
 <style>
 :root {
   --bg-color: #f8fafc;
-  --header-bg: #0f172a;
+  --header-bg: #0f172a; 
   --card-bg: #ffffff;
   --primary-text: #1e293b;
   --secondary-text: #64748b;
@@ -27,12 +20,12 @@
 body {
   margin: 0;
   font-family: 'Inter', -apple-system, system-ui, sans-serif;
-  background: var(--bg-color);
+  background: var(--header-bg) !important; 
   color: var(--primary-text);
-  line-height: 1.6;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
 }
 
-/* HEADER */
 header {
   padding: 1rem 2rem;
   background: var(--header-bg);
@@ -40,167 +33,81 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  position: fixed; 
+  top: 0; left: 0; width: 100%;
+  box-sizing: border-box;
+  z-index: 1000;
 }
 
-.brand { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.025em; }
+.brand { font-size: 1.25rem; font-weight: 700; }
 
 #updateBtn {
-  background: #3b82f6;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-#updateBtn:hover { background: #2563eb; transform: translateY(-1px); }
-#updateBtn:disabled { background: #94a3b8; cursor: not-allowed; }
-
-/* NÚT UPDATE MOBILE (FLOATING) */
-#mobileUpdateBtn {
-  display: none; 
-  position: fixed;
-  right: 20px;
-  bottom: 400px;
-  width: 60px;
-  height: 60px;
-  background: transparent;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  z-index: 999;
-  cursor: pointer;
-  font-size: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s, background 0.2s;
-}
-#mobileUpdateBtn:active { transform: scale(0.9); background: #2563eb; }
-
-#toggleBtn {
-  background: transparent; 
-  color: #64748b;          
-  border: 1px solid transparent; 
-  font-size: 1.5rem;      
-  font-weight: 400;
-  cursor: pointer;
-  padding: 0 10px;
-  transition: color 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-#toggleBtn:hover { color: #1e293b; }
-
-.container { width: 95%; max-width: 1200px; margin: 2rem auto; }
-
-#lastTime { 
-  font-size: 0.875rem; 
-  color: var(--secondary-text); 
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  background: #3b82f6; color: white; border: none;
+  padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;
 }
 
-/* GRID & CARDS */
+.container { 
+  width: 100%; max-width: 1200px; margin: 0 auto; 
+  padding-top: 85px; 
+  background: var(--bg-color); 
+  min-height: 100vh;
+  padding: 85px 15px 3rem 15px;
+  box-sizing: border-box;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  gap: 1.5rem; margin-bottom: 2rem;
 }
 
 .card {
-  background: var(--card-bg);
-  border-radius: 16px;
-  padding: 1.5rem;
-  border: 1px solid var(--border-color);
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  background: var(--card-bg); border-radius: 16px;
+  padding: 1.5rem; border: 1px solid var(--border-color);
 }
-
 .card.highlight { border-left: 4px solid #3b82f6; }
-
-.card-title { 
-  font-size: 0.75rem; 
-  color: var(--secondary-text); 
-  text-transform: uppercase; 
-  font-weight: 700;
-  letter-spacing: 0.05em;
-}
-
-.card-value { 
-  font-size: 1.875rem; 
-  font-weight: 800; 
-  margin-top: 0.5rem; 
-  font-variant-numeric: tabular-nums;
-}
+.card-title { font-size: 0.75rem; color: var(--secondary-text); text-transform: uppercase; font-weight: 700; }
+.card-value { font-size: 1.875rem; font-weight: 800; margin-top: 0.5rem; }
 
 .sjc-sub { font-size: 0.875rem; margin-top: 0.25rem; display: flex; align-items: center; gap: 4px; }
 .change-up { color: var(--up-color); }
 .change-down { color: var(--down-color); }
 
-/* TABLE & OTHER STYLES ... (Giữ nguyên) */
-.section-header { display: flex; justify-content: space-between; align-items: center; margin-top: 3rem; margin-bottom: 1rem; }
-.section-title { font-size: 1.25rem; font-weight: 700; }
-.table-wrapper { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
-th { background: #f1f5f9; padding: 12px 16px; text-align: right; font-weight: 600; color: var(--secondary-text); border-bottom: 1px solid var(--border-color); }
-td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; font-variant-numeric: tabular-nums; }
-th:first-child, td:first-child { text-align: left; }
-tr.newest { background: #eff6ff; }
-.badge { padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 0.8rem; }
-.badge-up { background: #dcfce7; color: #166534; }
-.badge-down { background: #fee2e2; color: #991b1b; }
-.filter-bar { display: none; background: white; padding: 1rem; border-radius: 12px; margin-bottom: 1rem; gap: 10px; border: 1px solid var(--border-color); }
-.filter-bar.show { display: flex; flex-wrap: wrap; }
-.filter-bar input { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; }
-.chart-wrapper { margin-top: 2rem; padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-
-/* MOBILE RESPONSIVE - PHẦN SỬA ĐỔI CHÍNH */
-@media (max-width: 640px) {
-  .grid { 
-    grid-template-columns: 1fr; 
-    gap: 0.75rem; /* Giảm khoảng cách giữa các ô */
-    margin-bottom: 1.5rem;
-  }
-  .card {
-    padding: 0.75rem 1rem; /* Thu nhỏ padding trong ô */
-    border-radius: 12px;
-  }
-  .card-value { 
-    font-size: 1.4rem; /* Giảm kích cỡ chữ số một chút */
-    margin-top: 0.25rem;
-  }
-  .card-title {
-    font-size: 0.7rem; /* Giảm kích cỡ tiêu đề ô */
-  }
-  header { padding: 0.75rem 1rem; }
-  header #updateBtn { display: none; } 
-  #mobileUpdateBtn { display: flex; } 
-  .container { margin: 0.75rem auto; }
-  .section-header { margin-top: 1.5rem; }
+#filterBox {
+  display: none; background: white; padding: 15px; border-radius: 12px;
+  border: 1px solid var(--border-color); margin-bottom: 1.5rem;
+  gap: 10px; align-items: center; flex-wrap: wrap;
 }
-  /* ===== MOBILE UPDATE BUTTON STYLE ===== */
-@media (max-width:600px){
+input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
+.btn-filter, .btn-clear { border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; color: white; }
+.btn-filter { background: #3b82f6; }
+.btn-clear { background: #ef4444; }
 
-  #fabUpdate{
-    background: transparent;          /* nền trong suốt */
-    border: 2px solid #3b82f6;        /* viền xanh */
-    color: transparent;                   /* icon xanh */
-  }
+.table-wrapper { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto; margin-bottom: 2rem; }
+table { width: 100%; border-collapse: collapse; font-size: 0.95rem; min-width: 600px; }
+th { background: #f1f5f9; padding: 14px 16px; text-align: right; color: var(--secondary-text); }
+td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; }
+th:first-child, td:first-child { text-align: left; }
 
-  #fabUpdate:active{
-    background: rgba(59,130,246,0.1); /* hiệu ứng khi bấm */
-  }
+/* FIX BIỂU ĐỒ MOBILE */
+.chart-card {
+  padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color);
+}
+.chart-scroll-container {
+  width: 100%;
+  overflow-x: auto; /* Cho phép trượt ngang */
+  margin-top: 1rem;
+}
+.chart-inner-wrapper {
+  min-width: 800px; /* Ép biểu đồ rộng ít nhất 800px để không bị nén */
+  height: 350px;
+}
 
+@media (max-width: 640px) {
+  header #updateBtn { display: none; } 
+  .container { padding-top: 75px; }
+  .grid { grid-template-columns: 1fr; gap: 0.8rem; }
+  .card-value { font-size: 1.5rem; }
 }
 </style>
 </head>
@@ -211,49 +118,49 @@ tr.newest { background: #eff6ff; }
   <button id="updateBtn" onclick="load()">UPDATE</button>
 </header>
 
-<button id="mobileUpdateBtn" onclick="load()">🔄</button>
-
 <div class="container">
-  <div id="lastTime"></div>
+  <div id="lastTime" style="margin-bottom:1rem; font-size:0.875rem; color:#64748b; font-weight: 500;"></div>
 
   <div class="grid">
     <div class="card"><div class="card-title">💵 USD Exchange</div><div id="usd" class="card-value">--</div></div>
     <div class="card highlight"><div class="card-title">🌍 Global XAU (oz)</div><div id="xau" class="card-value">--</div></div>
     <div class="card highlight"><div class="card-title">🧈 SJC Gold </div><div id="sjc" class="card-value">--</div></div>
     <div class="card"><div class="card-title">⚖️ Market Gap</div><div id="diff" class="card-value">--</div></div>
-    <div class="card"><div class="card-title">📊 DIFFERENCE %</div><div id="percent" class="card-value">--</div></div>
+    <div class="card"><div class="card-title">📊 DIFF %</div><div id="percent" class="card-value">--</div></div>
   </div>
 
-  <div class="section-header">
-    <div class="section-title">Query History</div>
-    <button onclick="toggleView()" id="toggleBtn">+</button>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <div style="font-size: 1.2rem; font-weight: 700;">Query History</div>
+    <button onclick="toggleFilterBox()" id="toggleBtn" style="background:transparent; border:none; font-size:1.8rem; cursor:pointer; color:#64748b;">+</button>
   </div>
 
-  <div id="filterBox" class="filter-bar">
+  <div id="filterBox">
     <input type="date" id="filterDate">
-    <input type="text" id="searchInput" placeholder="Search by time...">
-    <button onclick="applyFilter()" style="background:#3b82f6; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Apply</button>
-    <button onclick="resetFilter()" style="background:#94a3b8; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">Reset</button>
-    <button onclick="clearAll()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; margin-left: auto;">Clear All</button>
+    <button class="btn-filter" onclick="applyFilter()">Apply</button>
+    <button class="btn-clear" onclick="clearAllHistory()">Clear All</button>
   </div>
 
   <div class="table-wrapper">
     <table>
       <thead>
-        <tr><th>Update Time</th><th>XAU ($)</th><th>SJC (VND)</th><th>Gap (VND)</th><th>Status</th></tr>
+        <tr><th>Time</th><th>XAU ($)</th><th>SJC (VND)</th><th>Gap (VND)</th><th>Status</th></tr>
       </thead>
       <tbody id="history"></tbody>
     </table>
   </div>
 
-  <div class="chart-wrapper">
-    <div class="section-title" style="margin-bottom: 1rem;">📈 XAU-SJC Gap </div>
-    <canvas id="gapChart" style="max-height: 400px;"></canvas>
+  <div class="chart-card">
+    <div style="font-size: 1.1rem; font-weight: 700;">📈 XAU-SJC Gap Trend</div>
+    <div class="chart-scroll-container">
+      <div class="chart-inner-wrapper">
+        <canvas id="gapChart"></canvas>
+      </div>
+    </div>
+    <p style="font-size: 0.75rem; color: #94a3b8; text-align: center; margin-top: 10px;">(Vuốt ngang để xem lịch sử đầy đủ)</p>
   </div>
 </div>
 
 <script>
-/* SCRIPT GIỮ NGUYÊN HOÀN TOÀN NHƯ CŨ */
 const API = "/api/gold";
 const HIST_API = "/api/history"; 
 const elements = {
@@ -265,87 +172,28 @@ const elements = {
   lastTime: document.getElementById("lastTime"),
   historyTable: document.getElementById("history"),
   filterBox: document.getElementById("filterBox"),
-  updateBtn: document.getElementById("updateBtn"),
-  mobileUpdateBtn: document.getElementById("mobileUpdateBtn"),
+  filterDate: document.getElementById("filterDate"),
   toggleBtn: document.getElementById("toggleBtn")
 };
 
 const fmtVND = new Intl.NumberFormat('vi-VN');
 const fmtXAU = new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-let history = []; 
-let chartData = JSON.parse(localStorage.getItem("goldChartData") || "[]");
-let filteredData = [];
-let myChart;
-let isExpanded = false;
-
-function initChart() {
-  const ctx = document.getElementById('gapChart').getContext('2d');
-  myChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: chartData.map(item => item.date),
-      datasets: [{
-        label: 'Gap (VND)',
-        data: chartData.map(item => item.gap),
-        borderColor: '#3b82f6',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        borderWidth: 2,
-        tension: 0.3,
-        fill: true
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: { y: { ticks: { callback: value => value.toLocaleString('vi-VN') } } }
-    }
-  });
-}
-
-function updateChartRecord(gap) {
-  const now = new Date();
-  const totalMinutes = now.getHours() * 60 + now.getMinutes();
-  const todayKey = now.toLocaleDateString('vi-VN');
-  if (totalMinutes >= 550 && totalMinutes <= 660) { 
-    if (!chartData.find(item => item.date === todayKey)) {
-      chartData.push({ date: todayKey, gap: gap });
-      if (chartData.length > 30) chartData.shift();
-      localStorage.setItem("goldChartData", JSON.stringify(chartData));
-      myChart.data.labels = chartData.map(item => item.date);
-      myChart.data.datasets[0].data = chartData.map(item => item.gap);
-      myChart.update();
-    }
-  }
-}
-
-async function fetchHistory() {
-  try {
-    const res = await fetch(HIST_API);
-    history = await res.json();
-    filteredData = [...history];
-    renderHistory();
-  } catch(e) { console.error("Lỗi tải lịch sử từ server"); }
-}
+let historyData = []; 
+let lastSJCValue = null; 
+let myChart = null;
 
 async function load() {
-  const btns = [elements.updateBtn, elements.mobileUpdateBtn];
-  btns.forEach(b => { if(b) b.disabled = true; });
-  elements.updateBtn.innerText = "Updating...";
   try {
     const res = await fetch(`${API}?t=${Date.now()}`);
     const d = await res.json();
-    await fetchHistory();
     renderMain(d);
-    updateChartRecord(d.diff);
-    const time = new Date().toLocaleString('vi-VN');
-    elements.lastTime.innerHTML = `🟢 Live Update: ${time}`;
-    localStorage.setItem("lastData", JSON.stringify(d));
-    localStorage.setItem("lastTime", time);
-  } catch(e) { alert("Error!"); } finally {
-    btns.forEach(b => { if(b) b.disabled = false; });
-    elements.updateBtn.innerText = "UPDATE";
-  }
+    if (lastSJCValue === null || d.sjc !== lastSJCValue) {
+      lastSJCValue = d.sjc;
+      await fetchHistory();
+    }
+    elements.lastTime.innerHTML = `🟢 Live: ${new Date().toLocaleString('vi-VN')}`;
+  } catch(e) { console.error(e); }
 }
 
 function renderMain(d) {
@@ -360,103 +208,122 @@ function renderMain(d) {
   elements.sjc.innerHTML = `<div>${fmtVND.format(d.sjc)}</div><div class="sjc-sub ${isUp ? 'change-up' : 'change-down'}">${isUp ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}</div>`;
 }
 
-function renderHistory() {
+async function fetchHistory() {
+  try {
+    const res = await fetch(HIST_API);
+    historyData = await res.json(); 
+    renderHistory(historyData);
+    updateChart(historyData);
+  } catch(e) { console.error(e); }
+}
+
+function renderHistory(data) {
   elements.historyTable.innerHTML = "";
-  let data = [...filteredData].reverse();
-  if(!isExpanded) data = data.slice(0, 5);
-  data.forEach((r, i) => {
+  let displayData = [...data].reverse().slice(0, 15); 
+  displayData.forEach(r => {
     const row = document.createElement("tr");
-    if(i === 0 && !isExpanded) row.className = "newest";
     row.innerHTML = `<td>${r.time}</td><td>${fmtXAU.format(r.xau)}</td><td>${fmtVND.format(r.sjc)}</td><td>${fmtVND.format(r.diff)}</td><td><span class="badge ${r.percent.includes('-') ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>`;
     elements.historyTable.appendChild(row);
   });
 }
 
-function toggleView() {
-  isExpanded = !isExpanded;
-  elements.toggleBtn.innerText = isExpanded ? "−" : "+";
-  elements.filterBox.classList.toggle("show", isExpanded);
-  renderHistory();
+function updateChart(data) {
+  const ctx = document.getElementById('gapChart').getContext('2d');
+  // Dữ liệu từ trái (cũ) qua phải (mới)
+  const labels = data.map(r => r.time.split(' ')[1] || r.time);
+  const gaps = data.map(r => r.diff / 1000000);
+
+  if (myChart) myChart.destroy();
+  myChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Gap (M)',
+        data: gaps,
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderWidth: 3, fill: true, tension: 0.3, pointRadius: 4, hitRadius: 10
+      }]
+    },
+    options: { 
+      responsive: true, 
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { 
+        y: { beginAtZero: false, ticks: { callback: v => v + 'M' } },
+        x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
+      }
+    }
+  });
+
+  // Tự động cuộn về cuối biểu đồ (dữ liệu mới nhất) khi load xong
+  const scroller = document.querySelector('.chart-scroll-container');
+  setTimeout(() => { scroller.scrollLeft = scroller.scrollWidth; }, 100);
+}
+
+function toggleFilterBox() {
+  const isHidden = elements.filterBox.style.display === "none" || elements.filterBox.style.display === "";
+  elements.filterBox.style.display = isHidden ? "flex" : "none";
+  elements.toggleBtn.innerText = isHidden ? "−" : "+";
 }
 
 function applyFilter() {
-  const date = document.getElementById("filterDate").value;
-  const key = document.getElementById("searchInput").value.toLowerCase();
-  filteredData = history.filter(r => (!date || r.time.includes(date)) && (!key || r.time.toLowerCase().includes(key)));
-  renderHistory();
+  const selectedDate = elements.filterDate.value;
+  if (!selectedDate) return;
+  const filtered = historyData.filter(r => {
+    const parts = r.time.split(' ')[0].split('/');
+    return `${parts[2]}-${parts[1]}-${parts[0]}` === selectedDate;
+  });
+  renderHistory(filtered);
+  updateChart(filtered);
 }
 
-function resetFilter() {
-  document.getElementById("filterDate").value = "";
-  document.getElementById("searchInput").value = "";
-  filteredData = [...history];
-  renderHistory();
+async function clearAllHistory() {
+  if (!confirm("Xóa toàn bộ lịch sử?")) return;
+  try {
+    historyData = [];
+    renderHistory([]);
+    updateChart([]);
+    await fetch(HIST_API, { method: 'DELETE' });
+    alert("Đã xóa!");
+  } catch(e) { console.error("Error"); }
 }
 
-function clearAll() {
-  if(confirm("Xác nhận xóa toàn bộ dữ liệu trên Server?")) {
-    fetch('/api/history/clear', { method: 'POST' }).then(() => {
-      localStorage.clear();
-      location.reload();
-    });
-  }
-}
+load();
 
-initChart();
-const lastData = localStorage.getItem("lastData");
-if(lastData) renderMain(JSON.parse(lastData));
-const lastTimeSaved = localStorage.getItem("lastTime");
-elements.lastTime.innerHTML = lastTimeSaved ? `⚪ Last update: ${lastTimeSaved}` : "Ready";
-fetchHistory();
-  const indicator = document.createElement("div");
+/* PULL TO REFRESH */
+let startY = 0; let isPulling = false;
+const indicator = document.createElement("div");
 indicator.innerText = "↓ Pull to refresh";
-indicator.style = `
-  position:fixed;
-  top:10px;
-  left:50%;
-  transform:translateX(-50%);
-  font-size:12px;
-  opacity:0;
-`;
+indicator.style = "position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-100px); font-size:16px; font-weight:600; opacity:0; z-index:2000; background:#0f172a; color:white; padding:12px 24px; border-radius:30px; box-shadow:0 4px 15px rgba(0,0,0,0.3); transition: opacity 0.2s; pointer-events:none; display:flex; align-items:center; gap:8px;";
 document.body.appendChild(indicator);
-/* ===== PULL TO REFRESH (MOBILE) ===== */
-let startY = 0;
-let isPulling = false;
 
-window.addEventListener("touchstart", (e) => {
-  if (window.scrollY === 0) {
-    startY = e.touches[0].clientY;
-    isPulling = true;
-  }
-});
-
+window.addEventListener("touchstart", (e) => { if (window.scrollY <= 1) { startY = e.touches[0].clientY; isPulling = true; } }, { passive: false });
 window.addEventListener("touchmove", (e) => {
   if (!isPulling) return;
-
-  const currentY = e.touches[0].clientY;
-  const diff = currentY - startY;
-
-  if (diff > 20) {
-    indicator.style.opacity = 1;
-    indicator.innerText = diff > 80 ? "Release to refresh" : "Pull to refresh";
+  const diff = e.touches[0].clientY - startY;
+  if (diff > 0 && window.scrollY <= 1) {
+    if (e.cancelable) e.preventDefault(); 
+    indicator.style.opacity = "1";
+    const moveY = Math.min(diff / 2, 60); 
+    indicator.style.transform = `translateX(-50%) translateY(${moveY}px)`;
+    indicator.innerText = diff > 100 ? "🚀 Release to update" : "↓ Pull to refresh";
   }
-
-  if (diff > 80) {
-    isPulling = false;
-    indicator.innerText = "Updating...";
+}, { passive: false });
+window.addEventListener("touchend", (e) => {
+  if (!isPulling) return;
+  const diff = e.changedTouches[0].clientY - startY;
+  if (diff > 100) {
+    indicator.innerHTML = "🔄 Updating...";
+    indicator.style.transform = `translateX(-50%) translateY(40px)`;
     load();
-
-    setTimeout(() => {
-      indicator.style.opacity = 0;
-    }, 1000);
+    setTimeout(() => { indicator.style.opacity = "0"; indicator.style.transform = `translateX(-50%) translateY(-100px)`; }, 1500);
+  } else {
+    indicator.style.opacity = "0"; indicator.style.transform = `translateX(-50%) translateY(-100px)`;
   }
-});
-
-window.addEventListener("touchend", () => {
   isPulling = false;
-  indicator.style.opacity = 0;
 });
 </script>
-
 </body>
 </html>
