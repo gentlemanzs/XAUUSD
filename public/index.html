@@ -315,7 +315,9 @@ function applyFilter() {
 
   const filtered = historyData.filter(r => {
     const d = new Date(r.time);
-    const formatted = d.toISOString().slice(0, 10);
+    const formatted = d.toLocaleDateString('sv-SE', {
+  timeZone: 'Asia/Ho_Chi_Minh'
+});
     return formatted === selectedDate;
   });
 
