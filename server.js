@@ -89,7 +89,7 @@ async function getWorldGoldPrice() {
 
 /* ===== SJC ===== */
 async function getSJCPrice() {
-  return 168800000;
+  return 168800000 + Math.floor(Math.random() * 1000000);
 }
 
 /* ===== SAVE HISTORY (MongoDB) ===== */
