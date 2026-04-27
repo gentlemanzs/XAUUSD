@@ -20,7 +20,7 @@
 body {
   margin: 0;
   font-family: 'Inter', -apple-system, system-ui, sans-serif;
-  background: var(--header-bg) !important; 
+  background: var(--bg-color) !important;
   color: var(--primary-text);
   overflow-x: hidden;
   overscroll-behavior-y: contain;
@@ -206,7 +206,9 @@ async function load() {
       lastSJCValue = d.sjc;
       await fetchHistory();
     }
-    elements.lastTime.innerHTML = `🟢 Live: ${new Date().toLocaleString('vi-VN')}`;
+    elements.lastTime.innerHTML = `🟢 Live: ${new Date().toLocaleString('vi-VN', {
+  timeZone: 'Asia/Ho_Chi_Minh'
+})}`;
   } catch(e) { console.error(e); }
 }
 
@@ -236,7 +238,28 @@ function renderHistory(data) {
   let displayData = [...data].reverse().slice(0, 5); 
   displayData.forEach(r => {
     const row = document.createElement("tr");
-    row.innerHTML = `<td>${r.time}</td><td>${fmtXAU.format(r.xau)}</td><td>${fmtVND.format(r.sjc)}</td><td>${fmtVND.format(r.diff)}</td><td><span class="badge ${r.percent.includes('-') ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>`;
+    function formatVNTime(timeStr) {
+  const d = new Date(timeStr);
+  return d.toLocaleString('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh'
+  });
+}
+
+function renderHistory(data) {
+  elements.historyTable.innerHTML = "";
+  let displayData = [...data].reverse().slice(0, 5); 
+  displayData.forEach(r => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${formatVNTime(r.time)}</td>
+      <td>${fmtXAU.format(r.xau)}</td>
+      <td>${fmtVND.format(r.sjc)}</td>
+      <td>${fmtVND.format(r.diff)}</td>
+      <td><span class="badge ${r.percent.includes('-') ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>
+    `;
+    elements.historyTable.appendChild(row);
+  });
+}
     elements.historyTable.appendChild(row);
   });
 }
@@ -244,7 +267,12 @@ function renderHistory(data) {
 function updateChart(data) {
   const ctx = document.getElementById('gapChart').getContext('2d');
   // Dữ liệu từ trái (cũ) qua phải (mới)
-  const labels = data.map(r => r.time.split(' ')[1] || r.time);
+  const labels = data.map(r => {
+  const d = new Date(r.time);
+  return d.toLocaleTimeString('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh'
+  });
+});
   const gaps = data.map(r => r.diff / 1000000);
 
   if (myChart) myChart.destroy();
