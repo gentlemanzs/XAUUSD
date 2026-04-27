@@ -10,16 +10,23 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-/* --- CẤU HÌNH HỆ THỐNG --- */
+/* --- CẤU HÌNH --- */
 const PORT = process.env.PORT || 8080;
 const MONGO_URI = process.env.MONGO_URI;
 
-/* --- KẾT NỐI MONGODB --- */
-mongoose.connect(MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected!"))
-  .catch(err => console.error("❌ Lỗi kết nối MongoDB:", err));
+/* --- KẾT NỐI MONGODB VỚI LOG CHI TIẾT --- */
+mongoose.connect(MONGO_URI, { 
+    serverSelectionTimeoutMS: 5000 // Tự động ngắt sau 5s nếu không kết nối được
+})
+.then(() => console.log("✅ [Database] Đã kết nối MongoDB Atlas thành công!"))
+.catch(err => {
+    console.error("❌ [Database] LỖI KẾT NỐI:");
+    console.error("   - Kiểm tra lại chuỗi MONGO_URI trên Railway.");
+    console.error("   - Đảm bảo đã thay <password> và xóa dấu < >.");
+    console.error("   - Đảm bảo đã mở IP 0.0.0.0/0 trên MongoDB Atlas.");
+});
 
-/* --- SCHEMA DỮ LIỆU --- */
+/* --- SCHEMA --- */
 const historySchema = new mongoose.Schema({
   time: String,
   usd: Number,
@@ -33,10 +40,9 @@ const historySchema = new mongoose.Schema({
 const History = mongoose.model("History", historySchema);
 
 app.use(express.static("public"));
-
 let latestData = null;
 
-/* --- HELPER FETCH --- */
+/* --- HELPER TẢI DỮ LIỆU --- */
 async function fetchWithRetry(url) {
   try {
     const res = await axios.get(url, {
@@ -45,55 +51,60 @@ async function fetchWithRetry(url) {
     });
     return res.data;
   } catch (e) {
-    console.error(`⚠️ Lỗi tải URL: ${url}`);
+    console.log(`⚠️ Không thể tải: ${url}`);
     return null;
   }
 }
 
-/* --- 1. CÀO TỶ GIÁ USD (VIETCOMBANK) --- */
+/* --- 1. LẤY TỶ GIÁ USD (CHỈ LẤY CỘT BÁN) --- */
 async function getUSDRate() {
   try {
     const html = await fetchWithRetry("https://webgia.com/ty-gia/vietcombank/");
-    if (!html) throw "Fail HTML";
+    if (!html) throw "Lỗi tải trang";
+
     const clean = html.replace(/\s+/g, " ");
-    const nums = clean.match(/[0-9]{2}\.[0-9]{3}/g); // Tìm dạng 25.xxx
-    if (!nums) throw "Không thấy USD";
-    
-    // Lấy giá trị bán ra (thường là con số cao nhất trong nhóm 25.xxx)
-    const values = nums.map(n => parseFloat(n.replace(".", "")));
-    const usdRate = Math.max(...values);
-    console.log(`💵 USD: ${usdRate}`);
-    return usdRate;
+    const usdIndex = clean.indexOf("USD");
+    if (usdIndex === -1) throw "Không tìm thấy dòng USD";
+
+    // Cắt đoạn dữ liệu quanh chữ USD
+    const section = clean.substring(usdIndex, usdIndex + 300);
+    const nums = section.match(/[0-9]{2}\.[0-9]{3}/g); // Tìm số dạng 25.xxx
+
+    if (!nums || nums.length < 3) throw "Không đủ dữ liệu cột (Mua/CK/Bán)";
+
+    // Lấy phần tử thứ 3 (nums[2]) - Đây là cột BÁN RA
+    const rate = parseFloat(nums[2].replace(".", ""));
+    console.log(`💵 USD (Bán): ${rate}`);
+    return rate;
   } catch (e) {
-    return 25450;
+    console.log("❌ Lỗi cào USD:", e);
+    return 25450; 
   }
 }
 
-/* --- 2. CÀO GIÁ VÀNG THẾ GIỚI (XAU) --- */
+/* --- 2. LẤY GIÁ VÀNG THẾ GIỚI --- */
 async function getWorldGoldPrice() {
   try {
     const data = await fetchWithRetry("https://api.gold-api.com/price/XAU");
     return data?.price || 2350;
-  } catch {
-    return 2350;
-  }
+  } catch { return 2350; }
 }
 
-/* --- 3. CÀO GIÁ VÀNG SJC --- */
+/* --- 3. LẤY GIÁ VÀNG SJC (CÀO THẬT) --- */
 async function getSJCPrice() {
   try {
     const html = await fetchWithRetry("https://webgia.com/gia-vang/sjc/");
-    if (!html) throw "Fail HTML";
+    if (!html) throw "Lỗi tải trang";
+
     const clean = html.replace(/\s+/g, " ");
-    // Tìm số dạng 8x.xxx.xxx
-    const nums = clean.match(/[0-9]{2}\.[0-9]{3}\.[0-9]{3}/g);
-    if (!nums) throw "Không thấy SJC";
-    
+    const nums = clean.match(/[0-9]{2}\.[0-9]{3}\.[0-9]{3}/g); // Tìm số dạng 8x.xxx.xxx
+    if (!nums) throw "Không thấy số SJC";
+
     const values = nums.map(n => parseInt(n.replace(/\./g, "")));
-    // Lấy giá Bán ra (thường là giá trị lớn thứ 2 hoặc thứ 4 trong danh sách cào được)
-    const sjcPrice = values[1] || values[0]; 
-    console.log(`🧈 SJC: ${sjcPrice}`);
-    return sjcPrice;
+    // Lấy giá Bán ra (vị trí số 2 trong danh sách)
+    const price = values[1] || values[0];
+    console.log(`🧈 SJC (Bán): ${price}`);
+    return price;
   } catch (e) {
     return 89000000;
   }
@@ -102,20 +113,29 @@ async function getSJCPrice() {
 /* --- LƯU LỊCH SỬ --- */
 async function saveHistory(entry) {
   try {
+    // 1. Kiểm tra trạng thái kết nối Database trước
+    if (mongoose.connection.readyState !== 1) {
+        console.log("⚠️ Bỏ qua lưu: Chưa kết nối được Database.");
+        return;
+    }
+
     const lastEntry = await History.findOne().sort({ createdAt: -1 });
-    // Chỉ lưu nếu giá SJC hoặc XAU thay đổi để tránh trùng lặp
+
+    // 2. Chỉ lưu nếu giá có thay đổi thực sự
     if (!lastEntry || lastEntry.sjc !== entry.sjc || lastEntry.xau !== entry.xau) {
       await History.create(entry);
-      console.log("💾 Đã ghi nhận lịch sử mới.");
+      console.log("💾 [MongoDB] Đã ghi lịch sử mới thành công.");
+    } else {
+      console.log("ℹ️ [MongoDB] Giá không đổi, không ghi thêm.");
     }
   } catch (e) {
-    console.error("❌ Lỗi MongoDB:", e.message);
+    console.error("❌ [MongoDB] Lỗi khi ghi:", e.message);
   }
 }
 
-/* --- CẬP NHẬT TỔNG THỂ --- */
+/* --- UPDATE DATA --- */
 async function updateData() {
-  console.log(`\n[${new Date().toLocaleTimeString()}] Đang cập nhật...`);
+  console.log(`\n--- ${new Date().toLocaleTimeString('vi-VN')} BẮT ĐẦU CẬP NHẬT ---`);
   try {
     const [usd, xau, sjc] = await Promise.all([
       getUSDRate(),
@@ -138,34 +158,32 @@ async function updateData() {
     };
 
     await saveHistory(latestData);
+    console.log("✅ HOÀN TẤT CẬP NHẬT");
+
   } catch (e) {
-    console.log("❌ Lỗi Update:", e);
+    console.log("❌ LỖI UPDATE:", e);
   }
 }
 
-/* --- CHU KỲ & ROUTING --- */
+/* --- CHU KỲ & ROUTE --- */
 cron.schedule("*/2 * * * *", updateData);
 
 app.get("/api/gold", (req, res) => {
-  res.json(latestData || { message: "Vui lòng đợi khởi tạo..." });
+  res.json(latestData || { message: "Đang khởi tạo, vui lòng đợi..." });
 });
 
 app.get("/api/history", async (req, res) => {
   try {
     const data = await History.find().sort({ createdAt: -1 }).limit(100);
     res.json(data.reverse());
-  } catch (e) {
-    res.status(500).send("Lỗi server");
-  }
+  } catch (e) { res.status(500).send("Lỗi DB"); }
 });
 
 app.delete("/api/history", async (req, res) => {
   try {
     await History.deleteMany({});
-    res.json({ message: "Đã xóa lịch sử thành công." });
-  } catch (e) {
-    res.status(500).send("Lỗi xóa");
-  }
+    res.json({ message: "Đã xóa lịch sử DB." });
+  } catch (e) { res.status(500).send("Lỗi xóa"); }
 });
 
 app.get("/", (req, res) => {
@@ -173,6 +191,6 @@ app.get("/", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server chạy trên port ${PORT}`);
   updateData();
 });
