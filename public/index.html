@@ -17,11 +17,10 @@
   --border-color: #e2e8f0;
 }
 
-/* CHỐNG LỘ NỀN TRẮNG KHI VUỐT */
 body {
   margin: 0;
   font-family: 'Inter', -apple-system, system-ui, sans-serif;
-  background: var(--header-bg) !important; 
+  background: var(--header-bg) !important; /* Fix lộ nền trắng */
   color: var(--primary-text);
   overflow-x: hidden;
 }
@@ -37,10 +36,10 @@ header {
   top: 0; left: 0; width: 100%;
   box-sizing: border-box;
   z-index: 1000;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
 }
 
-.brand { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.025em; }
+.brand { font-size: 1.25rem; font-weight: 700; }
 
 #updateBtn {
   background: #3b82f6; color: white; border: none;
@@ -65,34 +64,23 @@ header {
 .card {
   background: var(--card-bg); border-radius: 16px;
   padding: 1.5rem; border: 1px solid var(--border-color);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 .card.highlight { border-left: 4px solid #3b82f6; }
 .card-title { font-size: 0.75rem; color: var(--secondary-text); text-transform: uppercase; font-weight: 700; }
 .card-value { font-size: 1.875rem; font-weight: 800; margin-top: 0.5rem; }
 
-.sjc-sub { 
-  font-size: 0.875rem; margin-top: 0.25rem; 
-  display: flex; align-items: center; gap: 4px; justify-content: flex-start; 
-}
-
+.sjc-sub { font-size: 0.875rem; margin-top: 0.25rem; display: flex; align-items: center; gap: 4px; }
 .change-up { color: var(--up-color); }
 .change-down { color: var(--down-color); }
 
-/* FILTER BOX */
 #filterBox {
-  display: none;
-  background: white; padding: 15px; border-radius: 12px;
+  display: none; background: white; padding: 15px; border-radius: 12px;
   border: 1px solid var(--border-color); margin-bottom: 1.5rem;
   gap: 10px; align-items: center; flex-wrap: wrap;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
-input[type="date"] {
-  padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);
-  font-family: inherit;
-}
-.btn-filter { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; }
-.btn-clear { background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
+.btn-filter { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; }
+.btn-clear { background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; }
 
 .table-wrapper { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; margin-bottom: 2rem; }
 table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
@@ -104,16 +92,13 @@ th:first-child, td:first-child { text-align: left; }
 .badge-up { background: #dcfce7; color: #166534; }
 .badge-down { background: #fee2e2; color: #991b1b; }
 
-.chart-wrapper { padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); margin-top: 1rem; }
+.chart-wrapper { padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); }
 
 @media (max-width: 640px) {
-  header { padding: 0.8rem 1.2rem; }
   header #updateBtn { display: none; } 
   .container { padding-top: 75px; }
   .grid { grid-template-columns: 1fr; gap: 0.8rem; }
   .table-wrapper { overflow-x: auto; }
-  table { min-width: 600px; }
-  .card-value { font-size: 1.5rem; }
 }
 </style>
 </head>
@@ -125,14 +110,14 @@ th:first-child, td:first-child { text-align: left; }
 </header>
 
 <div class="container">
-  <div id="lastTime" style="margin-bottom:1rem; font-size:0.875rem; color:#64748b; font-weight: 500;"></div>
+  <div id="lastTime" style="margin-bottom:1rem; font-size:0.875rem; color:#64748b;"></div>
 
   <div class="grid">
     <div class="card"><div class="card-title">💵 USD Exchange</div><div id="usd" class="card-value">--</div></div>
-    <div class="card highlight"><div class="card-title">🌍 Global XAU (oz)</div><div id="xau" class="card-value">--</div></div>
+    <div class="card highlight"><div class="card-title">🌍 Global XAU</div><div id="xau" class="card-value">--</div></div>
     <div class="card highlight"><div class="card-title">🧈 SJC Gold </div><div id="sjc" class="card-value">--</div></div>
     <div class="card"><div class="card-title">⚖️ Market Gap</div><div id="diff" class="card-value">--</div></div>
-    <div class="card"><div class="card-title">📊 DIFFERENCE %</div><div id="percent" class="card-value">--</div></div>
+    <div class="card"><div class="card-title">📊 DIFF %</div><div id="percent" class="card-value">--</div></div>
   </div>
 
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
@@ -149,7 +134,7 @@ th:first-child, td:first-child { text-align: left; }
   <div class="table-wrapper">
     <table>
       <thead>
-        <tr><th>Update Time</th><th>XAU ($)</th><th>SJC (VND)</th><th>Gap (VND)</th><th>Status</th></tr>
+        <tr><th>Time</th><th>XAU ($)</th><th>SJC (VND)</th><th>Gap (VND)</th><th>Status</th></tr>
       </thead>
       <tbody id="history"></tbody>
     </table>
@@ -190,7 +175,6 @@ async function load() {
     const d = await res.json();
     renderMain(d);
     
-    // Chỉ cập nhật lịch sử khi giá SJC thay đổi
     if (lastSJCValue === null || d.sjc !== lastSJCValue) {
       lastSJCValue = d.sjc;
       await fetchHistory();
@@ -228,6 +212,7 @@ async function fetchHistory() {
 
 function renderHistory(data) {
   elements.historyTable.innerHTML = "";
+  // Hiển thị 10 bản ghi mới nhất ở đầu bảng
   let displayData = [...data].reverse().slice(0, 10); 
   displayData.forEach(r => {
     const row = document.createElement("tr");
@@ -238,8 +223,10 @@ function renderHistory(data) {
 
 function updateChart(data) {
   const ctx = document.getElementById('gapChart').getContext('2d');
-  const labels = data.map(r => r.time.split(' ')[1] || r.time);
-  const gaps = data.map(r => r.diff / 1000000);
+  // Vẽ từ cũ sang mới (Trái qua phải)
+  const sortedData = [...data];
+  const labels = sortedData.map(r => r.time.split(' ')[1] || r.time);
+  const gaps = sortedData.map(r => r.diff / 1000000);
 
   if (myChart) myChart.destroy();
   myChart = new Chart(ctx, {
@@ -247,7 +234,7 @@ function updateChart(data) {
     data: {
       labels: labels,
       datasets: [{
-        label: 'Gap (M)',
+        label: 'Gap (Triệu)',
         data: gaps,
         borderColor: '#3b82f6',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -255,10 +242,12 @@ function updateChart(data) {
       }]
     },
     options: { 
-      responsive: true, 
-      maintainAspectRatio: false, 
+      responsive: true, maintainAspectRatio: false, 
       plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: false } }
+      scales: { 
+        x: { grid: { display: false } },
+        y: { beginAtZero: false, ticks: { callback: v => v + 'M' } }
+      }
     }
   });
 }
@@ -281,34 +270,31 @@ function applyFilter() {
 }
 
 async function clearAllHistory() {
-  if (confirm("Xác nhận XÓA SẠCH toàn bộ lịch sử truy vấn?")) {
-    try {
-      const res = await fetch(HIST_API, { method: 'DELETE' });
-      if (res.ok) {
-        historyData = [];
-        renderHistory([]);
-        updateChart([]);
-        elements.filterDate.value = "";
-        alert("Đã xóa sạch!");
-      }
-    } catch(e) { alert("Lỗi kết nối server."); }
+  if (!confirm("Xác nhận XÓA SẠCH toàn bộ lịch sử?")) return;
+  
+  try {
+    // 1. Reset ngay lập tức trên giao diện (UI First)
+    historyData = [];
+    renderHistory([]);
+    updateChart([]);
+    elements.filterDate.value = "";
+
+    // 2. Gửi lệnh xóa tới máy chủ
+    await fetch(HIST_API, { method: 'DELETE' });
+    alert("Đã làm sạch lịch sử!");
+  } catch(e) {
+    console.error("Server Delete failed, UI reset anyway.");
   }
 }
 
 load();
 
-/* PULL TO REFRESH LOGIC */
+/* PULL TO REFRESH */
 let startY = 0;
 let isPulling = false;
 const indicator = document.createElement("div");
 indicator.innerText = "↓ Pull to refresh";
-indicator.style = `
-  position:fixed; top:20px; left:50%; transform:translateX(-50%); 
-  font-size:16px; font-weight:600; opacity:0; z-index:2000; 
-  background:#0f172a; color:white; padding:12px 24px; border-radius:30px; 
-  box-shadow:0 4px 15px rgba(0,0,0,0.3); transition:opacity 0.2s, transform 0.2s; 
-  pointer-events:none;
-`;
+indicator.style = "position:fixed; top:20px; left:50%; transform:translateX(-50%); font-size:16px; font-weight:600; opacity:0; z-index:2000; background:#0f172a; color:white; padding:12px 24px; border-radius:30px; box-shadow:0 4px 15px rgba(0,0,0,0.3); transition:opacity 0.2s, transform 0.2s; pointer-events:none;";
 document.body.appendChild(indicator);
 
 window.addEventListener("touchstart", (e) => { if (window.scrollY === 0) { startY = e.touches[0].clientY; isPulling = true; } });
