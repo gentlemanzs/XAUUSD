@@ -86,7 +86,7 @@ header {
 
 #toggleBtn {
   background: transparent; 
-  color: #64748b;          
+  color: #64748b;           
   border: 1px solid transparent; 
   font-size: 1.5rem;      
   font-weight: 400;
@@ -147,7 +147,7 @@ header {
 .change-up { color: var(--up-color); }
 .change-down { color: var(--down-color); }
 
-/* TABLE & OTHER STYLES ... (Giữ nguyên) */
+/* TABLE & OTHER STYLES */
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-top: 3rem; margin-bottom: 1rem; }
 .section-title { font-size: 1.25rem; font-weight: 700; }
 .table-wrapper { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
@@ -164,43 +164,38 @@ tr.newest { background: #eff6ff; }
 .filter-bar input { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; }
 .chart-wrapper { margin-top: 2rem; padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
 
-/* MOBILE RESPONSIVE - PHẦN SỬA ĐỔI CHÍNH */
+/* MOBILE RESPONSIVE - PHẦN SỬA ĐỔI */
 @media (max-width: 640px) {
   .grid { 
     grid-template-columns: 1fr; 
-    gap: 0.75rem; /* Giảm khoảng cách giữa các ô */
+    gap: 0.75rem;
     margin-bottom: 1.5rem;
   }
   .card {
-    padding: 0.75rem 1rem; /* Thu nhỏ padding trong ô */
+    padding: 0.75rem 1rem;
     border-radius: 12px;
   }
   .card-value { 
-    font-size: 1.4rem; /* Giảm kích cỡ chữ số một chút */
+    font-size: 1.4rem;
     margin-top: 0.25rem;
   }
   .card-title {
-    font-size: 0.7rem; /* Giảm kích cỡ tiêu đề ô */
+    font-size: 0.7rem;
   }
   header { padding: 0.75rem 1rem; }
   header #updateBtn { display: none; } 
   #mobileUpdateBtn { display: flex; } 
   .container { margin: 0.75rem auto; }
   .section-header { margin-top: 1.5rem; }
-}
-  /* ===== MOBILE UPDATE BUTTON STYLE ===== */
-@media (max-width:600px){
 
-  #fabUpdate{
-    background: transparent;          /* nền trong suốt */
-    border: 2px solid #3b82f6;        /* viền xanh */
-    color: transparent;                   /* icon xanh */
+  /* FIX TABLE SCROLL MOBILE */
+  .table-wrapper {
+    overflow-x: auto; /* Cho phép cuộn ngang */
+    -webkit-overflow-scrolling: touch; /* Cuộn mượt hơn trên iOS */
   }
-
-  #fabUpdate:active{
-    background: rgba(59,130,246,0.1); /* hiệu ứng khi bấm */
+  table {
+    min-width: 600px; /* Ép bảng có độ rộng tối thiểu để không bị dồn chữ */
   }
-
 }
 </style>
 </head>
@@ -253,7 +248,7 @@ tr.newest { background: #eff6ff; }
 </div>
 
 <script>
-/* SCRIPT GIỮ NGUYÊN HOÀN TOÀN NHƯ CŨ */
+/* PHẦN SCRIPT GIỮ NGUYÊN HOÀN TOÀN */
 const API = "/api/gold";
 const HIST_API = "/api/history"; 
 const elements = {
@@ -408,54 +403,6 @@ if(lastData) renderMain(JSON.parse(lastData));
 const lastTimeSaved = localStorage.getItem("lastTime");
 elements.lastTime.innerHTML = lastTimeSaved ? `⚪ Last update: ${lastTimeSaved}` : "Ready";
 fetchHistory();
-  const indicator = document.createElement("div");
-indicator.innerText = "↓ Pull to refresh";
-indicator.style = `
-  position:fixed;
-  top:10px;
-  left:50%;
-  transform:translateX(-50%);
-  font-size:12px;
-  opacity:0;
-`;
-document.body.appendChild(indicator);
-/* ===== PULL TO REFRESH (MOBILE) ===== */
-let startY = 0;
-let isPulling = false;
-
-window.addEventListener("touchstart", (e) => {
-  if (window.scrollY === 0) {
-    startY = e.touches[0].clientY;
-    isPulling = true;
-  }
-});
-
-window.addEventListener("touchmove", (e) => {
-  if (!isPulling) return;
-
-  const currentY = e.touches[0].clientY;
-  const diff = currentY - startY;
-
-  if (diff > 20) {
-    indicator.style.opacity = 1;
-    indicator.innerText = diff > 80 ? "Release to refresh" : "Pull to refresh";
-  }
-
-  if (diff > 80) {
-    isPulling = false;
-    indicator.innerText = "Updating...";
-    load();
-
-    setTimeout(() => {
-      indicator.style.opacity = 0;
-    }, 1000);
-  }
-});
-
-window.addEventListener("touchend", () => {
-  isPulling = false;
-  indicator.style.opacity = 0;
-});
 </script>
 
 </body>
