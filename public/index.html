@@ -17,12 +17,14 @@
   --border-color: #e2e8f0;
 }
 
+/* FIX LỖI LỘ NỀN TRẮNG VÀ XUNG ĐỘT TRÌNH DUYỆT */
 body {
   margin: 0;
   font-family: 'Inter', -apple-system, system-ui, sans-serif;
-  background: var(--header-bg) !important; /* Fix lộ nền trắng */
+  background: var(--header-bg) !important; 
   color: var(--primary-text);
   overflow-x: hidden;
+  overscroll-behavior-y: contain; /* Chặn reload mặc định của Chrome/Safari */
 }
 
 header {
@@ -36,7 +38,7 @@ header {
   top: 0; left: 0; width: 100%;
   box-sizing: border-box;
   z-index: 1000;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .brand { font-size: 1.25rem; font-weight: 700; }
@@ -73,14 +75,15 @@ header {
 .change-up { color: var(--up-color); }
 .change-down { color: var(--down-color); }
 
+/* FILTER SYSTEM */
 #filterBox {
   display: none; background: white; padding: 15px; border-radius: 12px;
   border: 1px solid var(--border-color); margin-bottom: 1.5rem;
   gap: 10px; align-items: center; flex-wrap: wrap;
 }
-input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
-.btn-filter { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; }
-.btn-clear { background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; }
+input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); font-family: inherit; }
+.btn-filter { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+.btn-clear { background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; }
 
 .table-wrapper { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; margin-bottom: 2rem; }
 table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
@@ -99,6 +102,7 @@ th:first-child, td:first-child { text-align: left; }
   .container { padding-top: 75px; }
   .grid { grid-template-columns: 1fr; gap: 0.8rem; }
   .table-wrapper { overflow-x: auto; }
+  table { min-width: 600px; }
 }
 </style>
 </head>
@@ -110,11 +114,11 @@ th:first-child, td:first-child { text-align: left; }
 </header>
 
 <div class="container">
-  <div id="lastTime" style="margin-bottom:1rem; font-size:0.875rem; color:#64748b;"></div>
+  <div id="lastTime" style="margin-bottom:1rem; font-size:0.875rem; color:#64748b; font-weight: 500;"></div>
 
   <div class="grid">
     <div class="card"><div class="card-title">💵 USD Exchange</div><div id="usd" class="card-value">--</div></div>
-    <div class="card highlight"><div class="card-title">🌍 Global XAU</div><div id="xau" class="card-value">--</div></div>
+    <div class="card highlight"><div class="card-title">🌍 Global XAU (oz)</div><div id="xau" class="card-value">--</div></div>
     <div class="card highlight"><div class="card-title">🧈 SJC Gold </div><div id="sjc" class="card-value">--</div></div>
     <div class="card"><div class="card-title">⚖️ Market Gap</div><div id="diff" class="card-value">--</div></div>
     <div class="card"><div class="card-title">📊 DIFF %</div><div id="percent" class="card-value">--</div></div>
@@ -180,7 +184,7 @@ async function load() {
       await fetchHistory();
     }
     elements.lastTime.innerHTML = `🟢 Live: ${new Date().toLocaleString('vi-VN')}`;
-  } catch(e) { console.error(e); }
+  } catch(e) { console.error("Load error:", e); }
 }
 
 function renderMain(d) {
@@ -207,12 +211,12 @@ async function fetchHistory() {
     historyData = await res.json(); 
     renderHistory(historyData);
     updateChart(historyData);
-  } catch(e) { console.error(e); }
+  } catch(e) { console.error("Fetch history error:", e); }
 }
 
 function renderHistory(data) {
   elements.historyTable.innerHTML = "";
-  // Hiển thị 10 bản ghi mới nhất ở đầu bảng
+  // Hiển thị 10 cái mới nhất lên đầu bảng
   let displayData = [...data].reverse().slice(0, 10); 
   displayData.forEach(r => {
     const row = document.createElement("tr");
@@ -223,10 +227,9 @@ function renderHistory(data) {
 
 function updateChart(data) {
   const ctx = document.getElementById('gapChart').getContext('2d');
-  // Vẽ từ cũ sang mới (Trái qua phải)
-  const sortedData = [...data];
-  const labels = sortedData.map(r => r.time.split(' ')[1] || r.time);
-  const gaps = sortedData.map(r => r.diff / 1000000);
+  // Biểu đồ vẽ theo thời gian thực (Cũ -> Mới)
+  const labels = data.map(r => r.time.split(' ')[1] || r.time);
+  const gaps = data.map(r => r.diff / 1000000);
 
   if (myChart) myChart.destroy();
   myChart = new Chart(ctx, {
@@ -234,7 +237,7 @@ function updateChart(data) {
     data: {
       labels: labels,
       datasets: [{
-        label: 'Gap (Triệu)',
+        label: 'Gap (M)',
         data: gaps,
         borderColor: '#3b82f6',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -245,7 +248,6 @@ function updateChart(data) {
       responsive: true, maintainAspectRatio: false, 
       plugins: { legend: { display: false } },
       scales: { 
-        x: { grid: { display: false } },
         y: { beginAtZero: false, ticks: { callback: v => v + 'M' } }
       }
     }
@@ -270,50 +272,73 @@ function applyFilter() {
 }
 
 async function clearAllHistory() {
-  if (!confirm("Xác nhận XÓA SẠCH toàn bộ lịch sử?")) return;
-  
+  if (!confirm("Xóa sạch toàn bộ lịch sử truy vấn?")) return;
   try {
-    // 1. Reset ngay lập tức trên giao diện (UI First)
+    // Xóa sạch UI trước
     historyData = [];
     renderHistory([]);
     updateChart([]);
     elements.filterDate.value = "";
-
-    // 2. Gửi lệnh xóa tới máy chủ
+    // Gửi lệnh xóa cho server
     await fetch(HIST_API, { method: 'DELETE' });
-    alert("Đã làm sạch lịch sử!");
-  } catch(e) {
-    console.error("Server Delete failed, UI reset anyway.");
-  }
+    alert("Đã xóa sạch!");
+  } catch(e) { console.error("Delete failed"); }
 }
 
 load();
 
-/* PULL TO REFRESH */
+/* ===== PULL TO REFRESH - PHIÊN BẢN ỔN ĐỊNH CAO ===== */
 let startY = 0;
 let isPulling = false;
 const indicator = document.createElement("div");
+
 indicator.innerText = "↓ Pull to refresh";
-indicator.style = "position:fixed; top:20px; left:50%; transform:translateX(-50%); font-size:16px; font-weight:600; opacity:0; z-index:2000; background:#0f172a; color:white; padding:12px 24px; border-radius:30px; box-shadow:0 4px 15px rgba(0,0,0,0.3); transition:opacity 0.2s, transform 0.2s; pointer-events:none;";
+indicator.style = `
+  position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-100px); 
+  font-size:16px; font-weight:600; opacity:0; z-index:2000; 
+  background:#0f172a; color:white; padding:12px 24px; border-radius:30px; 
+  box-shadow:0 4px 15px rgba(0,0,0,0.3); transition: opacity 0.2s;
+  pointer-events:none; display: flex; align-items: center; gap: 8px;
+`;
 document.body.appendChild(indicator);
 
-window.addEventListener("touchstart", (e) => { if (window.scrollY === 0) { startY = e.touches[0].clientY; isPulling = true; } });
+window.addEventListener("touchstart", (e) => { 
+  if (window.scrollY <= 1) { 
+    startY = e.touches[0].clientY; 
+    isPulling = true; 
+  } 
+}, { passive: false });
+
 window.addEventListener("touchmove", (e) => {
   if (!isPulling) return;
   const diff = e.touches[0].clientY - startY;
-  if (diff > 20) { 
-    indicator.style.opacity = 1; 
-    indicator.style.transform = `translateX(-50%) translateY(${Math.min(diff/2, 40)}px)`;
-    indicator.innerText = diff > 80 ? "Release to refresh" : "↓ Pull to refresh"; 
+
+  if (diff > 0 && window.scrollY <= 1) {
+    if (e.cancelable) e.preventDefault(); 
+    indicator.style.opacity = "1";
+    const moveY = Math.min(diff / 2, 60); 
+    indicator.style.transform = `translateX(-50%) translateY(${moveY}px)`;
+    indicator.innerText = diff > 100 ? "🚀 Release to update" : "↓ Pull to refresh";
   }
-  if (diff > 100) { 
-    isPulling = false;
-    indicator.innerText = "🔄 Updating..."; 
-    load();
-    setTimeout(() => { indicator.style.opacity = 0; }, 1500);
+}, { passive: false });
+
+window.addEventListener("touchend", (e) => {
+  if (!isPulling) return;
+  const diff = e.changedTouches[0].clientY - startY;
+  if (diff > 100) {
+    indicator.innerHTML = "🔄 Updating...";
+    indicator.style.transform = `translateX(-50%) translateY(40px)`;
+    load(); 
+    setTimeout(() => {
+      indicator.style.opacity = "0";
+      indicator.style.transform = `translateX(-50%) translateY(-100px)`;
+    }, 1500);
+  } else {
+    indicator.style.opacity = "0";
+    indicator.style.transform = `translateX(-50%) translateY(-100px)`;
   }
+  isPulling = false;
 });
-window.addEventListener("touchend", () => { isPulling = false; setTimeout(() => { if (indicator.innerText !== "🔄 Updating...") indicator.style.opacity = 0; }, 500); });
 </script>
 </body>
 </html>
