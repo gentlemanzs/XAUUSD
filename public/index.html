@@ -72,6 +72,11 @@ header {
 .change-up { color: var(--up-color); }
 .change-down { color: var(--down-color); }
 
+/* Badge styles for history table */
+.badge { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
+.badge-up { background: #dcfce7; color: #166534; }
+.badge-down { background: #fee2e2; color: #991b1b; }
+
 #filterBox {
   display: none; background: white; padding: 15px; border-radius: 12px;
   border: 1px solid var(--border-color); margin-bottom: 1.5rem;
@@ -125,14 +130,14 @@ th:first-child, td:first-child { text-align: left; }
   </div>
 
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-    <div style="font-size: 1.2rem; font-weight: 700;">Query History</div>
+    <div style="font-size: 1.2rem; font-weight: 700;">Query History (MongoDB)</div>
     <button onclick="toggleFilterBox()" id="toggleBtn" style="background:transparent; border:none; font-size:1.8rem; cursor:pointer; color:#64748b;">+</button>
   </div>
 
   <div id="filterBox">
     <input type="date" id="filterDate">
     <button class="btn-filter" onclick="applyFilter()">Apply</button>
-    <button class="btn-clear" onclick="clearAllHistory()">Clear All</button>
+    <button class="btn-clear" onclick="clearAllHistory()">Clear DB</button>
   </div>
 
   <div class="table-wrapper">
@@ -155,8 +160,13 @@ th:first-child, td:first-child { text-align: left; }
 </div>
 
 <script>
-const API = "/api/gold";
-const HIST_API = "/api/history"; 
+/* LƯU Ý: Nếu bạn chạy frontend này trên một domain khác (như GitHub Pages), 
+   hãy thay "" bằng link Render của bạn (ví dụ: https://gold-api.onrender.com)
+*/
+const BASE_URL = ""; 
+const API = `${BASE_URL}/api/gold`;
+const HIST_API = `${BASE_URL}/api/history`; 
+
 const elements = {
   usd: document.getElementById("usd"),
   xau: document.getElementById("xau"),
@@ -181,13 +191,18 @@ async function load() {
   try {
     const res = await fetch(`${API}?t=${Date.now()}`);
     const d = await res.json();
+    if(d.message) return console.log(d.message);
+
     renderMain(d);
-    if (lastSJCValue === null || d.sjc !== lastSJCValue) {
+    
+    // Tự động cập nhật lịch sử khi thấy có dữ liệu mới
+    if (lastSJCValue !== d.sjc) {
       lastSJCValue = d.sjc;
       await fetchHistory();
     }
-    elements.lastTime.innerHTML = `🟢 Live: ${new Date().toLocaleString('vi-VN')}`;
-  } catch(e) { console.error(e); }
+    
+    elements.lastTime.innerHTML = `🟢 Live Atlas: ${new Date().toLocaleString('vi-VN')}`;
+  } catch(e) { console.error("Lỗi load dữ liệu:", e); }
 }
 
 function renderMain(d) {
@@ -195,10 +210,13 @@ function renderMain(d) {
   elements.xau.innerText = fmtXAU.format(d.xau);
   elements.diff.innerText = fmtVND.format(d.diff);
   elements.percent.innerText = d.percent;
+
+  // So sánh với giá sáng lưu ở LocalStorage của trình duyệt hiện tại
   const key = "sjcMorning_" + new Date().toISOString().slice(0,10);
   let morning = localStorage.getItem(key) || localStorage.setItem(key, d.sjc) || d.sjc;
   const change = d.sjc - parseFloat(morning);
   const isUp = change >= 0;
+  
   elements.sjc.innerHTML = `<div>${fmtVND.format(d.sjc)}</div><div class="sjc-sub ${isUp ? 'change-up' : 'change-down'}">${isUp ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}</div>`;
 }
 
@@ -208,23 +226,33 @@ async function fetchHistory() {
     historyData = await res.json(); 
     renderHistory(historyData);
     updateChart(historyData);
-  } catch(e) { console.error(e); }
+  } catch(e) { console.error("Lỗi fetch history:", e); }
 }
 
 function renderHistory(data) {
   elements.historyTable.innerHTML = "";
-  let displayData = [...data].reverse().slice(0, 15); 
+  // Hiển thị 20 bản ghi mới nhất lên bảng
+  let displayData = [...data].reverse().slice(0, 20); 
   displayData.forEach(r => {
+    const isDown = r.percent.includes('-');
     const row = document.createElement("tr");
-    row.innerHTML = `<td>${r.time}</td><td>${fmtXAU.format(r.xau)}</td><td>${fmtVND.format(r.sjc)}</td><td>${fmtVND.format(r.diff)}</td><td><span class="badge ${r.percent.includes('-') ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>`;
+    row.innerHTML = `
+      <td>${r.time}</td>
+      <td>${fmtXAU.format(r.xau)}</td>
+      <td>${fmtVND.format(r.sjc)}</td>
+      <td>${fmtVND.format(r.diff)}</td>
+      <td><span class="badge ${isDown ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>
+    `;
     elements.historyTable.appendChild(row);
   });
 }
 
 function updateChart(data) {
   const ctx = document.getElementById('gapChart').getContext('2d');
+  // Lấy nhãn là giờ:phút
   const labels = data.map(r => r.time.split(' ')[1] || r.time);
-  const gaps = data.map(r => r.diff / 1000000);
+  const gaps = data.map(r => r.diff / 1000000); // Đơn vị Triệu đồng
+
   if (myChart) myChart.destroy();
   myChart = new Chart(ctx, {
     type: 'line',
@@ -243,10 +271,11 @@ function updateChart(data) {
       plugins: { legend: { display: false } },
       scales: { 
         y: { beginAtZero: false, ticks: { callback: v => v + 'M' } },
-        x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
+        x: { ticks: { autoSkip: true, maxTicksLimit: 10 } }
       }
     }
   });
+  // Cuộn biểu đồ về cuối
   const scroller = document.querySelector('.chart-scroll-container');
   setTimeout(() => { scroller.scrollLeft = scroller.scrollWidth; }, 100);
 }
@@ -258,36 +287,40 @@ function toggleFilterBox() {
 }
 
 function applyFilter() {
-  const selectedDate = elements.filterDate.value;
+  const selectedDate = elements.filterDate.value; // Format: YYYY-MM-DD
   if (!selectedDate) return;
+  
   const filtered = historyData.filter(r => {
-    const parts = r.time.split(' ')[0].split('/');
-    return `${parts[2]}-${parts[1]}-${parts[0]}` === selectedDate;
+    // r.time có dạng "DD/MM/YYYY, HH:mm:ss"
+    const datePart = r.time.split(',')[0].trim(); // "DD/MM/YYYY"
+    const [d, m, y] = datePart.split('/');
+    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}` === selectedDate;
   });
   renderHistory(filtered);
   updateChart(filtered);
 }
 
 async function clearAllHistory() {
-  if (!confirm("Xóa toàn bộ lịch sử?")) return;
+  if (!confirm("Bạn có chắc chắn muốn xóa TOÀN BỘ lịch sử trên MongoDB Atlas?")) return;
   try {
-    historyData = []; renderHistory([]); updateChart([]);
-    await fetch(HIST_API, { method: 'DELETE' });
-  } catch(e) { console.error("Error"); }
+    const res = await fetch(HIST_API, { method: 'DELETE' });
+    const result = await res.json();
+    alert(result.message);
+    historyData = []; 
+    renderHistory([]); 
+    updateChart([]);
+  } catch(e) { alert("Lỗi khi xóa dữ liệu"); }
 }
 
+// Khởi chạy
 load();
+// Tự động làm mới mỗi 1 phút
+setInterval(load, 60000);
 
-/* ===== PULL TO REFRESH - TIN TINH GIẢN ===== */
+/* ===== PULL TO REFRESH LOGIC ===== */
 let startY = 0; let isPulling = false;
 const indicator = document.createElement("div");
-
-indicator.style = `
-  position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-100px); 
-  opacity:0; z-index:2000; background:#0f172a; color:white; padding:10px 20px; 
-  border-radius:30px; box-shadow:0 4px 15px rgba(0,0,0,0.3); transition: opacity 0.2s; 
-  pointer-events:none; display:flex; align-items:center; justify-content:center; gap: 8px;
-`;
+indicator.style = `position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-100px); opacity:0; z-index:2000; background:#0f172a; color:white; padding:10px 20px; border-radius:30px; box-shadow:0 4px 15px rgba(0,0,0,0.3); transition: opacity 0.2s; pointer-events:none; display:flex; align-items:center; justify-content:center; gap: 8px;`;
 document.body.appendChild(indicator);
 
 window.addEventListener("touchstart", (e) => { 
@@ -300,8 +333,7 @@ window.addEventListener("touchmove", (e) => {
   if (diff > 0 && window.scrollY <= 1) {
     if (e.cancelable) e.preventDefault(); 
     indicator.style.opacity = "1";
-    // Chỉ hiện icon khi đang kéo
-    indicator.innerHTML = `<span style="font-size: 20px;">🔄</span>`;
+    indicator.innerHTML = `<span>🔄</span>`;
     const moveY = Math.min(diff / 2, 60); 
     indicator.style.transform = `translateX(-50%) translateY(${moveY}px) rotate(${diff * 2}deg)`;
   }
@@ -311,15 +343,13 @@ window.addEventListener("touchend", (e) => {
   if (!isPulling) return;
   const diff = e.changedTouches[0].clientY - startY;
   if (diff > 100) {
-    // Khi buông tay và đủ lực kéo -> Hiện chữ Updating
-    indicator.innerHTML = `<span style="font-size: 18px;">🔄</span> <span style="font-size: 14px; font-weight:600;">Updating...</span>`;
+    indicator.innerHTML = `<span>🔄</span> <span style="font-size: 14px; font-weight:600;">Refreshed</span>`;
     indicator.style.transform = `translateX(-50%) translateY(40px) rotate(0deg)`;
-    
     load();
     setTimeout(() => {
       indicator.style.opacity = "0";
       indicator.style.transform = `translateX(-50%) translateY(-100px)`;
-    }, 1500);
+    }, 1000);
   } else {
     indicator.style.opacity = "0";
     indicator.style.transform = `translateX(-50%) translateY(-100px)`;
