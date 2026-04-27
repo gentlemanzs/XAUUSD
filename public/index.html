@@ -6,7 +6,7 @@
 <title>XAU Professional Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-/* --- PHỤC HỒI TOÀN BỘ CSS GỐC --- */
+/* --- GIỮ NGUYÊN 100% CSS GỐC CỦA BẠN --- */
 :root {
   --bg-color: #f8fafc;
   --header-bg: #0f172a; 
@@ -64,7 +64,6 @@ header {
 .card {
   background: var(--card-bg); border-radius: 16px;
   padding: 1.5rem; border: 1px solid var(--border-color);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1); /* Thêm bóng đổ nhẹ */
 }
 .card.highlight { border-left: 4px solid #3b82f6; }
 .card-title { font-size: 0.75rem; color: var(--secondary-text); text-transform: uppercase; font-weight: 700; }
@@ -74,7 +73,7 @@ header {
 .change-up { color: var(--up-color); }
 .change-down { color: var(--down-color); }
 
-/* Thêm style cho Badge vì trong code gốc của bạn chưa có class này */
+/* Badge cho bảng lịch sử */
 .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
 .badge-up { background: #dcfce7; color: #166534; }
 .badge-down { background: #fee2e2; color: #991b1b; }
@@ -132,7 +131,7 @@ th:first-child, td:first-child { text-align: left; }
   </div>
 
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-    <div style="font-size: 1.2rem; font-weight: 700;">Query History (MongoDB)</div>
+    <div style="font-size: 1.2rem; font-weight: 700;">Query History (Atlas)</div>
     <button onclick="toggleFilterBox()" id="toggleBtn" style="background:transparent; border:none; font-size:1.8rem; cursor:pointer; color:#64748b;">+</button>
   </div>
 
@@ -162,6 +161,7 @@ th:first-child, td:first-child { text-align: left; }
 </div>
 
 <script>
+/* LOGIC KẾT NỐI API */
 const API = "/api/gold";
 const HIST_API = "/api/history"; 
 const elements = {
@@ -181,7 +181,6 @@ const fmtVND = new Intl.NumberFormat('vi-VN');
 const fmtXAU = new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 let historyData = []; 
-let lastSJCValue = null; 
 let myChart = null;
 
 async function load() {
@@ -190,11 +189,11 @@ async function load() {
     const d = await res.json();
     renderMain(d);
     
-    // Khác với bản cũ, bản này luôn gọi fetchHistory khi bấm Update để đồng bộ MongoDB
+    // Luôn lấy lịch sử mỗi khi load
     await fetchHistory();
     
     elements.lastTime.innerHTML = `🟢 Live Atlas: ${new Date().toLocaleString('vi-VN')}`;
-  } catch(e) { console.error("Lỗi khi tải dữ liệu:", e); }
+  } catch(e) { console.error("Lỗi:", e); }
 }
 
 function renderMain(d) {
@@ -216,43 +215,31 @@ async function fetchHistory() {
     historyData = await res.json(); 
     renderHistory(historyData);
     updateChart(historyData);
-  } catch(e) { console.error("Lỗi khi tải lịch sử:", e); }
+  } catch(e) { console.error(e); }
 }
 
 function renderHistory(data) {
   elements.historyTable.innerHTML = "";
-  // Hiển thị 15 bản ghi mới nhất từ MongoDB
   let displayData = [...data].reverse().slice(0, 15); 
   displayData.forEach(r => {
     const row = document.createElement("tr");
-    // Kiểm tra class badge để hiện màu xanh/đỏ
     const badgeClass = r.percent && r.percent.includes('-') ? 'badge-down' : 'badge-up';
-    
-    row.innerHTML = `
-      <td>${r.time}</td>
-      <td>${fmtXAU.format(r.xau)}</td>
-      <td>${fmtVND.format(r.sjc)}</td>
-      <td>${fmtVND.format(r.diff)}</td>
-      <td><span class="badge ${badgeClass}">${r.percent}</span></td>
-    `;
+    row.innerHTML = `<td>${r.time}</td><td>${fmtXAU.format(r.xau)}</td><td>${fmtVND.format(r.sjc)}</td><td>${fmtVND.format(r.diff)}</td><td><span class="badge ${badgeClass}">${r.percent}</span></td>`;
     elements.historyTable.appendChild(row);
   });
 }
 
 function updateChart(data) {
-  const canvas = document.getElementById('gapChart');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
+  const ctx = document.getElementById('gapChart').getContext('2d');
   const labels = data.map(r => r.time.split(' ')[1] || r.time);
   const gaps = data.map(r => r.diff / 1000000);
-  
   if (myChart) myChart.destroy();
   myChart = new Chart(ctx, {
     type: 'line',
     data: {
       labels: labels,
       datasets: [{
-        label: 'Gap (Triệu)',
+        label: 'Gap (M)',
         data: gaps,
         borderColor: '#3b82f6',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -269,7 +256,7 @@ function updateChart(data) {
     }
   });
   const scroller = document.querySelector('.chart-scroll-container');
-  if(scroller) setTimeout(() => { scroller.scrollLeft = scroller.scrollWidth; }, 100);
+  setTimeout(() => { scroller.scrollLeft = scroller.scrollWidth; }, 100);
 }
 
 function toggleFilterBox() {
@@ -282,7 +269,6 @@ function applyFilter() {
   const selectedDate = elements.filterDate.value;
   if (!selectedDate) return;
   const filtered = historyData.filter(r => {
-    // Phân tách ngày từ chuỗi "DD/MM/YYYY, HH:mm:ss"
     const datePart = r.time.split(',')[0].trim();
     const [d, m, y] = datePart.split('/');
     return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}` === selectedDate;
@@ -292,17 +278,16 @@ function applyFilter() {
 }
 
 async function clearAllHistory() {
-  if (!confirm("Xóa toàn bộ lịch sử trên MongoDB Atlas?")) return;
+  if (!confirm("Xóa toàn bộ lịch sử trên MongoDB?")) return;
   try {
     await fetch(HIST_API, { method: 'DELETE' });
     await fetchHistory();
-  } catch(e) { console.error("Lỗi khi xóa lịch sử:", e); }
+  } catch(e) { console.error(e); }
 }
 
-// Khởi chạy
 load();
 
-/* --- PULL TO REFRESH GỐC --- */
+/* --- PULL TO REFRESH --- */
 let startY = 0; let isPulling = false;
 const indicator = document.createElement("div");
 indicator.style = `position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-100px); opacity:0; z-index:2000; background:#0f172a; color:white; padding:10px 20px; border-radius:30px; box-shadow:0 4px 15px rgba(0,0,0,0.3); transition: opacity 0.2s; pointer-events:none; display:flex; align-items:center; justify-content:center; gap: 8px;`;
@@ -320,7 +305,6 @@ window.addEventListener("touchmove", (e) => {
     indicator.style.transform = `translateX(-50%) translateY(${moveY}px) rotate(${diff * 2}deg)`;
   }
 }, { passive: false });
-
 window.addEventListener("touchend", (e) => {
   if (!isPulling) return;
   const diff = e.changedTouches[0].clientY - startY;
