@@ -235,9 +235,16 @@ async function fetchHistory() {
 
 function formatVNTime(timeStr) {
   const d = new Date(timeStr);
-  return d.toLocaleString('vi-VN', {
-    timeZone: 'Asia/Ho_Chi_Minh'
-  });
+
+  // Nếu parse được → dùng luôn
+  if (!isNaN(d)) {
+    return d.toLocaleString('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh'
+    });
+  }
+
+  // Nếu lỗi → giữ nguyên text gốc (fallback)
+  return timeStr;
 }
 
 function renderHistory(data) {
@@ -265,9 +272,18 @@ function updateChart(data) {
   // Dữ liệu từ trái (cũ) qua phải (mới)
   const labels = data.map(r => {
   const d = new Date(r.time);
-  return d.toLocaleTimeString('vi-VN', {
-    timeZone: 'Asia/Ho_Chi_Minh'
-  });
+
+  // Nếu parse được
+  if (!isNaN(d)) {
+    return d.toLocaleTimeString('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  // Nếu lỗi → giữ nguyên (tránh Invalid Date)
+  return r.time;
 });
   const gaps = data.map(r => r.diff / 1000000);
 
