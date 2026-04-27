@@ -8,10 +8,7 @@
 <style>
 :root {
   --bg-color: #f8fafc;
-  
-  /* ĐÂY LÀ MÀU NỀN CỦA HEADER CHÚNG TA CẦN SỬ DỤNG */
   --header-bg: #0f172a; 
-  
   --card-bg: #ffffff;
   --primary-text: #1e293b;
   --secondary-text: #64748b;
@@ -20,18 +17,13 @@
   --border-color: #e2e8f0;
 }
 
-/* SỬA ĐỔI 1: Đặt màu nền body trùng với màu Header */
 body {
   margin: 0;
   font-family: 'Inter', -apple-system, system-ui, sans-serif;
-  
-  /* Thay đổi màu nền body để khi kéo xuống không bị lộ màu trắng */
-  background: var(--header-bg) !important; 
-  
+  background: var(--header-bg) !important; /* Chống lộ nền trắng khi pull */
   color: var(--primary-text);
 }
 
-/* SỬA ĐỔI 2: Cố định Header lên trên cùng */
 header {
   padding: 1rem 2rem;
   background: var(--header-bg);
@@ -39,82 +31,67 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  
-  /* Chuyển sang position: fixed để nó luôn nằm trên cùng ngay cả khi kéo */
   position: fixed; 
-  top: 0;
-  left: 0;
-  width: 100%;
-  box-sizing: border-box; /* Đảm bảo padding không làm tràn chiều rộng */
-  
-  z-index: 1000; /* Đảm bảo nằm trên các Card */
+  top: 0; left: 0; width: 100%;
+  box-sizing: border-box;
+  z-index: 1000;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
 
 .brand { font-size: 1.25rem; font-weight: 700; }
 
 #updateBtn {
-  background: #3b82f6;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
+  background: #3b82f6; color: white; border: none;
+  padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;
 }
 
-/* Ẩn nút mobile */
-#mobileUpdateBtn {
-  display: none !important; 
-}
-
-/* SỬA ĐỔI 3: Tạo khoảng trống phía trên cho Container để không bị Header che mất */
 .container { 
-  width: 95%; 
-  max-width: 1200px; 
-  margin: 2rem auto; 
-  
-  /* Thêm padding-top để nội dung bắt đầu dưới thanh fixed Header */
-  padding-top: 80px; 
-  
-  /* Đặt lại màu nền trắng cho khu vực nội dung chính */
+  width: 95%; max-width: 1200px; margin: 0 auto; 
+  padding-top: 90px; /* Khoảng trống cho fixed header */
   background: var(--bg-color); 
-  border-radius: 16px; 
-  padding-left: 15px;
-  padding-right: 15px;
-  padding-bottom: 2rem;
+  min-height: 100vh;
+  padding-left: 15px; padding-right: 15px; padding-bottom: 2rem;
   box-sizing: border-box;
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  gap: 1.5rem; margin-bottom: 2rem;
 }
 
 .card {
-  background: var(--card-bg);
-  border-radius: 16px;
-  padding: 1.5rem;
-  border: 1px solid var(--border-color);
+  background: var(--card-bg); border-radius: 16px;
+  padding: 1.5rem; border: 1px solid var(--border-color);
 }
-
 .card.highlight { border-left: 4px solid #3b82f6; }
 .card-title { font-size: 0.75rem; color: var(--secondary-text); text-transform: uppercase; font-weight: 700; }
 .card-value { font-size: 1.875rem; font-weight: 800; margin-top: 0.5rem; }
 
 .sjc-sub { 
-  font-size: 0.875rem; 
-  margin-top: 0.25rem; 
-  display: flex; 
-  align-items: center; 
-  gap: 4px; 
-  justify-content: flex-start; 
+  font-size: 0.875rem; margin-top: 0.25rem; 
+  display: flex; align-items: center; gap: 4px; justify-content: flex-start; 
 }
 
 .change-up { color: var(--up-color); }
 .change-down { color: var(--down-color); }
+
+/* FILTER STYLES */
+#filterBox {
+  display: none; /* Mặc định ẩn, hiện khi bấm nút + */
+  background: white; padding: 15px; border-radius: 12px;
+  border: 1px solid var(--border-color); margin-bottom: 1rem;
+  gap: 10px; align-items: center; flex-wrap: wrap;
+}
+input[type="date"] {
+  padding: 8px; border-radius: 6px; border: 1px solid var(--border-color);
+}
+.btn-filter {
+  background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;
+}
+.btn-clear {
+  background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;
+}
 
 .table-wrapper { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; margin-bottom: 2rem; }
 table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
@@ -126,16 +103,12 @@ th:first-child, td:first-child { text-align: left; }
 .badge-up { background: #dcfce7; color: #166534; }
 .badge-down { background: #fee2e2; color: #991b1b; }
 
-.chart-wrapper { padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+.chart-wrapper { padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); }
 
-/* MOBILE RESPONSIVE */
 @media (max-width: 640px) {
   header { padding: 0.75rem 1rem; }
   header #updateBtn { display: none; } 
-  .container { 
-    margin: 0.75rem auto; 
-    padding-top: 70px; /* Nhỏ hơn một chút trên mobile */
-  }
+  .container { padding-top: 70px; }
   .grid { grid-template-columns: 1fr; gap: 0.75rem; }
   .table-wrapper { overflow-x: auto; }
   table { min-width: 600px; }
@@ -148,8 +121,6 @@ th:first-child, td:first-child { text-align: left; }
   <div class="brand">📊 XAU DASHBOARD</div>
   <button id="updateBtn" onclick="load()">UPDATE</button>
 </header>
-
-<button id="mobileUpdateBtn" onclick="load()">🔄</button>
 
 <div class="container">
   <div id="lastTime" style="margin-bottom:1rem; font-size:0.875rem; color:#64748b;"></div>
@@ -164,7 +135,13 @@ th:first-child, td:first-child { text-align: left; }
 
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
     <div style="font-size: 1.25rem; font-weight: 700;">Query History</div>
-    <button onclick="toggleView()" id="toggleBtn" style="background:transparent; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;">+</button>
+    <button onclick="toggleFilterBox()" id="toggleBtn" style="background:transparent; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;">+</button>
+  </div>
+
+  <div id="filterBox">
+    <input type="date" id="filterDate">
+    <button class="btn-filter" onclick="applyFilter()">Apply</button>
+    <button class="btn-clear" onclick="clearFilter()">Clear All</button>
   </div>
 
   <div class="table-wrapper">
@@ -183,7 +160,6 @@ th:first-child, td:first-child { text-align: left; }
 </div>
 
 <script>
-// Giữ nguyên toàn bộ phần Script của bạn
 const API = "/api/gold";
 const HIST_API = "/api/history"; 
 const elements = {
@@ -194,14 +170,14 @@ const elements = {
   percent: document.getElementById("percent"),
   lastTime: document.getElementById("lastTime"),
   historyTable: document.getElementById("history"),
-  updateBtn: document.getElementById("updateBtn")
+  filterBox: document.getElementById("filterBox"),
+  filterDate: document.getElementById("filterDate")
 };
 
 const fmtVND = new Intl.NumberFormat('vi-VN');
 const fmtXAU = new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 let historyData = []; 
-let isExpanded = false;
 let lastSJCValue = null; 
 let myChart = null;
 
@@ -239,28 +215,28 @@ function renderMain(d) {
 async function fetchHistory() {
   const res = await fetch(HIST_API);
   historyData = await res.json(); 
-  renderHistory();
-  updateChart();
+  renderHistory(historyData);
+  updateChart(historyData);
 }
 
-function renderHistory() {
+function renderHistory(data) {
   elements.historyTable.innerHTML = "";
-  let data = [...historyData].reverse();
-  if(!isExpanded) data = data.slice(0, 5);
-  data.forEach(r => {
+  // Hiển thị mới nhất lên đầu (đảo ngược mảng copy)
+  let displayData = [...data].reverse().slice(0, 10); 
+  displayData.forEach(r => {
     const row = document.createElement("tr");
     row.innerHTML = `<td>${r.time}</td><td>${fmtXAU.format(r.xau)}</td><td>${fmtVND.format(r.sjc)}</td><td>${fmtVND.format(r.diff)}</td><td><span class="badge ${r.percent.includes('-') ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>`;
     elements.historyTable.appendChild(row);
   });
 }
 
-function updateChart() {
+function updateChart(data) {
   const ctx = document.getElementById('gapChart').getContext('2d');
-  const labels = historyData.map(r => r.time.split(' ')[1] || r.time);
-  const gaps = historyData.map(r => r.diff / 1000000);
+  // Vẽ từ cũ đến mới (trái sang phải)
+  const labels = data.map(r => r.time.split(' ')[1] || r.time);
+  const gaps = data.map(r => r.diff / 1000000);
 
   if (myChart) myChart.destroy();
-
   myChart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -270,71 +246,60 @@ function updateChart() {
         data: gaps,
         borderColor: '#3b82f6',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        borderWidth: 3,
-        fill: true,
-        tension: 0.3
+        borderWidth: 3, fill: true, tension: 0.3
       }]
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } }
-    }
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
   });
 }
 
-function toggleView() {
-  isExpanded = !isExpanded;
-  document.getElementById("toggleBtn").innerText = isExpanded ? "−" : "+";
-  renderHistory();
+/* LOGIC BỘ LỌC ĐÃ KHÔI PHỤC */
+function toggleFilterBox() {
+  const isHidden = elements.filterBox.style.display === "none" || elements.filterBox.style.display === "";
+  elements.filterBox.style.display = isHidden ? "flex" : "none";
+  document.getElementById("toggleBtn").innerText = isHidden ? "−" : "+";
+}
+
+function applyFilter() {
+  const selectedDate = elements.filterDate.value; // YYYY-MM-DD
+  if (!selectedDate) return;
+  
+  // Lọc dữ liệu dựa trên ngày (giả định định dạng r.time là DD/MM/YYYY HH:mm:ss)
+  const filtered = historyData.filter(r => {
+    const parts = r.time.split(' ')[0].split('/'); // [DD, MM, YYYY]
+    const rDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+    return rDate === selectedDate;
+  });
+  
+  renderHistory(filtered);
+  updateChart(filtered);
+}
+
+function clearFilter() {
+  elements.filterDate.value = "";
+  renderHistory(historyData);
+  updateChart(historyData);
 }
 
 load();
 
-/* PULL TO REFRESH LOGIC */
+/* PULL TO REFRESH LOGIC (Giữ nguyên bản màu Header) */
 let startY = 0;
 let isPulling = false;
 const indicator = document.createElement("div");
-
 indicator.innerText = "↓ Pull to refresh";
-// Đặt màu nền và kích thước lớn hơn
-indicator.style = `
-  position: fixed; 
-  top: 20px; 
-  left: 50%; 
-  transform: translateX(-50%); 
-  font-size: 16px;              /* Lớn hơn */
-  font-weight: 600;
-  opacity: 0; 
-  z-index: 2000; 
-  background: #0f172a;          /* Trùng màu Header (#0f172a) */
-  color: white; 
-  padding: 12px 24px;           /* Rộng hơn */
-  border-radius: 30px; 
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-  transition: opacity 0.2s, transform 0.2s;
-  pointer-events: none;
-`;
+indicator.style = "position:fixed; top:20px; left:50%; transform:translateX(-50%); font-size:16px; font-weight:600; opacity:0; z-index:2000; background:#0f172a; color:white; padding:12px 24px; border-radius:30px; box-shadow:0 4px 15px rgba(0,0,0,0.3); transition:opacity 0.2s, transform 0.2s; pointer-events:none;";
 document.body.appendChild(indicator);
 
-window.addEventListener("touchstart", (e) => { 
-  if (window.scrollY === 0) { 
-    startY = e.touches[0].clientY; 
-    isPulling = true; 
-  } 
-});
-
+window.addEventListener("touchstart", (e) => { if (window.scrollY === 0) { startY = e.touches[0].clientY; isPulling = true; } });
 window.addEventListener("touchmove", (e) => {
   if (!isPulling) return;
-  const currentY = e.touches[0].clientY;
-  const diff = currentY - startY;
-  
+  const diff = e.touches[0].clientY - startY;
   if (diff > 20) { 
     indicator.style.opacity = 1; 
     indicator.style.transform = `translateX(-50%) translateY(${Math.min(diff/2, 40)}px)`;
     indicator.innerText = diff > 80 ? "Release to refresh" : "↓ Pull to refresh"; 
   }
-  
   if (diff > 100) { 
     isPulling = false;
     indicator.innerText = "🔄 Updating..."; 
@@ -342,15 +307,7 @@ window.addEventListener("touchmove", (e) => {
     setTimeout(() => { indicator.style.opacity = 0; }, 1500);
   }
 });
-
-window.addEventListener("touchend", () => { 
-  isPulling = false; 
-  setTimeout(() => { 
-    if (indicator.innerText !== "🔄 Updating...") {
-      indicator.style.opacity = 0; 
-    }
-  }, 500); 
-});
+window.addEventListener("touchend", () => { isPulling = false; setTimeout(() => { if (indicator.innerText !== "🔄 Updating...") indicator.style.opacity = 0; }, 500); });
 </script>
 </body>
 </html>
