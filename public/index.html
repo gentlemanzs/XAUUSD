@@ -140,7 +140,10 @@ th:first-child, td:first-child { text-align: left; }
 
 /* Tối ưu riêng cho điện thoại */
 @media (max-width: 640px) {
-  .chart-inner-wrapper { height: 250px; } 
+  .chart-inner-wrapper { 
+    min-width: 100% !important; /* Ép khung biểu đồ không được rộng quá màn hình */
+    height: 250px !important;    /* Giảm chiều cao một chút để cân đối trên mobile */
+  }
 }
 </style>
 </head>
@@ -402,35 +405,26 @@ datasets: [{
 }]
       },
       options: { 
-        responsive: true, maintainAspectRatio: false, 
-        plugins: { 
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                if (context.raw === null) return null; 
-                return 'Gap: ' + new Intl.NumberFormat('vi-VN').format(context.raw * 1000000) + ' ₫';
-              }
-            }
-          }
-        },
-        scales: { 
-  y: { 
-    beginAtZero: false, 
-    ticks: { 
-      callback: v => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(v) + 'M' 
-    } 
-  }, 
-  x: { 
-    ticks: { 
-      autoSkip: true,      // Bật tự động bỏ bớt nhãn nếu quá dày
-      maxTicksLimit: 8,    // Giới hạn hiển thị khoảng 8 mốc thời gian để nhìn cho thoáng
-      maxRotation: 0,      // Để chữ nằm ngang cho dễ đọc
-      minRotation: 0 
+  responsive: true, 
+  maintainAspectRatio: false, 
+  plugins: { 
+    legend: { display: false } 
+  },
+  scales: { 
+    y: { 
+      ticks: { 
+        callback: v => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(v) + 'M' 
+      } 
+    }, 
+    x: { 
+      ticks: { 
+        autoSkip: true,     // QUAN TRỌNG: Tự ẩn nhãn nếu màn hình quá hẹp
+        maxTicksLimit: 6,   // Giới hạn hiển thị khoảng 6 mốc thời gian để nhìn cho thoáng
+        maxRotation: 0      // Giữ chữ nằm ngang cho dễ đọc trên điện thoại
+      } 
     } 
   } 
 }
-      }
     });
   }
   const scroller = document.querySelector('.chart-scroll-container');
