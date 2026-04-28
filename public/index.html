@@ -198,9 +198,7 @@ async function load() {
 })}`;
   } catch(e) { console.error(e); }
 }
-function parseVNTime(timeStr) {
-  return new Date(timeStr + ' GMT+7');
-}
+
 function renderMain(d) {
   elements.usd.innerText = fmtVND.format(d.usd);
   elements.xau.innerText = fmtXAU.format(d.xau);

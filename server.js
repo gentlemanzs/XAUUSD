@@ -197,7 +197,7 @@ async function updateData() {
     // 4. Cập nhật vào biến Global latestData
     latestData = {
       // Đảm bảo giờ hiển thị là giờ Việt Nam dù Deploy trên Railway (server quốc tế)
-      time: new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }),
+      time: new Date(),
       date: getToday(),
       usd: usd,
       xau: xau,
