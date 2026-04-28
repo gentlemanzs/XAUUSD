@@ -168,19 +168,19 @@ async function updateData() {
 }
 
 /* ===== LOGIC KHUNG GIỜ GIAO DỊCH GMT+7 ===== */
+/* ===== LOGIC KHUNG GIỜ GIAO DỊCH GMT+7 (Đã cấu hình TZ env) ===== */
 function isWithinTradingHours() {
-  const nowStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" });
-  const nowVN = new Date(nowStr);
+  const now = new Date(); // Mặc định đã là giờ VN do biến TZ trên Railway
   
-  const day = nowVN.getDay(); 
-  const hour = nowVN.getHours();
-  const minute = nowVN.getMinutes();
+  const day = now.getDay(); 
+  const hour = now.getHours();
+  const minute = now.getMinutes();
   
   const timeVal = hour + minute / 60;
 
-  if (day === 0) return false;
-  if (day === 1 && timeVal < 8.5) return false;
-  if (day === 6 && timeVal > 10.5) return false;
+  if (day === 0) return false; // Chủ Nhật
+  if (day === 1 && timeVal < 8.5) return false; // Sáng T2 trước 8h30
+  if (day === 6 && timeVal > 10.5) return false; // Sáng T7 sau 10h30
   
   return true;
 }
