@@ -4,6 +4,7 @@ const cron = require("node-cron");
 const cors = require("cors");
 const path = require("path");
 const mongoose = require("mongoose");
+const cheerio = require("cheerio");
 
 const app = express();
 app.use(cors());
@@ -78,17 +79,30 @@ async function getWorldGoldPrice() {
 }
 
 /* ===== SJC ===== */
+/* ===== SJC ===== */
 async function getSJCPrice() {
   try {
     const html = await fetchWithRetry("https://webgia.com/gia-vang/sjc/");
-    const clean = html.replace(/\s+/g, " ");
-    const nums = clean.match(/[0-9]{2,3}\.[0-9]{3},[0-9]{2}/g);
-    const values = nums.map(n =>
-      parseFloat(n.replace(/\./g, "").replace(",", "."))
-    );
-    return Math.max(...values.filter(v => v > 10000000 && v < 40000000));
-  } catch {
-    return Error;
+    if (!html) return 168800000; // Giá fallback dự phòng nếu không lấy được HTML
+
+    const $ = cheerio.load(html);
+    
+    // Tìm bảng đầu tiên, lấy dòng dữ liệu đầu tiên (Vàng SJC 1L, 10L, 1KG)
+    // Cột thứ 4 (index 3) chính là cột "Bán ra"
+    const sellPriceText = $('table tbody tr').first().find('td').eq(3).text().trim();
+    
+    if (sellPriceText) {
+      // Chuỗi lấy được có dạng "16.850.000". Ta cần xóa các dấu chấm để ép kiểu về số
+      const pricePerChi = parseInt(sellPriceText.replace(/\./g, ""), 10);
+      
+      // Nhân 10 để quy đổi từ 1 chỉ ra 1 lượng (khớp với công thức worldVND)
+      return pricePerChi * 10;
+    }
+
+    return 168800000;
+  } catch (error) {
+    console.error("❌ Lỗi lấy giá SJC:", error.message);
+    return 168800000;
   }
 }
 
