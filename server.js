@@ -221,7 +221,7 @@ async function updateData() {
   }
 }
 /* ===== CRON ===== */
-cron.schedule("*/2 * * * *", updateData);
+cron.schedule("*/15 * * * *", updateData);
 
 /* ===== API ===== */
 app.get("/api/gold", (req, res) => {
@@ -237,7 +237,25 @@ app.delete("/api/history", async (req, res) => {
   await History.deleteMany({});
   res.json({ ok: true });
 });
+app.post("/api/update", async (req, res) => {
+  try {
+    console.log("🔄 Manual update triggered");
 
+    await updateData(); // GỌI HÀM UPDATE NGAY LẬP TỨC
+
+    res.json({
+      ok: true,
+      message: "Updated successfully"
+    });
+  } catch (e) {
+    console.error("❌ Update error:", e);
+
+    res.status(500).json({
+      ok: false,
+      message: "Update failed"
+    });
+  }
+});
 /* ===== START ===== */
 app.listen(PORT, () => {
   console.log("🚀 Server running on", PORT);

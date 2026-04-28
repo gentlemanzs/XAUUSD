@@ -186,6 +186,7 @@ let myChart = null;
 
 async function load() {
   try {
+   await fetch("/api/update", { method: "POST" });
     const res = await fetch(`${API}?t=${Date.now()}`);
     const d = await res.json();
     renderMain(d);
