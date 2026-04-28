@@ -119,7 +119,7 @@ const fmtVND = new Intl.NumberFormat('vi-VN');
 const fmtXAU = new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 let historyData = []; 
-let currentData = []; // Dữ liệu đang thao tác (chứa data đã filter)
+let currentData = []; 
 let lastSJCValue = null; 
 let myChart = null;
 
@@ -166,7 +166,7 @@ async function fetchHistory() {
     const res = await fetch(HIST_API);
     historyData = await res.json(); 
     currentData = [...historyData]; 
-    renderTable(); // Vẽ lại bảng dựa theo state hiện tại
+    renderTable(); 
     updateChart(currentData);
   } catch(e) { console.error(e); }
 }
@@ -177,11 +177,10 @@ function formatVNDateTime(isoString) {
   return d.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
 }
 
-// Hàm render bảng có kết hợp phân trang
+// Hàm render bảng
 function renderTable() {
   elements.historyTable.innerHTML = "";
   
-  // Tính toán số dòng
   const pageSize = isExpanded ? 20 : 10;
   const startIdx = isExpanded ? (currentPage - 1) * pageSize : 0;
   const endIdx = startIdx + pageSize;
@@ -189,7 +188,6 @@ function renderTable() {
   const displayData = currentData.slice(startIdx, endIdx);
   const displayStyle = isExpanded ? "table-cell" : "none";
 
-  // Reset nút checkall mỗi khi chuyển trang
   document.getElementById('selectAll').checked = false;
 
   displayData.forEach(r => {
@@ -210,7 +208,7 @@ function renderTable() {
   renderPagination();
 }
 
-// Logic vẽ nút phân trang
+// Logic phân trang
 function renderPagination() {
   const pag = elements.pagination;
   if (!isExpanded || currentData.length <= 20) {
@@ -223,14 +221,12 @@ function renderPagination() {
 
   const totalPages = Math.ceil(currentData.length / 20);
 
-  // Nút Lùi
   const prevBtn = document.createElement("button");
   prevBtn.className = "page-btn"; prevBtn.innerText = "« Trước";
   prevBtn.disabled = currentPage === 1;
   prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; renderTable(); } };
   pag.appendChild(prevBtn);
 
-  // Các nút số (Hiển thị thông minh 5 trang gần nhất)
   let startPage = Math.max(1, currentPage - 2);
   let endPage = Math.min(totalPages, startPage + 4);
   if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
@@ -243,7 +239,6 @@ function renderPagination() {
     pag.appendChild(btn);
   }
 
-  // Nút Tới
   const nextBtn = document.createElement("button");
   nextBtn.className = "page-btn"; nextBtn.innerText = "Sau »";
   nextBtn.disabled = currentPage === totalPages;
@@ -251,14 +246,12 @@ function renderPagination() {
   pag.appendChild(nextBtn);
 }
 
-// Khi bấm nút +
 function toggleFilterBox() {
   isExpanded = !isExpanded;
   elements.filterBox.style.display = isExpanded ? "flex" : "none";
   elements.toggleBtn.innerText = isExpanded ? "−" : "+";
   elements.actionHeader.style.display = isExpanded ? "table-cell" : "none";
   
-  // Trở về trang 1 khi đóng/mở menu nâng cao
   currentPage = 1;
   renderTable();
 }
@@ -313,15 +306,35 @@ async function clearAllHistory() {
   } catch(e) { console.error(e); alert("Lỗi mạng!"); }
 }
 
-// Chart.js được update hiển thị tiền đầy đủ
+// Hàm vẽ biểu đồ được TỐI ƯU CỘT X VÀ THÊM NGÀY THÁNG
 function updateChart(data) {
   const ctx = document.getElementById('gapChart').getContext('2d');
   const reversedData = [...data].reverse();
+
+  // 1. Format lại nhãn (Gồm Giờ và Ngày Tháng)
   const labels = reversedData.map(r => {
     const d = new Date(r.createdAt);
-    return isNaN(d) ? '' : d.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' });
+    if (isNaN(d)) return '';
+    // Lấy riêng giờ và ngày
+    const time = d.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' });
+    const date = d.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric' });
+    // Chart.js sẽ hiểu array này là 2 dòng văn bản xếp đè lên nhau
+    return [time, date];
   });
+  
   const gaps = reversedData.map(r => r.diff / 1000000);
+
+  // 2. Thuật toán đệm (Padding): Nếu ít dữ liệu thì chỉ chiếm 2/3 không gian X
+  const currentLen = labels.length;
+  if (currentLen > 0 && currentLen < 20) {
+    // Tính toán số lượng điểm trống cần đệm vào (chính bằng một nửa số liệu hiện tại)
+    // Tổng số lượng điểm trên trục x sẽ bằng 1.5 lần số điểm data, từ đó data sẽ chiếm đúng 1 / 1.5 = 2/3.
+    const padCount = Math.ceil(currentLen / 2);
+    for (let i = 0; i < padCount; i++) {
+      labels.push(''); // Thêm khoảng trống trục X
+      gaps.push(null); // Không có data trục Y
+    }
+  }
 
   if (myChart) {
     myChart.data.labels = labels;
@@ -334,23 +347,27 @@ function updateChart(data) {
         labels: labels,
         datasets: [{
           label: 'Gap (M)', data: gaps, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          borderWidth: 3, fill: true, tension: 0.3, pointRadius: 4, hitRadius: 10
+          borderWidth: 3, fill: true, tension: 0.3, pointRadius: 4, hitRadius: 10,
+          spanGaps: false // Đảm bảo không vẽ đường gạch ngang vào những điểm trống
         }]
       },
       options: { 
         responsive: true, maintainAspectRatio: false, 
         plugins: { 
           legend: { display: false },
-          // Tối ưu tooltip hiển thị đầy đủ VNĐ
           tooltip: {
             callbacks: {
               label: function(context) {
+                if (context.raw === null) return null; // Không hiện popup ở những vùng trống đệm thêm
                 return 'Gap: ' + new Intl.NumberFormat('vi-VN').format(context.raw * 1000000) + ' ₫';
               }
             }
           }
         },
-        scales: { y: { beginAtZero: false, ticks: { callback: v => v + 'M' } }, x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } } }
+        scales: { 
+          y: { beginAtZero: false, ticks: { callback: v => v + 'M' } }, 
+          x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } } 
+        }
       }
     });
   }
@@ -360,7 +377,7 @@ function updateChart(data) {
 
 load();
 
-/* ===== CYBER PULSE EFFECT (Giữ nguyên) ===== */
+/* ===== CYBER PULSE EFFECT ===== */
 const style = document.createElement('style');
 style.innerHTML = `.cyber-pull-container { position: fixed; top: -80px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 15px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); padding: 12px 24px; border-radius: 40px; border: 1px solid rgba(59, 130, 246, 0.3); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); z-index: 9999; transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s, box-shadow 0.3s; pointer-events: none; } .cyber-pull-container.ready { border-color: rgba(16, 185, 129, 0.8); box-shadow: 0 0 25px rgba(16, 185, 129, 0.2); } .pulse-bars { display: flex; gap: 4px; align-items: flex-end; height: 24px; } .pulse-bar { width: 5px; height: 4px; border-radius: 2px; background: #3b82f6; transition: background 0.3s; } .cyber-pull-container.ready .pulse-bar { background: #10b981; } .cyber-pull-container.refreshing .pulse-bar { background: #10b981; animation: pulseWave 0.5s ease-in-out infinite alternate; } .cyber-pull-container.refreshing .pulse-bar:nth-child(1) { animation-delay: 0.0s; } .cyber-pull-container.refreshing .pulse-bar:nth-child(2) { animation-delay: 0.1s; } .cyber-pull-container.refreshing .pulse-bar:nth-child(3) { animation-delay: 0.2s; } .cyber-pull-container.refreshing .pulse-bar:nth-child(4) { animation-delay: 0.3s; } @keyframes pulseWave { 0% { height: 4px; box-shadow: none; } 100% { height: 24px; box-shadow: 0 0 10px #10b981; } } .cyber-text { color: #94a3b8; font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif; transition: color 0.3s; } .cyber-pull-container.ready .cyber-text { color: #10b981; text-shadow: 0 0 8px rgba(16,185,129,0.4); }`;
 document.head.appendChild(style);
