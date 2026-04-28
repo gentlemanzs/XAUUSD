@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.static("public"));
 
 const PORT = process.env.PORT || 3000;
-const ADMIN_KEY = process.env.ADMIN_KEY || "123456"; // Đổi thành mật khẩu của bạn trên Railway Variables
+const ADMIN_KEY = process.env.ADMIN_KEY || "123456";
 
 /* ===== CONNECT MONGO ===== */
 mongoose.connect(process.env.MONGO_URI, {
@@ -23,7 +23,6 @@ mongoose.connect(process.env.MONGO_URI, {
 });
 
 /* ===== SCHEMA TỐI ƯU ===== */
-// Sử dụng timestamps mặc định của MongoDB thay vì chuỗi string thủ công
 const HistorySchema = new mongoose.Schema({
   usd: Number,
   xau: Number,
@@ -65,7 +64,6 @@ async function fetchWithRetry(url, retries = 3) {
   }
 }
 
-/* ===== CÀO DỮ LIỆU ===== */
 async function getUSDRate() {
   try {
     const html = await fetchWithRetry("https://webgia.com/ty-gia/vietcombank/");
@@ -92,11 +90,9 @@ async function getSJCPrice() {
   try {
     const html = await fetchWithRetry("https://webgia.com/gia-vang/sjc/");
     if (!html) return 0;
-
     const $ = cheerio.load(html);
     const nameCell = $('td:contains("Vàng SJC 1L")').first();
     const sellPriceText = nameCell.next().next().text().trim();
-    
     if (sellPriceText) {
       const pricePerChi = parseInt(sellPriceText.replace(/\./g, ""), 10);
       if (!isNaN(pricePerChi)) return pricePerChi * 10;
@@ -107,25 +103,23 @@ async function getSJCPrice() {
   }
 }
 
-/* ===== SAVE LOGIC TỐI ƯU ===== */
+/* ===== SAVE LOGIC (CHỈ LƯU KHI SJC THAY ĐỔI) ===== */
 async function saveHistory(entry) {
   try {
     const last = await History.findOne().sort({ createdAt: -1 });
     
-    // Lưu khi giá SJC đổi HOẶC giá XAU đổi trên 5 USD
-    const sjcChanged = !last || last.sjc !== entry.sjc;
-    const xauChanged = !last || Math.abs(last.xau - entry.xau) >= 5;
-
-    if (sjcChanged || xauChanged) {
+    // Điều kiện: Chưa có data HOẶC giá SJC mới khác giá SJC cũ
+    if (!last || last.sjc !== entry.sjc) {
       await History.create(entry);
-      console.log("💾 Đã lưu biến động SJC/XAU mới vào database.");
+      console.log(`💾 Lịch sử: Đã lưu SJC mới là ${entry.sjc} (Cũ: ${last ? last.sjc : 'N/A'})`);
 
+      // Tự động dọn dẹp nếu quá 200 bản ghi
       const count = await History.countDocuments();
       if (count > 200) {
         await History.findOneAndDelete({}, { sort: { createdAt: 1 } });
       }
     } else {
-      console.log("⏭ Thị trường đi ngang, bỏ qua lưu lịch sử.");
+      console.log("⏭ SJC không đổi, bỏ qua ghi log vào Query History.");
     }
   } catch (e) {
     console.log("❌ Lỗi lưu DB:", e);
@@ -144,7 +138,7 @@ async function updateData() {
     if (usd === 1000 && lastRecord) { usd = lastRecord.usd; }
 
     if (sjc <= 0 || xau <= 0) {
-      console.log("⚠️ Không có dữ liệu để cập nhật.");
+      console.log("⚠️ Không có dữ liệu hợp lệ để cập nhật.");
       return;
     }
 
@@ -153,7 +147,7 @@ async function updateData() {
     const percent = (diff / worldVND) * 100;
 
     latestData = {
-      updatedAt: new Date(), // Truyền thời gian chuẩn ISO xuống Frontend
+      updatedAt: new Date(),
       usd: usd,
       xau: xau,
       sjc: sjc,
@@ -166,15 +160,46 @@ async function updateData() {
     if (!isFallback) {
       await saveHistory(latestData);
     } else {
-      console.log("🟡 Đang hiển thị dữ liệu tạm thời (Fallback).");
+      console.log("🟡 Giá cào được bị lỗi, đang dùng giá dự phòng (Fallback). Không lưu log.");
     }
   } catch (e) {
-    console.log("❌ Lỗi nghiêm trọng trong quá trình Update:", e);
+    console.log("❌ Lỗi cập nhật:", e);
   }
 }
 
-/* ===== CRON ===== */
-cron.schedule("*/2 * * * *", updateData);
+/* ===== LOGIC KHUNG GIỜ GIAO DỊCH GMT+7 ===== */
+function isWithinTradingHours() {
+  // Lấy thời gian hiện tại chuẩn GMT+7
+  const nowStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" });
+  const nowVN = new Date(nowStr);
+  
+  const day = nowVN.getDay(); // 0: CN, 1: T2, ..., 6: T7
+  const hour = nowVN.getHours();
+  const minute = nowVN.getMinutes();
+  
+  // Chuyển đổi ra số thập phân (VD: 8h30 = 8.5)
+  const timeVal = hour + minute / 60;
+
+  // Chủ Nhật (0) -> Nghỉ
+  if (day === 0) return false;
+  // Thứ 2 (1) trước 8h30 -> Nghỉ
+  if (day === 1 && timeVal < 8.5) return false;
+  // Thứ 7 (6) sau 10h30 -> Nghỉ
+  if (day === 6 && timeVal > 10.5) return false;
+  
+  // Tất cả thời gian còn lại (Từ 8h30 T2 đến 10h30 T7) -> Chạy
+  return true;
+}
+
+/* ===== CRON JOB KHUNG GIỜ ===== */
+cron.schedule("*/15 * * * *", () => {
+  if (isWithinTradingHours()) {
+    console.log("🔄 Bắt đầu cronjob cập nhật dữ liệu...");
+    updateData();
+  } else {
+    console.log("⏸ Đang ngoài giờ giao dịch (Chỉ chạy 8h30 T2 - 10h30 T7 GMT+7). Bỏ qua tự cập nhật.");
+  }
+});
 
 /* ===== API ===== */
 app.get("/api/gold", (req, res) => {
@@ -186,7 +211,6 @@ app.get("/api/history", async (req, res) => {
   res.json(data);
 });
 
-/* BẢO MẬT: Bắt buộc gửi Header chứa mã Secret để xóa DB */
 app.delete("/api/history", async (req, res) => {
   const userKey = req.headers['x-admin-key'];
   if (userKey !== ADMIN_KEY) {
@@ -198,6 +222,7 @@ app.delete("/api/history", async (req, res) => {
 
 /* ===== START ===== */
 app.listen(PORT, () => {
-  console.log("🚀 Server running on", PORT);
+  console.log("🚀 Server đang chạy trên port", PORT);
+  // Khởi chạy 1 lần khi bật server để luôn có data initial (không phụ thuộc giờ giấc)
   updateData();
 });
