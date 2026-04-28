@@ -6,110 +6,36 @@
 <title>XAU Professional Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-:root {
-  --bg-color: #f8fafc;
-  --header-bg: #0f172a; 
-  --card-bg: #ffffff;
-  --primary-text: #1e293b;
-  --secondary-text: #64748b;
-  --up-color: #10b981;
-  --down-color: #ef4444;
-  --border-color: #e2e8f0;
-}
-
-body {
-  margin: 0;
-  font-family: 'Inter', -apple-system, system-ui, sans-serif;
-  background: var(--bg-color) !important;
-  color: var(--primary-text);
-  overflow-x: hidden;
-  overscroll-behavior-y: contain;
-}
-
-header {
-  padding: 1rem 2rem;
-  background: var(--header-bg);
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: fixed; 
-  top: 0; left: 0; width: 100%;
-  box-sizing: border-box;
-  z-index: 1000;
-}
-
+/* CSS Giữ nguyên như cũ */
+:root { --bg-color: #f8fafc; --header-bg: #0f172a; --card-bg: #ffffff; --primary-text: #1e293b; --secondary-text: #64748b; --up-color: #10b981; --down-color: #ef4444; --border-color: #e2e8f0; }
+body { margin: 0; font-family: 'Inter', -apple-system, system-ui, sans-serif; background: var(--bg-color) !important; color: var(--primary-text); overflow-x: hidden; overscroll-behavior-y: contain; }
+header { padding: 1rem 2rem; background: var(--header-bg); color: white; display: flex; justify-content: space-between; align-items: center; position: fixed; top: 0; left: 0; width: 100%; box-sizing: border-box; z-index: 1000; }
 .brand { font-size: 1.25rem; font-weight: 700; }
-
-#updateBtn {
-  background: #3b82f6; color: white; border: none;
-  padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;
-}
-
-.container { 
-  width: 100%; max-width: 1200px; margin: 0 auto; 
-  padding-top: 85px; 
-  background: var(--bg-color); 
-  min-height: 100vh;
-  padding: 85px 15px 3rem 15px;
-  box-sizing: border-box;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.5rem; margin-bottom: 2rem;
-}
-
-.card {
-  background: var(--card-bg); border-radius: 16px;
-  padding: 1.5rem; border: 1px solid var(--border-color);
-}
+#updateBtn { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+.container { width: 100%; max-width: 1200px; margin: 0 auto; background: var(--bg-color); min-height: 100vh; padding: 85px 15px 3rem 15px; box-sizing: border-box; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+.card { background: var(--card-bg); border-radius: 16px; padding: 1.5rem; border: 1px solid var(--border-color); }
 .card.highlight { border-left: 4px solid #3b82f6; }
 .card-title { font-size: 0.75rem; color: var(--secondary-text); text-transform: uppercase; font-weight: 700; }
 .card-value { font-size: 1.875rem; font-weight: 800; margin-top: 0.5rem; }
-
 .sjc-sub { font-size: 0.875rem; margin-top: 0.25rem; display: flex; align-items: center; gap: 4px; }
-.change-up { color: var(--up-color); }
-.change-down { color: var(--down-color); }
-
-#filterBox {
-  display: none; background: white; padding: 15px; border-radius: 12px;
-  border: 1px solid var(--border-color); margin-bottom: 1.5rem;
-  gap: 10px; align-items: center; flex-wrap: wrap;
-}
+.change-up { color: var(--up-color); } .change-down { color: var(--down-color); }
+#filterBox { display: none; background: white; padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 1.5rem; gap: 10px; align-items: center; flex-wrap: wrap; }
 input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
 .btn-filter, .btn-clear { border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; color: white; }
-.btn-filter { background: #3b82f6; }
-.btn-clear { background: #ef4444; }
-
+.btn-filter { background: #3b82f6; } .btn-clear { background: #ef4444; }
 .table-wrapper { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto; margin-bottom: 2rem; }
 table { width: 100%; border-collapse: collapse; font-size: 0.95rem; min-width: 600px; }
 th { background: #f1f5f9; padding: 14px 16px; text-align: right; color: var(--secondary-text); }
 td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; }
 th:first-child, td:first-child { text-align: left; }
-
-/* FIX BIỂU ĐỒ MOBILE */
-.chart-card {
-  padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color);
-}
-.chart-scroll-container {
-  width: 100%;
-  overflow-x: auto; /* Cho phép trượt ngang */
-  margin-top: 1rem;
-}
-.chart-inner-wrapper {
-  min-width: 800px; /* Ép biểu đồ rộng ít nhất 800px để không bị nén */
-  height: 350px;
-}
-
-@media (max-width: 640px) {
-  header #updateBtn { display: none; } 
-  .container { padding-top: 75px; }
-  .grid { grid-template-columns: 1fr; gap: 0.8rem; }
-  .card-value { font-size: 1.5rem; }
-}
-
+.badge { padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
+.badge-up { background: rgba(16, 185, 129, 0.1); color: var(--up-color); }
+.badge-down { background: rgba(239, 68, 68, 0.1); color: var(--down-color); }
+.chart-card { padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); }
+.chart-scroll-container { width: 100%; overflow-x: auto; margin-top: 1rem; }
+.chart-inner-wrapper { min-width: 800px; height: 350px; }
+@media (max-width: 640px) { header #updateBtn { display: none; } .container { padding-top: 75px; } .grid { grid-template-columns: 1fr; gap: 0.8rem; } .card-value { font-size: 1.5rem; } }
 </style>
 </head>
 <body>
@@ -120,7 +46,7 @@ th:first-child, td:first-child { text-align: left; }
 </header>
 
 <div class="container">
-  <div id="lastTime" style="margin-bottom:1rem; font-size:0.875rem; color:#64748b; font-weight: 500;"></div>
+  <div id="lastTime" style="margin-bottom:1rem; font-size:0.875rem; color:#64748b; font-weight: 500;">Đang kết nối...</div>
 
   <div class="grid">
     <div class="card"><div class="card-title">💵 USD Exchange</div><div id="usd" class="card-value">--</div></div>
@@ -144,7 +70,7 @@ th:first-child, td:first-child { text-align: left; }
   <div class="table-wrapper">
     <table>
       <thead>
-        <tr><th>Time</th><th>XAU ($)</th><th>SJC (VND)</th><th>Gap (VND)</th><th>Status</th></tr>
+        <tr><th>Time</th><th>XAU ($)</th><th>SJC (VND)</th><th>Gap (VND)</th><th>%</th></tr>
       </thead>
       <tbody id="history"></tbody>
     </table>
@@ -157,7 +83,6 @@ th:first-child, td:first-child { text-align: left; }
         <canvas id="gapChart"></canvas>
       </div>
     </div>
-  
   </div>
 </div>
 
@@ -165,16 +90,11 @@ th:first-child, td:first-child { text-align: left; }
 const API = "/api/gold";
 const HIST_API = "/api/history"; 
 const elements = {
-  usd: document.getElementById("usd"),
-  xau: document.getElementById("xau"),
-  sjc: document.getElementById("sjc"),
-  diff: document.getElementById("diff"),
-  percent: document.getElementById("percent"),
-  lastTime: document.getElementById("lastTime"),
-  historyTable: document.getElementById("history"),
-  filterBox: document.getElementById("filterBox"),
-  filterDate: document.getElementById("filterDate"),
-  toggleBtn: document.getElementById("toggleBtn")
+  usd: document.getElementById("usd"), xau: document.getElementById("xau"),
+  sjc: document.getElementById("sjc"), diff: document.getElementById("diff"),
+  percent: document.getElementById("percent"), lastTime: document.getElementById("lastTime"),
+  historyTable: document.getElementById("history"), filterBox: document.getElementById("filterBox"),
+  filterDate: document.getElementById("filterDate"), toggleBtn: document.getElementById("toggleBtn")
 };
 
 const fmtVND = new Intl.NumberFormat('vi-VN');
@@ -188,29 +108,35 @@ async function load() {
   try {
     const res = await fetch(`${API}?t=${Date.now()}`);
     const d = await res.json();
+    if (!d || Object.keys(d).length === 0) return;
+    
     renderMain(d);
+    
     if (lastSJCValue === null || d.sjc !== lastSJCValue) {
       lastSJCValue = d.sjc;
       await fetchHistory();
     }
-    elements.lastTime.innerHTML = `🟢 Live: ${new Date().toLocaleString('vi-VN', {
-  timeZone: 'Asia/Ho_Chi_Minh'
-})}`;
   } catch(e) { console.error(e); }
 }
-function parseVNTime(timeStr) {
-  return new Date(timeStr + ' GMT+7');
-}
+
 function renderMain(d) {
   elements.usd.innerText = fmtVND.format(d.usd);
   elements.xau.innerText = fmtXAU.format(d.xau);
   elements.diff.innerText = fmtVND.format(d.diff);
   elements.percent.innerText = d.percent;
+  
   const key = "sjcMorning_" + new Date().toISOString().slice(0,10);
   let morning = localStorage.getItem(key) || localStorage.setItem(key, d.sjc) || d.sjc;
   const change = d.sjc - parseFloat(morning);
   const isUp = change >= 0;
+  
   elements.sjc.innerHTML = `<div>${fmtVND.format(d.sjc)}</div><div class="sjc-sub ${isUp ? 'change-up' : 'change-down'}">${isUp ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}</div>`;
+
+  // Xử lý hiển thị trạng thái và thời gian chuẩn ISO
+  const updateTime = new Date(d.updatedAt);
+  const timeStr = isNaN(updateTime) ? new Date().toLocaleTimeString('vi-VN') : updateTime.toLocaleTimeString('vi-VN');
+  const statusIcon = d.status === "Delayed" ? "🟡 Tạm thời (Fallback)" : "🟢 Live";
+  elements.lastTime.innerHTML = `${statusIcon} - Cập nhật: ${timeStr}`;
 }
 
 async function fetchHistory() {
@@ -222,36 +148,25 @@ async function fetchHistory() {
   } catch(e) { console.error(e); }
 }
 
-function formatVNTime(timeStr) {
-  const d = parseVNTime(timeStr);
-
-  // Nếu parse được → dùng luôn
-  if (!isNaN(d)) {
-    return d.toLocaleString('vi-VN', {
-      timeZone: 'Asia/Ho_Chi_Minh'
-    });
-  }
-
-  // Nếu lỗi → giữ nguyên text gốc (fallback)
-  return timeStr;
+function formatVNDateTime(isoString) {
+  const d = new Date(isoString);
+  if (isNaN(d)) return "--";
+  return d.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
 }
 
 function renderHistory(data) {
   elements.historyTable.innerHTML = "";
-
-  let displayData = data.slice(0, 5);
+  let displayData = data.slice(0, 10); // Hiển thị 10 dòng gần nhất
 
   displayData.forEach(r => {
     const row = document.createElement("tr");
-
     row.innerHTML = `
-      <td>${formatVNTime(r.time)}</td>
+      <td>${formatVNDateTime(r.createdAt)}</td>
       <td>${fmtXAU.format(r.xau)}</td>
       <td>${fmtVND.format(r.sjc)}</td>
       <td>${fmtVND.format(r.diff)}</td>
       <td><span class="badge ${r.percent.includes('-') ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>
     `;
-
     elements.historyTable.appendChild(row);
   });
 }
@@ -259,57 +174,37 @@ function renderHistory(data) {
 function updateChart(data) {
   const ctx = document.getElementById('gapChart').getContext('2d');
   
-  // Dữ liệu từ trái (cũ) qua phải (mới)
-  const labels = data.map(r => {
-    const d = parseVNTime(r.time);
-
-    // Nếu parse được
-    if (!isNaN(d)) {
-      return d.toLocaleTimeString('vi-VN', {
-        timeZone: 'Asia/Ho_Chi_Minh',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    }
-
-    // Nếu lỗi → giữ nguyên (tránh Invalid Date)
-    return r.time;
+  // Đảo ngược mảng để vẽ từ cũ -> mới
+  const reversedData = [...data].reverse();
+  
+  const labels = reversedData.map(r => {
+    const d = new Date(r.createdAt);
+    return isNaN(d) ? '' : d.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' });
   });
   
-  const gaps = data.map(r => r.diff / 1000000);
+  const gaps = reversedData.map(r => r.diff / 1000000);
 
-  // TỐI ƯU: Nếu biểu đồ đã có, chỉ nạp data mới và update để có hiệu ứng chuyển động
   if (myChart) {
     myChart.data.labels = labels;
     myChart.data.datasets[0].data = gaps;
     myChart.update();
   } else {
-    // Nếu chưa có biểu đồ thì mới tạo mới
     myChart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: labels,
         datasets: [{
-          label: 'Gap (M)',
-          data: gaps,
-          borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          label: 'Gap (M)', data: gaps, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)',
           borderWidth: 3, fill: true, tension: 0.3, pointRadius: 4, hitRadius: 10
         }]
       },
       options: { 
-        responsive: true, 
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { 
-          y: { beginAtZero: false, ticks: { callback: v => v + 'M' } },
-          x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
-        }
+        responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: false, ticks: { callback: v => v + 'M' } }, x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } } }
       }
     });
   }
 
-  // Tự động cuộn về cuối biểu đồ (dữ liệu mới nhất) khi load xong
   const scroller = document.querySelector('.chart-scroll-container');
   setTimeout(() => { scroller.scrollLeft = scroller.scrollWidth; }, 100);
 }
@@ -321,14 +216,14 @@ function toggleFilterBox() {
 }
 
 function applyFilter() {
-  const selectedDate = elements.filterDate.value;
+  const selectedDate = elements.filterDate.value; // YYYY-MM-DD
   if (!selectedDate) return;
 
   const filtered = historyData.filter(r => {
-    const d = parseVNTime(r.time);
-    const formatted = d.toLocaleDateString('sv-SE', {
-  timeZone: 'Asia/Ho_Chi_Minh'
-});
+    const d = new Date(r.createdAt);
+    if(isNaN(d)) return false;
+    // Chuyển đổi createdAt sang định dạng YYYY-MM-DD theo giờ Việt Nam
+    const formatted = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }); 
     return formatted === selectedDate;
   });
 
@@ -337,140 +232,54 @@ function applyFilter() {
 }
 
 async function clearAllHistory() {
-  if (!confirm("Xóa toàn bộ lịch sử?")) return;
+  const secretKey = prompt("Vui lòng nhập Mã Bí Mật để xác nhận xóa toàn bộ DB:");
+  if (!secretKey) return;
+  if (!confirm("Hành động này không thể hoàn tác. Tiếp tục?")) return;
+  
   try {
+    const res = await fetch(HIST_API, { 
+      method: 'DELETE',
+      headers: { 'x-admin-key': secretKey } 
+    });
+    
+    if (!res.ok) {
+      alert("Mã bí mật không chính xác!");
+      return;
+    }
+    
     historyData = [];
     renderHistory([]);
     updateChart([]);
-    await fetch(HIST_API, { method: 'DELETE' });
-    alert("Đã xóa!");
-  } catch(e) { console.error("Error"); }
+    alert("Đã xóa toàn bộ lịch sử thành công!");
+  } catch(e) { console.error("Error", e); alert("Lỗi mạng!"); }
 }
 
 load();
 
-/* ===== HIỆU ỨNG PULL TO REFRESH: NHỊP ĐẬP THỊ TRƯỜNG (CYBER PULSE) ===== */
+/* ===== CYBER PULSE EFFECT (Giữ nguyên) ===== */
 const style = document.createElement('style');
-style.innerHTML = `
-  .cyber-pull-container {
-    position: fixed; top: -80px; left: 50%; transform: translateX(-50%);
-    display: flex; align-items: center; gap: 15px;
-    background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px);
-    padding: 12px 24px; border-radius: 40px;
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    z-index: 9999;
-    transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s, box-shadow 0.3s;
-    pointer-events: none;
-  }
-  
-  /* Trạng thái đã kéo đủ lực */
-  .cyber-pull-container.ready {
-    border-color: rgba(16, 185, 129, 0.8);
-    box-shadow: 0 0 25px rgba(16, 185, 129, 0.2);
-  }
-
-  .pulse-bars {
-    display: flex; gap: 4px; align-items: flex-end; height: 24px;
-  }
-  .pulse-bar {
-    width: 5px; height: 4px; border-radius: 2px;
-    background: #3b82f6; 
-    transition: background 0.3s;
-  }
-  
-  /* Đổi màu khi sẵn sàng */
-  .cyber-pull-container.ready .pulse-bar { background: #10b981; }
-  
-  /* Animation khi đang tải */
-  .cyber-pull-container.refreshing .pulse-bar {
-    background: #10b981;
-    animation: pulseWave 0.5s ease-in-out infinite alternate;
-  }
-  .cyber-pull-container.refreshing .pulse-bar:nth-child(1) { animation-delay: 0.0s; }
-  .cyber-pull-container.refreshing .pulse-bar:nth-child(2) { animation-delay: 0.1s; }
-  .cyber-pull-container.refreshing .pulse-bar:nth-child(3) { animation-delay: 0.2s; }
-  .cyber-pull-container.refreshing .pulse-bar:nth-child(4) { animation-delay: 0.3s; }
-
-  @keyframes pulseWave {
-    0% { height: 4px; box-shadow: none; }
-    100% { height: 24px; box-shadow: 0 0 10px #10b981; }
-  }
-
-  .cyber-text {
-    color: #94a3b8; font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif;
-    transition: color 0.3s;
-  }
-  .cyber-pull-container.ready .cyber-text { color: #10b981; text-shadow: 0 0 8px rgba(16,185,129,0.4); }
-`;
+style.innerHTML = `.cyber-pull-container { position: fixed; top: -80px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 15px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); padding: 12px 24px; border-radius: 40px; border: 1px solid rgba(59, 130, 246, 0.3); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); z-index: 9999; transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s, box-shadow 0.3s; pointer-events: none; } .cyber-pull-container.ready { border-color: rgba(16, 185, 129, 0.8); box-shadow: 0 0 25px rgba(16, 185, 129, 0.2); } .pulse-bars { display: flex; gap: 4px; align-items: flex-end; height: 24px; } .pulse-bar { width: 5px; height: 4px; border-radius: 2px; background: #3b82f6; transition: background 0.3s; } .cyber-pull-container.ready .pulse-bar { background: #10b981; } .cyber-pull-container.refreshing .pulse-bar { background: #10b981; animation: pulseWave 0.5s ease-in-out infinite alternate; } .cyber-pull-container.refreshing .pulse-bar:nth-child(1) { animation-delay: 0.0s; } .cyber-pull-container.refreshing .pulse-bar:nth-child(2) { animation-delay: 0.1s; } .cyber-pull-container.refreshing .pulse-bar:nth-child(3) { animation-delay: 0.2s; } .cyber-pull-container.refreshing .pulse-bar:nth-child(4) { animation-delay: 0.3s; } @keyframes pulseWave { 0% { height: 4px; box-shadow: none; } 100% { height: 24px; box-shadow: 0 0 10px #10b981; } } .cyber-text { color: #94a3b8; font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif; transition: color 0.3s; } .cyber-pull-container.ready .cyber-text { color: #10b981; text-shadow: 0 0 8px rgba(16,185,129,0.4); }`;
 document.head.appendChild(style);
 
-// Tạo giao diện HTML
-const pullContainer = document.createElement("div");
-pullContainer.className = "cyber-pull-container";
-pullContainer.innerHTML = `
-  <div class="pulse-bars">
-    <div class="pulse-bar" id="bar1"></div>
-    <div class="pulse-bar" id="bar2"></div>
-    <div class="pulse-bar" id="bar3"></div>
-    <div class="pulse-bar" id="bar4"></div>
-  </div>
-  <div class="cyber-text">Đồng bộ dữ liệu...</div>
-`;
+const pullContainer = document.createElement("div"); pullContainer.className = "cyber-pull-container";
+pullContainer.innerHTML = `<div class="pulse-bars"><div class="pulse-bar" id="bar1"></div><div class="pulse-bar" id="bar2"></div><div class="pulse-bar" id="bar3"></div><div class="pulse-bar" id="bar4"></div></div><div class="cyber-text">Đồng bộ dữ liệu...</div>`;
 document.body.appendChild(pullContainer);
 
-// Logic kéo thả
-let startY = 0; 
-let isPulling = false;
-let isRefreshing = false;
-const pullThreshold = 120; // Độ dài kéo để kích hoạt
+let startY = 0; let isPulling = false; let isRefreshing = false; const pullThreshold = 120; 
 const textEl = pullContainer.querySelector('.cyber-text');
-const bars = [
-  document.getElementById('bar1'),
-  document.getElementById('bar2'),
-  document.getElementById('bar3'),
-  document.getElementById('bar4')
-];
-
-// Chiều cao tối đa các cột sẽ đạt được khi kéo
+const bars = [document.getElementById('bar1'), document.getElementById('bar2'), document.getElementById('bar3'), document.getElementById('bar4')];
 const targetHeights = [12, 24, 16, 20]; 
 
-window.addEventListener("touchstart", (e) => { 
-  if (window.scrollY <= 0 && !isRefreshing) { 
-    startY = e.touches[0].clientY; 
-    isPulling = true; 
-  } 
-}, { passive: false });
-
+window.addEventListener("touchstart", (e) => { if (window.scrollY <= 0 && !isRefreshing) { startY = e.touches[0].clientY; isPulling = true; } }, { passive: false });
 window.addEventListener("touchmove", (e) => {
   if (!isPulling || isRefreshing) return;
-  const currentY = e.touches[0].clientY;
-  const diff = currentY - startY;
-  
+  const diff = e.touches[0].clientY - startY;
   if (diff > 0 && window.scrollY <= 0) {
     if (e.cancelable) e.preventDefault();
-    
-    // Kéo thẻ trượt xuống
-    const moveY = Math.min(diff * 0.4, 90); 
-    pullContainer.style.top = `${-80 + moveY}px`;
-    
-    // Tỷ lệ kéo (từ 0 đến 1)
+    const moveY = Math.min(diff * 0.4, 90); pullContainer.style.top = `${-80 + moveY}px`;
     const pullRatio = Math.min(diff / pullThreshold, 1);
-    
-    // Hiệu ứng ĐỘNG: Cột cao lên theo lực ngón tay
-    bars.forEach((bar, index) => {
-      // Chiều cao cơ bản là 4px, cộng thêm phần trăm tăng trưởng
-      const height = 4 + (targetHeights[index] - 4) * pullRatio;
-      bar.style.height = `${height}px`;
-    });
-    
-    if (diff > pullThreshold) {
-      pullContainer.classList.add('ready');
-      textEl.innerText = "Thả tay để tải mới!";
-    } else {
-      pullContainer.classList.remove('ready');
-      textEl.innerText = "Kéo thêm chút nữa...";
-    }
+    bars.forEach((bar, index) => { bar.style.height = `${4 + (targetHeights[index] - 4) * pullRatio}px`; });
+    if (diff > pullThreshold) { pullContainer.classList.add('ready'); textEl.innerText = "Thả tay để tải mới!"; } else { pullContainer.classList.remove('ready'); textEl.innerText = "Kéo thêm chút nữa..."; }
   }
 }, { passive: false });
 
@@ -478,36 +287,16 @@ window.addEventListener("touchend", (e) => {
   if (!isPulling || isRefreshing) return;
   isPulling = false;
   const diff = e.changedTouches[0].clientY - startY;
-  
-  // Dọn dẹp style inline để CSS Animation có thể chạy
   bars.forEach(bar => bar.style.height = '');
-  
   if (diff > pullThreshold) {
-    isRefreshing = true;
-    pullContainer.classList.remove('ready');
-    pullContainer.classList.add('refreshing');
-    pullContainer.style.top = "20px"; 
-    textEl.innerText = "Đang phân tích...";
-    
+    isRefreshing = true; pullContainer.classList.remove('ready'); pullContainer.classList.add('refreshing'); pullContainer.style.top = "20px"; textEl.innerText = "Đang phân tích...";
     load().then(() => {
       textEl.innerText = "Cập nhật thành công!";
-      
-      // Dừng nhấp nháy, set các cột full màu xanh
-      pullContainer.classList.remove('refreshing');
-      pullContainer.classList.add('ready');
+      pullContainer.classList.remove('refreshing'); pullContainer.classList.add('ready');
       bars.forEach((bar, idx) => bar.style.height = `${targetHeights[idx]}px`);
-      
-      setTimeout(() => { 
-        pullContainer.style.top = "-80px"; 
-        setTimeout(() => { 
-          isRefreshing = false;
-          pullContainer.classList.remove('ready');
-        }, 300);
-      }, 1200);
+      setTimeout(() => { pullContainer.style.top = "-80px"; setTimeout(() => { isRefreshing = false; pullContainer.classList.remove('ready'); }, 300); }, 1200);
     });
-  } else {
-    pullContainer.style.top = "-80px";
-  }
+  } else { pullContainer.style.top = "-80px"; }
 });
 </script>
 </body>
