@@ -307,6 +307,7 @@ async function clearAllHistory() {
 }
 
 // Hàm vẽ biểu đồ được TỐI ƯU CỘT X VÀ THÊM NGÀY THÁNG
+// Hàm vẽ biểu đồ được TỐI ƯU CỘT X, NGÀY THÁNG VÀ LÀM TRÒN CỘT Y
 function updateChart(data) {
   const ctx = document.getElementById('gapChart').getContext('2d');
   const reversedData = [...data].reverse();
@@ -315,24 +316,20 @@ function updateChart(data) {
   const labels = reversedData.map(r => {
     const d = new Date(r.createdAt);
     if (isNaN(d)) return '';
-    // Lấy riêng giờ và ngày
     const time = d.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' });
     const date = d.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric' });
-    // Chart.js sẽ hiểu array này là 2 dòng văn bản xếp đè lên nhau
     return [time, date];
   });
   
   const gaps = reversedData.map(r => r.diff / 1000000);
 
-  // 2. Thuật toán đệm (Padding): Nếu ít dữ liệu thì chỉ chiếm 2/3 không gian X
+  // 2. Thuật toán đệm (Padding)
   const currentLen = labels.length;
   if (currentLen > 0 && currentLen < 20) {
-    // Tính toán số lượng điểm trống cần đệm vào (chính bằng một nửa số liệu hiện tại)
-    // Tổng số lượng điểm trên trục x sẽ bằng 1.5 lần số điểm data, từ đó data sẽ chiếm đúng 1 / 1.5 = 2/3.
     const padCount = Math.ceil(currentLen / 2);
     for (let i = 0; i < padCount; i++) {
-      labels.push(''); // Thêm khoảng trống trục X
-      gaps.push(null); // Không có data trục Y
+      labels.push(''); 
+      gaps.push(null); 
     }
   }
 
@@ -348,7 +345,7 @@ function updateChart(data) {
         datasets: [{
           label: 'Gap (M)', data: gaps, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)',
           borderWidth: 3, fill: true, tension: 0.3, pointRadius: 4, hitRadius: 10,
-          spanGaps: false // Đảm bảo không vẽ đường gạch ngang vào những điểm trống
+          spanGaps: false 
         }]
       },
       options: { 
@@ -358,15 +355,25 @@ function updateChart(data) {
           tooltip: {
             callbacks: {
               label: function(context) {
-                if (context.raw === null) return null; // Không hiện popup ở những vùng trống đệm thêm
+                if (context.raw === null) return null; 
                 return 'Gap: ' + new Intl.NumberFormat('vi-VN').format(context.raw * 1000000) + ' ₫';
               }
             }
           }
         },
         scales: { 
-          y: { beginAtZero: false, ticks: { callback: v => v + 'M' } }, 
-          x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } } 
+          y: { 
+            beginAtZero: false, 
+            ticks: { 
+              // SỬA LỖI TẠI ĐÂY: Giới hạn tối đa 1 số thập phân cho trục Y
+              callback: function(value) {
+                return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(value) + 'M';
+              }
+            } 
+          }, 
+          x: { 
+            ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } 
+          } 
         }
       }
     });
