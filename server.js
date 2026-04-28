@@ -24,7 +24,7 @@ mongoose.connect(process.env.MONGO_URI, {
 
 /* ===== SCHEMA ===== */
 const HistorySchema = new mongoose.Schema({
-  time: Date, // ISO chuẩn
+  time: String,
   date: String, // yyyy-mm-dd
   usd: Number,
   xau: Number,
@@ -197,7 +197,7 @@ async function updateData() {
     // 4. Cập nhật vào biến Global latestData
     latestData = {
       // Đảm bảo giờ hiển thị là giờ Việt Nam dù Deploy trên Railway (server quốc tế)
-      time: new Date(),
+      time: new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }),
       date: getToday(),
       usd: usd,
       xau: xau,

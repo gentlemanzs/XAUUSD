@@ -198,7 +198,9 @@ async function load() {
 })}`;
   } catch(e) { console.error(e); }
 }
-
+function parseVNTime(timeStr) {
+  return new Date(timeStr + ' GMT+7');
+}
 function renderMain(d) {
   elements.usd.innerText = fmtVND.format(d.usd);
   elements.xau.innerText = fmtXAU.format(d.xau);
@@ -221,10 +223,7 @@ async function fetchHistory() {
 }
 
 function formatVNTime(timeStr) {
-  return new Date(timeStr).toLocaleString('vi-VN', {
-    timeZone: 'Asia/Ho_Chi_Minh'
-  });
-}
+  const d = parseVNTime(timeStr);
 
   // Nếu parse được → dùng luôn
   if (!isNaN(d)) {
