@@ -90,36 +90,71 @@ async function getWorldGoldPrice() {
 /* ===== SJC ===== */
 /* ===== SJC ===== */
 /* ===== SJC ===== */
+/* ===== SJC CÓ BACKUP ===== */
 async function getSJCPrice() {
+  // ---------------------------------------------------------
+  // LỚP 1: CÀO TỪ TRANG CHỦ F0 (sjc.com.vn)
+  // ---------------------------------------------------------
   try {
-    const html = await fetchWithRetry("https://webgia.com/gia-vang/sjc/");
-    if (!html) {
-      console.log("⚠️ Không tải được web, trả về 0.");
-      return 0; // Fallback là 0
-    }
-
-    const $ = cheerio.load(html);
+    console.log("⏳ Đang lấy giá SJC từ nguồn chính (sjc.com.vn)...");
+    const htmlF0 = await fetchWithRetry("https://sjc.com.vn/gia-vang-online");
     
-    // Tìm ô chứa "Vàng SJC 1L"
-    const nameCell = $('td:contains("Vàng SJC 1L")').first();
-    const sellPriceText = nameCell.next().next().text().trim();
-    
-    console.log("👉 Text giá cào được từ webgia:", sellPriceText);
-
-    if (sellPriceText) {
-      const pricePerChi = parseInt(sellPriceText.replace(/\./g, ""), 10);
-      if (!isNaN(pricePerChi)) {
-        console.log("✅ Giá 1 chỉ quy ra số:", pricePerChi);
-        return pricePerChi * 10;
+    if (htmlF0) {
+      const $ = cheerio.load(htmlF0);
+      // SJC thường ghi loại vàng phổ biến là "1L, 10L, 1KG"
+      const nameCell = $('td:contains("1L, 10L")').first(); 
+      
+      if (nameCell.length > 0) {
+        // Nhảy sang 2 cột để lấy giá Bán Ra
+        const sellPriceText = nameCell.next().next().text().trim();
+        let price = parseInt(sellPriceText.replace(/\D/g, ""), 10);
+        
+        if (!isNaN(price) && price > 0) {
+          // Giá SJC niêm yết theo ngàn đồng (vd 88.500), cần nhân 1000
+          if (price < 10000000) price = price * 1000;
+          console.log("✅ Lấy thành công SJC (Nguồn chính):", price);
+          return price; // Thành công thì dừng hàm, trả kết quả luôn
+        }
       }
     }
-
-    console.log("⚠️ Lấy được web nhưng không tìm thấy giá trị, trả về 0.");
-    return 0; // Fallback là 0
+    console.log("⚠️ Nguồn chính không có dữ liệu hoặc thay đổi cấu trúc, tự động chuyển qua Backup...");
   } catch (error) {
-    console.error("❌ Lỗi lấy giá SJC 1L:", error.message);
-    return 0; // Fallback là 0
+    console.error("❌ Lỗi cào nguồn chính SJC, kích hoạt Backup:", error.message);
   }
+
+  // ---------------------------------------------------------
+  // LỚP 2: CÀO TỪ NGUỒN BACKUP (webgia.com) - Chỉ chạy khi Lớp 1 lỗi
+  // ---------------------------------------------------------
+  try {
+    console.log("⏳ Đang lấy giá SJC từ nguồn dự phòng (webgia.com)...");
+    const htmlBackup = await fetchWithRetry("https://webgia.com/gia-vang/sjc/");
+    
+    if (htmlBackup) {
+      const $ = cheerio.load(htmlBackup);
+      const nameCell = $('td:contains("Vàng SJC 1L")').first();
+      const sellPriceText = nameCell.next().next().text().trim();
+      
+      if (sellPriceText) {
+        // Webgia có dấu chấm phân cách hàng ngàn
+        const pricePerChi = parseInt(sellPriceText.replace(/\./g, ""), 10);
+        if (!isNaN(pricePerChi) && pricePerChi > 0) {
+          // Webgia niêm yết theo chỉ, cần nhân 10 để ra lượng
+          const price = pricePerChi * 10;
+          console.log("✅ Lấy thành công SJC (Nguồn Webgia):", price);
+          return price;
+        }
+      }
+    }
+    console.log("⚠️ Nguồn dự phòng cũng thất bại.");
+  } catch (error) {
+    console.error("❌ Lỗi cào nguồn dự phòng Webgia:", error.message);
+  }
+
+  // ---------------------------------------------------------
+  // LỚP 3: THẤT BẠI HOÀN TOÀN
+  // ---------------------------------------------------------
+  console.log("🚨 TẤT CẢ CÁC NGUỒN ĐỀU SẬP. TRẢ VỀ 0.");
+  return 0;
 }
 
 /* ===== SAVE LOGIC ===== */
