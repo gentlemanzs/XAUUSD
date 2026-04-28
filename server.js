@@ -11,19 +11,14 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static("public"));
 
 /* ===== CONNECT MONGO ===== */
-mongoose.connect(process.env.MONGO_URI, {
-  serverSelectionTimeoutMS: 5000
-})
-.then(() => console.log("✅ MongoDB connected"))
-.catch(err => {
-  console.error("❌ MongoDB error:", err);
-  process.exit(1);
-});
+mongoose.connect(process.env.MONGO_URI)
+.then(() => console.log("✅ MongoDB connected (Railway)"))
+.catch(err => console.error("❌ MongoDB error:", err));
 
 /* ===== SCHEMA ===== */
 const HistorySchema = new mongoose.Schema({
-  time: String, // Lưu dạng ISO để dễ xử lý ở frontend
-  date: String, // yyyy-mm-dd (giờ VN)
+  time: String, // Lưu ISO String
+  date: String, // yyyy-mm-dd (Giờ VN)
   usd: Number,
   xau: Number,
   sjc: Number,
@@ -36,112 +31,100 @@ const History = mongoose.model("History", HistorySchema);
 
 let latestData = null;
 
-/* ===== HELPER: Lấy ngày yyyy-mm-dd theo giờ VN ===== */
+/* ===== HELPERS ===== */
 function getTodayVN() {
   return new Date(new Date().getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
-/* ===== FETCH HELPER ===== */
-async function fetchWithRetry(url) {
+async function fetchHTML(url) {
   try {
     const res = await axios.get(url, { 
-      timeout: 8000,
-      headers: { 'User-Agent': 'Mozilla/5.0' } 
+      timeout: 10000,
+      headers: { 'User-Agent': 'Mozilla/5.0' }
     });
     return res.data;
-  } catch { return null; }
+  } catch (e) { return null; }
 }
 
-/* ===== USD RATE (Target "Bán" Column) ===== */
-async function getUSDRate() {
-  try {
-    const html = await fetchWithRetry("https://webgia.com/ty-gia/vietcombank/");
-    if (!html) return 25450;
-    const clean = html.replace(/\s+/g, " ");
-    const nums = clean.match(/[0-9]{2,3}\.[0-9]{3},[0-9]{2}/g);
-    const values = nums.map(n => parseFloat(n.replace(/\./g, "").replace(",", ".")));
-    // Lấy giá trị lớn nhất thường là giá "Bán"
-    return Math.max(...values.filter(v => v > 24000 && v < 26000));
-  } catch { return 25450; }
-}
-
-/* ===== WORLD GOLD (XAU) ===== */
-async function getWorldGoldPrice() {
-  const data = await fetchWithRetry("https://api.gold-api.com/price/XAU");
-  return data?.price || 2350;
-}
-
-/* ===== SJC PRICE (Cập nhật lấy giá thật từ Webgia) ===== */
+/* ===== CÀO GIÁ SJC (Dòng 1, Cột 3) ===== */
 async function getSJCPrice() {
   try {
-    const html = await fetchWithRetry("https://webgia.com/gia-vang/sjc/");
-    if (!html) return 85000000;
-    const clean = html.replace(/\s+/g, " ");
-    // Regex tìm số có dạng 8x.xxx.000 hoặc 9x.xxx.000
-    const nums = clean.match(/[0-9]{2}\.[0-9]{3}\.[0-9]{3}/g);
-    if (nums) {
-      const values = nums.map(n => parseInt(n.replace(/\./g, "")));
-      // Lấy giá trị cao nhất (thường là giá bán ra của SJC)
-      return Math.max(...values.filter(v => v > 50000000));
+    const html = await fetchHTML("https://sjc.com.vn/gia-vang-online");
+    if (!html) return null;
+
+    // Tìm tất cả các số có định dạng giá tiền (ví dụ: 89.000 hoặc 89,000) trong bảng
+    const priceMatches = html.match(/[0-9]{2}[\.,][0-9]{3}/g);
+    
+    if (priceMatches && priceMatches.length >= 2) {
+      // Dòng 1 thường có: Cột 2 (Mua vào), Cột 3 (Bán ra)
+      // Cột 3 của dòng 1 sẽ là phần tử index 1 trong mảng kết quả match
+      const rawPrice = priceMatches[1].replace(/[\.,]/g, "");
+      return parseInt(rawPrice) * 1000; // Nhân 1000 vì SJC niêm yết đơn vị nghìn đồng
     }
-    return 85000000;
-  } catch { return 85000000; }
+    return null;
+  } catch (e) {
+    console.log("❌ Lỗi cào SJC:", e.message);
+    return null;
+  }
 }
 
-/* ===== SAVE LOGIC ===== */
-async function saveHistory(entry) {
+/* ===== TỶ GIÁ USD ===== */
+async function getUSDRate() {
+  const html = await fetchHTML("https://webgia.com/ty-gia/vietcombank/");
+  if (!html) return 25450;
+  const nums = html.replace(/\s+/g, "").match(/[0-9]{2}\.[0-9]{3},[0-9]{2}/g);
+  if (!nums) return 25450;
+  const values = nums.map(n => parseFloat(n.replace(/\./g, "").replace(",", ".")));
+  return Math.max(...values.filter(v => v > 24000 && v < 26000));
+}
+
+/* ===== GIÁ VÀNG THẾ GIỚI ===== */
+async function getWorldGold() {
   try {
-    const today = getTodayVN();
-    const firstToday = await History.findOne({ date: today }).sort({ createdAt: 1 });
-    const last = await History.findOne().sort({ createdAt: -1 });
-
-    // Lưu nếu: Bản ghi đầu tiên trong ngày HOẶC giá SJC thay đổi so với lần gần nhất
-    if (!firstToday || !last || last.sjc !== entry.sjc) {
-      await History.create(entry);
-      console.log(`💾 Saved SJC: ${entry.sjc} at ${new Date().toISOString()}`);
-
-      const count = await History.countDocuments();
-      if (count > 200) {
-        const oldest = await History.findOne().sort({ createdAt: 1 });
-        if (oldest) await History.deleteOne({ _id: oldest._id });
-      }
-    }
-  } catch (e) { console.log("❌ Save error:", e); }
+    const res = await axios.get("https://api.gold-api.com/price/XAU");
+    return res.data.price || 2350;
+  } catch { return 2350; }
 }
 
-/* ===== UPDATE MAIN ===== */
+/* ===== UPDATE & SAVE ===== */
 async function updateData() {
   try {
-    const [usd, xau, sjc] = await Promise.all([
+    const [usd, xau, sjcReal] = await Promise.all([
       getUSDRate(),
-      getWorldGoldPrice(),
+      getWorldGold(),
       getSJCPrice()
     ]);
 
-    const worldVND = xau * usd * (37.5 / 31.1035);
-    const diff = sjc - worldVND;
-    const percent = (diff / worldVND) * 100;
+    if (!sjcReal) {
+        console.log("⚠️ Không lấy được giá SJC, bỏ qua lượt cập nhật này.");
+        return;
+    }
+
+    const worldVND = Math.round(xau * usd * (37.5 / 31.1035));
+    const diff = sjcReal - worldVND;
+    const percent = ((diff / worldVND) * 100).toFixed(2) + "%";
 
     latestData = {
-      time: new Date().toISOString(), // Lưu dạng ISO chuẩn
+      time: new Date().toISOString(), // Lưu ISO chuẩn
       date: getTodayVN(),
-      usd,
-      xau,
-      sjc,
-      worldVND: Math.round(worldVND),
-      diff: Math.round(diff),
-      percent: percent.toFixed(2) + "%"
+      usd, xau, sjc: sjcReal, worldVND, diff, percent
     };
 
-    await saveHistory(latestData);
-  } catch (e) { console.log("❌ UPDATE ERROR:", e); }
+    // Lưu history nếu giá SJC thay đổi
+    const last = await History.findOne().sort({ createdAt: -1 });
+    if (!last || last.sjc !== sjcReal) {
+      await History.create(latestData);
+      console.log(`💾 Đã lưu SJC mới: ${sjcReal.toLocaleString()} VND`);
+    }
+
+  } catch (e) { console.log("❌ Lỗi Update:", e.message); }
 }
 
 cron.schedule("*/2 * * * *", updateData);
 
 app.get("/api/gold", (req, res) => res.json(latestData || {}));
 app.get("/api/history", async (req, res) => {
-  const data = await History.find().sort({ createdAt: -1 });
+  const data = await History.find().sort({ createdAt: -1 }).limit(100);
   res.json(data);
 });
 app.delete("/api/history", async (req, res) => {
