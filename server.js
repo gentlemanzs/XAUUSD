@@ -24,7 +24,7 @@ mongoose.connect(process.env.MONGO_URI, {
 
 /* ===== SCHEMA ===== */
 const HistorySchema = new mongoose.Schema({
-  time: new Date(), // ISO chuẩn
+  time: new Date, // ISO chuẩn
   date: String, // yyyy-mm-dd
   usd: Number,
   xau: Number,
