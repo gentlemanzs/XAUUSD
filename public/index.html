@@ -135,7 +135,13 @@ th:first-child, td:first-child { text-align: left; }
 
 .chart-card { padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); }
 .chart-scroll-container { width: 100%; overflow-x: auto; margin-top: 1rem; }
-.chart-inner-wrapper { min-width: 800px; height: 350px; }
+/* Mặc định cho máy tính */
+.chart-inner-wrapper { min-width: 800px; height: 320px; }
+
+/* Tối ưu riêng cho điện thoại */
+@media (max-width: 640px) {
+  .chart-inner-wrapper { height: 250px; } 
+}
 </style>
 </head>
 <body>
@@ -381,10 +387,19 @@ function updateChart(data) {
       type: 'line',
       data: {
         labels: labels,
-        datasets: [{
-          label: 'Gap (M)', data: gaps, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          borderWidth: 3, fill: true, tension: 0.3, pointRadius: 4, hitRadius: 10, spanGaps: false 
-        }]
+        // Tìm đoạn datasets trong hàm updateChart
+datasets: [{
+  label: 'Gap (M)', 
+  data: gaps, 
+  borderColor: '#3b82f6', 
+  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+  borderWidth: 2,          // Giảm độ dày đường kẻ xuống 2 (thay vì 3)
+  fill: true, 
+  tension: 0.3, 
+  pointRadius: 3,         // Giảm kích thước điểm xuống 3 (thay vì 4)
+  hitRadius: 15,          // Tăng vùng chạm để dễ xem tooltip trên điện thoại
+  spanGaps: false 
+}]
       },
       options: { 
         responsive: true, maintainAspectRatio: false, 
@@ -400,9 +415,21 @@ function updateChart(data) {
           }
         },
         scales: { 
-          y: { beginAtZero: false, ticks: { callback: v => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(v) + 'M' } }, 
-          x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } } 
-        }
+  y: { 
+    beginAtZero: false, 
+    ticks: { 
+      callback: v => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(v) + 'M' 
+    } 
+  }, 
+  x: { 
+    ticks: { 
+      autoSkip: true,      // Bật tự động bỏ bớt nhãn nếu quá dày
+      maxTicksLimit: 8,    // Giới hạn hiển thị khoảng 8 mốc thời gian để nhìn cho thoáng
+      maxRotation: 0,      // Để chữ nằm ngang cho dễ đọc
+      minRotation: 0 
+    } 
+  } 
+}
       }
     });
   }
