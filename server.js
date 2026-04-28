@@ -45,21 +45,18 @@ function getToday() {
 
 /* ===== FETCH ===== */
 /* ===== FETCH ===== */
-async function fetchWithRetry(url) {
-  try {
-    const res = await axios.get(url, { 
-      timeout: 10000, // Tăng thời gian chờ lên 10s
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-        "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Cache-Control": "no-cache"
-      }
-    });
-    return res.data;
-  } catch (e) {
-    console.log(`❌ Fetch error for ${url}:`, e.message);
-    return null;
+async function fetchWithRetry(url, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await axios.get(url, { 
+        timeout: 10000,
+        headers: { "User-Agent": "Mozilla/5.0..." /* Giữ nguyên Header của bạn */ }
+      });
+      return res.data;
+    } catch (e) {
+      console.log(`⚠️ Thử lại lần ${i + 1} cho ${url}...`);
+      if (i === retries - 1) return null; // Hết số lần thử thì bỏ cuộc
+    }
   }
 }
 
@@ -161,9 +158,11 @@ async function saveHistory(entry) {
 /* ===== UPDATE ===== */
 async function updateData() {
   try {
-    const usd = await getUSDRate();
-    const xau = await getWorldGoldPrice();
-    const sjc = await getSJCPrice();
+    const [usd, xau, sjc] = await Promise.all([
+  getUSDRate(),
+  getWorldGoldPrice(),
+  getSJCPrice()
+]);
 
     const worldVND = xau * usd * (37.5 / 31.1035);
     const diff = sjc - worldVND;
