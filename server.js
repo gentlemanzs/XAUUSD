@@ -174,7 +174,7 @@ async function updateData() {
 }
 
 /* ===== CRON ===== */
-cron.schedule("*/15 * * * *", updateData);
+cron.schedule("*/2 * * * *", updateData);
 
 /* ===== API ===== */
 app.get("/api/gold", (req, res) => {
