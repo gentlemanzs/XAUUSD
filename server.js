@@ -46,9 +46,16 @@ function getToday() {
 /* ===== FETCH ===== */
 async function fetchWithRetry(url) {
   try {
-    const res = await axios.get(url, { timeout: 5000 });
+    const res = await axios.get(url, { 
+      timeout: 5000,
+      headers: {
+        // Thêm User-Agent để tránh bị webgia.com chặn request từ server
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    });
     return res.data;
-  } catch {
+  } catch (e) {
+    console.log(`❌ Fetch error for ${url}:`, e.message);
     return null;
   }
 }
@@ -80,23 +87,22 @@ async function getWorldGoldPrice() {
 
 /* ===== SJC ===== */
 /* ===== SJC ===== */
+/* ===== SJC ===== */
 async function getSJCPrice() {
   try {
     const html = await fetchWithRetry("https://webgia.com/gia-vang/sjc/");
-    if (!html) return 168800000; // Giá fallback dự phòng nếu không lấy được HTML
+    if (!html) return 168800000;
 
     const $ = cheerio.load(html);
     
-    // Tìm bảng đầu tiên, lấy dòng dữ liệu đầu tiên (Vàng SJC 1L, 10L, 1KG)
-    // Cột thứ 4 (index 3) chính là cột "Bán ra"
-    const sellPriceText = $('table tbody tr').first().find('td').eq(3).text().trim();
+    // Tìm chính xác thẻ td chứa chữ "Vàng SJC 1L", lùi ra thẻ cha (tr), rồi lấy cột số 4 (index 3)
+    const sellPriceText = $('td:contains("Vàng SJC 1L")').first().parent().find('td').eq(3).text().trim();
     
     if (sellPriceText) {
-      // Chuỗi lấy được có dạng "16.850.000". Ta cần xóa các dấu chấm để ép kiểu về số
       const pricePerChi = parseInt(sellPriceText.replace(/\./g, ""), 10);
-      
-      // Nhân 10 để quy đổi từ 1 chỉ ra 1 lượng (khớp với công thức worldVND)
-      return pricePerChi * 10;
+      if (!isNaN(pricePerChi)) {
+        return pricePerChi * 10;
+      }
     }
 
     return 168800000;
