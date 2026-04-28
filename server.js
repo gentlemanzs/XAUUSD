@@ -2,7 +2,6 @@ const express = require("express");
 const axios = require("axios");
 const cron = require("node-cron");
 const cors = require("cors");
-const path = require("path");
 const mongoose = require("mongoose");
 
 const app = express();
@@ -12,19 +11,17 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static("public"));
 
 /* ===== CONNECT MONGO ===== */
-mongoose.connect(process.env.MONGO_URI, {
-  serverSelectionTimeoutMS: 5000
-})
-.then(() => console.log("✅ MongoDB connected"))
-.catch(err => {
-  console.error("❌ MongoDB error:", err);
-  process.exit(1);
-});
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB Atlas connected (Railway)"))
+  .catch(err => {
+    console.error("❌ MongoDB error:", err);
+    process.exit(1);
+  });
 
 /* ===== SCHEMA ===== */
 const HistorySchema = new mongoose.Schema({
-  time: String,
-  date: String, // yyyy-mm-dd
+  time: String, // Lưu ISO String (Vd: 2026-04-28T02:00:00Z)
+  date: String, // Lưu yyyy-mm-dd theo giờ VN để filter
   usd: Number,
   xau: Number,
   sjc: Number,
@@ -37,85 +34,56 @@ const History = mongoose.model("History", HistorySchema);
 
 let latestData = null;
 
-/* ===== HELPER ===== */
-function getToday() {
-  return new Date().toISOString().slice(0, 10);
+/* ===== HELPER: Lấy ngày yyyy-mm-dd theo giờ VN ===== */
+function getTodayVN() {
+  const now = new Date();
+  // Cộng 7 tiếng để ép về giờ VN trước khi lấy chuỗi ngày
+  const vnTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+  return vnTime.toISOString().slice(0, 10);
 }
 
-/* ===== FETCH ===== */
-async function fetchWithRetry(url) {
-  try {
-    const res = await axios.get(url, { timeout: 5000 });
-    return res.data;
-  } catch {
-    return null;
-  }
-}
-
-/* ===== USD ===== */
+/* ===== FETCH LOGIC ===== */
 async function getUSDRate() {
   try {
-    const html = await fetchWithRetry("https://webgia.com/ty-gia/vietcombank/");
-    const clean = html.replace(/\s+/g, " ");
+    const res = await axios.get("https://webgia.com/ty-gia/vietcombank/", { timeout: 5000 });
+    const clean = res.data.replace(/\s+/g, " ");
     const nums = clean.match(/[0-9]{2,3}\.[0-9]{3},[0-9]{2}/g);
-    const values = nums.map(n =>
-      parseFloat(n.replace(/\./g, "").replace(",", "."))
-    );
+    const values = nums.map(n => parseFloat(n.replace(/\./g, "").replace(",", ".")));
     return Math.max(...values.filter(v => v > 20000 && v < 30000));
-  } catch {
-    return 26000;
-  }
+  } catch { return 25450; }
 }
 
-/* ===== XAU ===== */
 async function getWorldGoldPrice() {
   try {
-    const data = await fetchWithRetry("https://api.gold-api.com/price/XAU");
-    return data?.price || 2350;
-  } catch {
-    return 2350;
-  }
+    const res = await axios.get("https://api.gold-api.com/price/XAU", { timeout: 5000 });
+    return res.data.price || 2350;
+  } catch { return 2350; }
 }
 
-/* ===== SJC ===== */
+// Thay bằng logic lấy giá SJC thực tế của bạn
 async function getSJCPrice() {
-  return 168800000; // production: thay bằng API thật
+  return 90000000; 
 }
 
 /* ===== SAVE LOGIC ===== */
 async function saveHistory(entry) {
   try {
-    const today = getToday();
-
-    // record đầu ngày
-    const firstToday = await History.findOne({ date: today }).sort({ createdAt: 1 });
-
-    // record cuối cùng
     const last = await History.findOne().sort({ createdAt: -1 });
-
-    // ✔ lưu nếu:
-    // 1. chưa có record hôm nay (giá đầu ngày)
-    // 2. SJC thay đổi
-    if (!firstToday || !last || last.sjc !== entry.sjc) {
+    // Chỉ lưu nếu giá SJC thay đổi
+    if (!last || last.sjc !== entry.sjc) {
       await History.create(entry);
-      console.log("💾 Saved:", entry.sjc);
-
-      // giữ max 200 record
+      console.log("💾 Đã lưu bản ghi mới vào MongoDB");
+      
       const count = await History.countDocuments();
       if (count > 200) {
         const oldest = await History.findOne().sort({ createdAt: 1 });
         if (oldest) await History.deleteOne({ _id: oldest._id });
       }
-    } else {
-      console.log("⏭ Skip (no change)");
     }
-
-  } catch (e) {
-    console.log("❌ Save error:", e);
-  }
+  } catch (e) { console.log("❌ Save error:", e); }
 }
 
-/* ===== UPDATE ===== */
+/* ===== UPDATE MAIN ===== */
 async function updateData() {
   try {
     const usd = await getUSDRate();
@@ -124,46 +92,34 @@ async function updateData() {
 
     const worldVND = xau * usd * (37.5 / 31.1035);
     const diff = sjc - worldVND;
-    const percent = (diff / worldVND) * 100;
+    const percent = ((diff / worldVND) * 100).toFixed(2) + "%";
 
     latestData = {
-      time: new Date().toLocaleString("vi-VN"),
-      date: getToday(),
-      usd,
-      xau,
-      sjc,
+      time: new Date().toISOString(), // LUÔN LƯU DẠNG CHUẨN ISO
+      date: getTodayVN(),
+      usd, xau, sjc,
       worldVND: Math.round(worldVND),
       diff: Math.round(diff),
-      percent: percent.toFixed(2) + "%"
+      percent
     };
 
     await saveHistory(latestData);
-
-  } catch (e) {
-    console.log("❌ UPDATE ERROR:", e);
-  }
+  } catch (e) { console.log("❌ Update error:", e.message); }
 }
 
-/* ===== CRON ===== */
 cron.schedule("*/2 * * * *", updateData);
 
-/* ===== API ===== */
-app.get("/api/gold", (req, res) => {
-  res.json(latestData || {});
-});
-
+app.get("/api/gold", (req, res) => res.json(latestData || {}));
 app.get("/api/history", async (req, res) => {
   const data = await History.find().sort({ createdAt: -1 });
   res.json(data);
 });
-
 app.delete("/api/history", async (req, res) => {
   await History.deleteMany({});
   res.json({ ok: true });
 });
 
-/* ===== START ===== */
 app.listen(PORT, () => {
-  console.log("🚀 Server running on", PORT);
+  console.log("🚀 Server running on port", PORT);
   updateData();
 });
