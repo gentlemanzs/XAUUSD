@@ -154,49 +154,40 @@ async function saveHistory(entry) {
 /* ===== UPDATE ===== */
 async function updateData() {
   try {
-    // 1. Cào dữ liệu từ các nguồn
+    // 1. Cào dữ liệu
     let [usd, xau, sjc] = await Promise.all([
       getUSDRate(),
       getWorldGoldPrice(),
       getSJCPrice()
     ]);
 
-    // Lấy bản ghi mới nhất từ database để làm phương án dự phòng (fallback)
+    // Lấy bản ghi cũ nhất
     const lastRecord = await History.findOne().sort({ createdAt: -1 });
-
-    // 2. Kiểm tra và xử lý Fallback
-    // Nếu cào lỗi (giá bằng 0 hoặc dùng giá mặc định), ta lấy lại giá trị cũ từ DB
     let isFallback = false;
 
-    if (sjc <= 0 && lastRecord) {
-      sjc = lastRecord.sjc;
+    // 2. LOGIC CỨU CÁNH: Nếu cào lỗi, lấy DB. Nếu DB trống, lấy giá mồi.
+    if (sjc <= 0) {
+      sjc = lastRecord ? lastRecord.sjc : 85000000; // Giá mồi 85tr nếu mới chạy lần đầu
       isFallback = true;
     }
     
-    if (xau <= 0 && lastRecord) {
-      xau = lastRecord.xau;
+    if (xau <= 0) {
+      xau = lastRecord ? lastRecord.xau : 2350; // Giá mồi 2350$ nếu mới chạy
       isFallback = true;
     }
 
-    // Riêng USD, nếu hàm trả về 1000 (giá mặc định khi lỗi) thì thử lấy lại giá cũ
-    if (usd === 1000 && lastRecord) {
-      usd = lastRecord.usd;
+    // Xử lý USD: Nếu là 1000 (lỗi) thì lấy lại giá cũ hoặc mặc định 25.500
+    if (usd <= 1000) {
+      usd = lastRecord ? lastRecord.usd : 25500;
+      isFallback = true;
     }
 
-    // Nếu không có cả dữ liệu mới lẫn dữ liệu cũ (DB trống), dừng xử lý
-    if (sjc <= 0 || xau <= 0) {
-      console.log("⚠️ Không có dữ liệu để cập nhật.");
-      return;
-    }
-
-    // 3. Tính toán các chỉ số chênh lệch
+    // 3. Tính toán (Đảm bảo luôn có số để tính, không return nửa chừng)
     const worldVND = xau * usd * (37.5 / 31.1035);
     const diff = sjc - worldVND;
     const percent = (diff / worldVND) * 100;
 
-    // 4. Cập nhật vào biến Global latestData
     latestData = {
-      // Đảm bảo giờ hiển thị là giờ Việt Nam dù Deploy trên Railway (server quốc tế)
       time: new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }),
       date: getToday(),
       usd: usd,
@@ -205,19 +196,18 @@ async function updateData() {
       worldVND: Math.round(worldVND),
       diff: Math.round(diff),
       percent: percent.toFixed(2) + "%",
-      status: isFallback ? "Delayed" : "Live" // Gắn nhãn để UI nhận biết
+      status: isFallback ? "Delayed" : "Live"
     };
 
-    // 5. Lưu vào lịch sử
-    // Chỉ gọi hàm lưu nếu không phải là dữ liệu Fallback (để tránh làm rác biểu đồ)
+    // 4. Lưu vào DB (Chỉ lưu nếu là dữ liệu thật)
     if (!isFallback) {
       await saveHistory(latestData);
-    } else {
-      console.log("🟡 Đang hiển thị dữ liệu tạm thời (Fallback), không lưu vào History.");
     }
 
+    console.log(`✅ Update thành công: SJC=${sjc}, Status=${latestData.status}`);
+
   } catch (e) {
-    console.log("❌ Lỗi nghiêm trọng trong quá trình Update:", e);
+    console.log("❌ Lỗi nặng trong updateData:", e);
   }
 }
 /* ===== CRON ===== */
