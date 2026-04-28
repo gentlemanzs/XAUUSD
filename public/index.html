@@ -223,7 +223,10 @@ async function fetchHistory() {
 }
 
 function formatVNTime(timeStr) {
-  const d = parseVNTime(timeStr);
+  return new Date(timeStr).toLocaleString('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh'
+  });
+}
 
   // Nếu parse được → dùng luôn
   if (!isNaN(d)) {
