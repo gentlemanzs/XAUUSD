@@ -186,32 +186,17 @@ let myChart = null;
 
 async function load() {
   try {
-
-    // 🟢 1. LẤY DỮ LIỆU CŨ NGAY (hiển thị tức thì)
     const res = await fetch(`${API}?t=${Date.now()}`);
     const d = await res.json();
     renderMain(d);
-
-    // 🟢 2. GỌI UPDATE NGẦM (KHÔNG await)
-    fetch("/api/update", { method: "POST" });
-
-    // 🟢 3. ĐỢI 1 CHÚT RỒI LOAD LẠI (lấy dữ liệu mới)
-    setTimeout(async () => {
-      const res2 = await fetch(`${API}?t=${Date.now()}`);
-      const d2 = await res2.json();
-
-      renderMain(d2);
-
-      if (lastSJCValue === null || d2.sjc !== lastSJCValue) {
-        lastSJCValue = d2.sjc;
-        await fetchHistory();
-      }
-
-    }, 1500); // có thể chỉnh 1000–3000ms
-
-  } catch(e) {
-    console.error(e);
-  }
+    if (lastSJCValue === null || d.sjc !== lastSJCValue) {
+      lastSJCValue = d.sjc;
+      await fetchHistory();
+    }
+    elements.lastTime.innerHTML = `🟢 Live: ${new Date().toLocaleString('vi-VN', {
+  timeZone: 'Asia/Ho_Chi_Minh'
+})}`;
+  } catch(e) { console.error(e); }
 }
 function parseVNTime(timeStr) {
   return new Date(timeStr + ' GMT+7');
@@ -317,7 +302,7 @@ function updateChart(data) {
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: { 
-          y: { beginAtZero: false, ticks: { callback: v => Number(v).toFixed(1) + 'M' } },
+          y: { beginAtZero: false, ticks: { callback: v => v + 'M' } },
           x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
         }
       }
