@@ -8,8 +8,18 @@
 <style>
 :root { --bg-color: #f8fafc; --header-bg: #0f172a; --card-bg: #ffffff; --primary-text: #1e293b; --secondary-text: #64748b; --up-color: #10b981; --down-color: #ef4444; --border-color: #e2e8f0; --accent-color: #3b82f6; }
 body { margin: 0; font-family: 'Inter', -apple-system, system-ui, sans-serif; background: var(--bg-color) !important; color: var(--primary-text); overflow-x: hidden; overscroll-behavior-y: contain; }
-header { padding: 1rem 2rem; background: var(--header-bg); color: white; display: flex; justify-content: space-between; align-items: center; position: fixed; top: 0; left: 0; width: 100%; box-sizing: border-box; z-index: 1000; }
-.brand { font-size: 1.25rem; font-weight: 700; }
+header { 
+  padding: 1rem 2rem; 
+  /* Nền trong suốt 80% */
+  background: rgba(15, 23, 42, 0.8); 
+  /* Hiệu ứng làm mờ kính */
+  backdrop-filter: blur(12px); 
+  -webkit-backdrop-filter: blur(12px);
+  /* Viền dưới mỏng tạo ranh giới */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08); 
+  color: white; display: flex; justify-content: space-between; align-items: center; 
+  position: fixed; top: 0; left: 0; width: 100%; box-sizing: border-box; z-index: 1000; 
+}
 #updateBtn { background: var(--accent-color); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; }
 .container { width: 100%; max-width: 1200px; margin: 0 auto; background: var(--bg-color); min-height: 100vh; padding: 85px 15px 3rem 15px; box-sizing: border-box; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
