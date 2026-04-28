@@ -225,8 +225,7 @@ async function load() {
     // KHÔNG viết đè elements.lastTime ở đây nữa
   } catch(e) { console.error(e); }
 }
-function parseVNTime(timeStr) {
-  return new Date(timeStr + ' GMT+7');
+
 }
 function renderMain(d) {
   if (!d || !d.sjc) return;
@@ -268,19 +267,6 @@ async function fetchHistory() {
   } catch(e) { console.error(e); }
 }
 
-function formatVNTime(timeStr) {
-  const d = parseVNTime(timeStr);
-
-  // Nếu parse được → dùng luôn
-  if (!isNaN(d)) {
-    return d.toLocaleString('vi-VN', {
-      timeZone: 'Asia/Ho_Chi_Minh'
-    });
-  }
-
-  // Nếu lỗi → giữ nguyên text gốc (fallback)
-  return timeStr;
-}
 
 function renderHistory(data) {
   elements.historyTable.innerHTML = "";
@@ -365,7 +351,7 @@ function applyFilter() {
   if (!selectedDate) return;
 
   const filtered = historyData.filter(r => {
-    const d = parseVNTime(r.time);
+    const d = new Date(r.createdAt);
     const formatted = d.toLocaleDateString('sv-SE', {
   timeZone: 'Asia/Ho_Chi_Minh'
 });
