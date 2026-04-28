@@ -239,7 +239,7 @@ function formatVNTime(timeStr) {
 function renderHistory(data) {
   elements.historyTable.innerHTML = "";
 
-  let displayData = [...data].reverse().slice(0, 5);
+  let displayData = data.slice(0, 5);
 
   displayData.forEach(r => {
     const row = document.createElement("tr");
