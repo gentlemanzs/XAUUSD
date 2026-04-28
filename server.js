@@ -7,10 +7,10 @@ const cheerio = require("cheerio");
 
 const app = express();
 app.use(cors());
+app.use(express.json()); // QUAN TRỌNG: Cho phép server đọc body JSON để xóa nhiều log
 app.use(express.static("public"));
 
 const PORT = process.env.PORT || 3000;
-const ADMIN_KEY = process.env.ADMIN_KEY || "123456";
 
 /* ===== CONNECT MONGO ===== */
 mongoose.connect(process.env.MONGO_URI, {
@@ -169,25 +169,19 @@ async function updateData() {
 
 /* ===== LOGIC KHUNG GIỜ GIAO DỊCH GMT+7 ===== */
 function isWithinTradingHours() {
-  // Lấy thời gian hiện tại chuẩn GMT+7
   const nowStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" });
   const nowVN = new Date(nowStr);
   
-  const day = nowVN.getDay(); // 0: CN, 1: T2, ..., 6: T7
+  const day = nowVN.getDay(); 
   const hour = nowVN.getHours();
   const minute = nowVN.getMinutes();
   
-  // Chuyển đổi ra số thập phân (VD: 8h30 = 8.5)
   const timeVal = hour + minute / 60;
 
-  // Chủ Nhật (0) -> Nghỉ
   if (day === 0) return false;
-  // Thứ 2 (1) trước 8h30 -> Nghỉ
   if (day === 1 && timeVal < 8.5) return false;
-  // Thứ 7 (6) sau 10h30 -> Nghỉ
   if (day === 6 && timeVal > 10.5) return false;
   
-  // Tất cả thời gian còn lại (Từ 8h30 T2 đến 10h30 T7) -> Chạy
   return true;
 }
 
@@ -211,33 +205,28 @@ app.get("/api/history", async (req, res) => {
   res.json(data);
 });
 
-// Xóa toàn bộ lịch sử
+// Xóa toàn bộ lịch sử (Không cần pass)
 app.delete("/api/history", async (req, res) => {
-  const userKey = req.headers['x-admin-key'];
-  if (userKey !== ADMIN_KEY) {
-    return res.status(403).json({ error: "Unauthorized" });
-  }
   await History.deleteMany({});
   res.json({ ok: true });
 });
 
-// Xóa 1 bản ghi cụ thể theo ID
-app.delete("/api/history/:id", async (req, res) => {
-  const userKey = req.headers['x-admin-key'];
-  if (userKey !== ADMIN_KEY) {
-    return res.status(403).json({ error: "Unauthorized" });
-  }
+// Xóa 1 hoặc nhiều bản ghi cùng lúc theo danh sách ID
+app.post("/api/history/bulk-delete", async (req, res) => {
   try {
-    await History.findByIdAndDelete(req.params.id);
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) {
+      return res.status(400).json({ error: "Invalid data" });
+    }
+    await History.deleteMany({ _id: { $in: ids } });
     res.json({ ok: true });
   } catch (error) {
-    res.status(500).json({ error: "Không thể xóa bản ghi này" });
+    res.status(500).json({ error: "Không thể xóa bản ghi" });
   }
 });
 
 /* ===== START ===== */
 app.listen(PORT, () => {
   console.log("🚀 Server đang chạy trên port", PORT);
-  // Khởi chạy 1 lần khi bật server để luôn có data initial (không phụ thuộc giờ giấc)
   updateData();
 });
