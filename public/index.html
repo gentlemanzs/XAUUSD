@@ -6,35 +6,13 @@
 <title>XAU Professional Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-:root {
-  --bg-color: #f8fafc;
-  --header-bg: #0f172a; 
-  --card-bg: #ffffff;
-  --primary-text: #1e293b;
-  --secondary-text: #64748b;
-  --up-color: #10b981;
-  --down-color: #ef4444;
-  --border-color: #e2e8f0;
-}
-body {
-  margin: 0; font-family: 'Inter', -apple-system, system-ui, sans-serif;
-  background: var(--bg-color) !important; color: var(--primary-text);
-  overflow-x: hidden; overscroll-behavior-y: contain;
-}
-header {
-  padding: 1rem 2rem; background: var(--header-bg); color: white;
-  display: flex; justify-content: space-between; align-items: center;
-  position: fixed; top: 0; left: 0; width: 100%; box-sizing: border-box; z-index: 1000;
-}
+/* ... Toàn bộ CSS gốc của bạn ... */
+:root { --bg-color: #f8fafc; --header-bg: #0f172a; --card-bg: #ffffff; --primary-text: #1e293b; --secondary-text: #64748b; --up-color: #10b981; --down-color: #ef4444; --border-color: #e2e8f0; }
+body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-color) !important; color: var(--primary-text); overflow-x: hidden; overscroll-behavior-y: contain; }
+header { padding: 1rem 2rem; background: var(--header-bg); color: white; display: flex; justify-content: space-between; align-items: center; position: fixed; top: 0; left: 0; width: 100%; box-sizing: border-box; z-index: 1000; }
 .brand { font-size: 1.25rem; font-weight: 700; }
-#updateBtn {
-  background: #3b82f6; color: white; border: none;
-  padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;
-}
-.container { 
-  width: 100%; max-width: 1200px; margin: 0 auto; 
-  padding: 85px 15px 3rem 15px; box-sizing: border-box;
-}
+#updateBtn { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+.container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 85px 15px 3rem 15px; box-sizing: border-box; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
 .card { background: var(--card-bg); border-radius: 16px; padding: 1.5rem; border: 1px solid var(--border-color); }
 .card.highlight { border-left: 4px solid #3b82f6; }
@@ -43,14 +21,11 @@ header {
 .sjc-sub { font-size: 0.875rem; margin-top: 0.25rem; display: flex; align-items: center; gap: 4px; }
 .change-up { color: var(--up-color); }
 .change-down { color: var(--down-color); }
-#filterBox {
-  display: none; background: white; padding: 15px; border-radius: 12px;
-  border: 1px solid var(--border-color); margin-bottom: 1.5rem; gap: 10px; align-items: center; flex-wrap: wrap;
-}
+#filterBox { display: none; background: white; padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 1.5rem; gap: 10px; align-items: center; flex-wrap: wrap; }
+input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
 .table-wrapper { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto; margin-bottom: 2rem; }
 table { width: 100%; border-collapse: collapse; font-size: 0.95rem; min-width: 600px; }
-th { background: #f1f5f9; padding: 14px 16px; text-align: right; color: var(--secondary-text); }
-td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; }
+th, td { padding: 14px 16px; text-align: right; border-bottom: 1px solid var(--border-color); }
 th:first-child, td:first-child { text-align: left; }
 .chart-card { padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); }
 .chart-scroll-container { width: 100%; overflow-x: auto; margin-top: 1rem; }
@@ -80,27 +55,27 @@ th:first-child, td:first-child { text-align: left; }
   </div>
 
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-    <div style="font-size: 1.2rem; font-weight: 700;">Query History (MongoDB)</div>
+    <div style="font-size: 1.2rem; font-weight: 700;">Query History</div>
     <button onclick="toggleFilterBox()" id="toggleBtn" style="background:transparent; border:none; font-size:1.8rem; cursor:pointer; color:#64748b;">+</button>
   </div>
 
   <div id="filterBox">
-    <input type="date" id="filterDate" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
-    <button onclick="applyFilter()" style="background:#3b82f6; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:600;">Apply</button>
-    <button onclick="clearAllHistory()" style="background:#ef4444; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:600;">Clear All</button>
+    <input type="date" id="filterDate">
+    <button style="background:#3b82f6; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer;" onclick="applyFilter()">Apply</button>
+    <button style="background:#ef4444; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer;" onclick="clearAllHistory()">Clear All</button>
   </div>
 
   <div class="table-wrapper">
     <table>
       <thead>
-        <tr><th>Time (VN)</th><th>XAU ($)</th><th>SJC (VND)</th><th>Gap (VND)</th><th>Status</th></tr>
+        <tr><th>Time (GMT+7)</th><th>XAU ($)</th><th>SJC (VND)</th><th>Gap (VND)</th><th>Status</th></tr>
       </thead>
       <tbody id="history"></tbody>
     </table>
   </div>
 
   <div class="chart-card">
-    <div style="font-size: 1.1rem; font-weight: 700;">📈 XAU-SJC Gap Trend (GMT+7)</div>
+    <div style="font-size: 1.1rem; font-weight: 700;">📈 XAU-SJC Gap Trend</div>
     <div class="chart-scroll-container">
       <div class="chart-inner-wrapper">
         <canvas id="gapChart"></canvas>
@@ -118,27 +93,21 @@ let myChart = null;
 const fmtVND = new Intl.NumberFormat('vi-VN');
 const fmtXAU = new Intl.NumberFormat('en-US', { minimumFractionDigits: 1 });
 
-/**
- * HÀM CỐ ĐỊNH MÚI GIỜ: Asia/Ho_Chi_Minh
- */
+// Hàm định dạng thời gian GMT+7
 function formatVN(isoString, mode = 'full') {
-    const date = new Date(isoString);
-    if (isNaN(date)) return "---";
-
-    const options = { timeZone: 'Asia/Ho_Chi_Minh', hour12: false };
-
-    if (mode === 'time') {
-        return date.toLocaleTimeString('vi-VN', { ...options, hour: '2-digit', minute: '2-digit' });
-    }
-    if (mode === 'date') {
-        // Trả về YYYY-MM-DD theo giờ VN
-        const parts = new Intl.DateTimeFormat('en-GB', options).formatToParts(date);
-        const d = parts.find(p => p.type === 'day').value;
-        const m = parts.find(p => p.type === 'month').value;
-        const y = parts.find(p => p.type === 'year').value;
-        return `${y}-${m}-${d}`;
-    }
-    return date.toLocaleString('vi-VN', options);
+  const date = new Date(isoString);
+  if (isNaN(date)) return isoString;
+  const opt = { timeZone: 'Asia/Ho_Chi_Minh', hour12: false };
+  
+  if (mode === 'chart') {
+    // Định dạng: HH:mm DD/MM
+    const time = date.toLocaleTimeString('vi-VN', { ...opt, hour: '2-digit', minute: '2-digit' });
+    const day = date.toLocaleDateString('vi-VN', { ...opt, day: '2-digit', month: '2-digit' });
+    return `${time} ${day}`;
+  }
+  if (mode === 'date') return new Intl.DateTimeFormat('sv-SE', opt).format(date).slice(0, 10);
+  
+  return date.toLocaleString('vi-VN', opt);
 }
 
 async function load() {
@@ -147,34 +116,27 @@ async function load() {
     const d = await res.json();
     if (!d.time) return;
 
-    // Render thông tin chính
     document.getElementById("usd").innerText = fmtVND.format(d.usd);
     document.getElementById("xau").innerText = fmtXAU.format(d.xau);
     document.getElementById("diff").innerText = fmtVND.format(d.diff);
     document.getElementById("percent").innerText = d.percent;
     document.getElementById("lastTime").innerText = `🟢 Live (GMT+7): ${formatVN(new Date().toISOString())}`;
 
-    // SJC Change (So với giá sáng sớm)
+    // SJC Change Logic
     const key = "sjcStart_" + formatVN(new Date().toISOString(), 'date');
     let startVal = localStorage.getItem(key) || (localStorage.setItem(key, d.sjc) || d.sjc);
     const change = d.sjc - parseFloat(startVal);
-    document.getElementById("sjc").innerHTML = `
-      <div>${fmtVND.format(d.sjc)}</div>
-      <div class="sjc-sub ${change >= 0 ? 'change-up' : 'change-down'}">
-        ${change >= 0 ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}
-      </div>`;
+    document.getElementById("sjc").innerHTML = `<div>${fmtVND.format(d.sjc)}</div><div class="sjc-sub ${change >= 0 ? 'change-up' : 'change-down'}">${change >= 0 ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}</div>`;
 
     await fetchHistory();
   } catch (e) { console.error(e); }
 }
 
 async function fetchHistory() {
-  try {
-    const res = await fetch(HIST_API);
-    historyData = await res.json();
-    renderHistory(historyData);
-    updateChart(historyData);
-  } catch (e) { console.error(e); }
+  const res = await fetch(HIST_API);
+  historyData = await res.json();
+  renderHistory(historyData);
+  updateChart(historyData);
 }
 
 function renderHistory(data) {
@@ -195,13 +157,13 @@ function renderHistory(data) {
 
 function updateChart(data) {
   const ctx = document.getElementById('gapChart').getContext('2d');
-  const chartData = [...data].reverse(); // Vẽ từ cũ đến mới
+  // Vẽ từ cũ sang mới
+  const chartData = [...data].reverse();
   
-  const labels = chartData.map(r => formatVN(r.time, 'time'));
-  const values = chartData.map(r => r.diff / 1000000); // Đơn vị triệu đồng
+  const labels = chartData.map(r => formatVN(r.time, 'chart')); // SỬA: Hiện cả giờ và ngày
+  const values = chartData.map(r => r.diff / 1000000);
 
   if (myChart) myChart.destroy();
-  
   myChart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -211,23 +173,19 @@ function updateChart(data) {
         data: values,
         borderColor: '#3b82f6',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        borderWidth: 3, fill: true, tension: 0.3, pointRadius: 4
+        fill: true, tension: 0.3, pointRadius: 4
       }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
         y: { ticks: { callback: v => v + 'M' } },
-        x: { ticks: { autoSkip: true, maxTicksLimit: 12 } }
+        x: { ticks: { autoSkip: true, maxTicksLimit: 10 } }
       }
     }
   });
-  
-  // Tự động cuộn biểu đồ về phía bên phải nhất
-  const scroller = document.querySelector('.chart-scroll-container');
-  setTimeout(() => { scroller.scrollLeft = scroller.scrollWidth; }, 100);
+  document.querySelector('.chart-scroll-container').scrollLeft = 9999;
 }
 
 function toggleFilterBox() {
@@ -240,22 +198,18 @@ function toggleFilterBox() {
 function applyFilter() {
   const selDate = document.getElementById("filterDate").value;
   if (!selDate) return;
-  // Lọc dữ liệu theo ngày YYYY-MM-DD
   const filtered = historyData.filter(r => formatVN(r.time, 'date') === selDate);
   renderHistory(filtered);
   updateChart(filtered);
 }
 
 async function clearAllHistory() {
-  if (!confirm("Bạn có chắc chắn muốn xóa toàn bộ lịch sử trong Database?")) return;
+  if (!confirm("Xóa sạch database?")) return;
   await fetch(HIST_API, { method: 'DELETE' });
   load();
 }
 
-// Chạy lần đầu
 load();
-
-// Tự động cập nhật mỗi 2 phút
 setInterval(load, 120000);
 </script>
 </body>

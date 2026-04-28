@@ -11,17 +11,19 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static("public"));
 
 /* ===== CONNECT MONGO ===== */
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Atlas connected (Railway)"))
-  .catch(err => {
-    console.error("❌ MongoDB error:", err);
-    process.exit(1);
-  });
+mongoose.connect(process.env.MONGO_URI, {
+  serverSelectionTimeoutMS: 5000
+})
+.then(() => console.log("✅ MongoDB connected"))
+.catch(err => {
+  console.error("❌ MongoDB error:", err);
+  process.exit(1);
+});
 
 /* ===== SCHEMA ===== */
 const HistorySchema = new mongoose.Schema({
-  time: String, // Lưu ISO String (Vd: 2026-04-28T02:00:00Z)
-  date: String, // Lưu yyyy-mm-dd theo giờ VN để filter
+  time: String, // Lưu dạng ISO để dễ xử lý ở frontend
+  date: String, // yyyy-mm-dd (giờ VN)
   usd: Number,
   xau: Number,
   sjc: Number,
@@ -36,44 +38,68 @@ let latestData = null;
 
 /* ===== HELPER: Lấy ngày yyyy-mm-dd theo giờ VN ===== */
 function getTodayVN() {
-  const now = new Date();
-  // Cộng 7 tiếng để ép về giờ VN trước khi lấy chuỗi ngày
-  const vnTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
-  return vnTime.toISOString().slice(0, 10);
+  return new Date(new Date().getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
-/* ===== FETCH LOGIC ===== */
+/* ===== FETCH HELPER ===== */
+async function fetchWithRetry(url) {
+  try {
+    const res = await axios.get(url, { 
+      timeout: 8000,
+      headers: { 'User-Agent': 'Mozilla/5.0' } 
+    });
+    return res.data;
+  } catch { return null; }
+}
+
+/* ===== USD RATE (Target "Bán" Column) ===== */
 async function getUSDRate() {
   try {
-    const res = await axios.get("https://webgia.com/ty-gia/vietcombank/", { timeout: 5000 });
-    const clean = res.data.replace(/\s+/g, " ");
+    const html = await fetchWithRetry("https://webgia.com/ty-gia/vietcombank/");
+    if (!html) return 25450;
+    const clean = html.replace(/\s+/g, " ");
     const nums = clean.match(/[0-9]{2,3}\.[0-9]{3},[0-9]{2}/g);
     const values = nums.map(n => parseFloat(n.replace(/\./g, "").replace(",", ".")));
-    return Math.max(...values.filter(v => v > 20000 && v < 30000));
+    // Lấy giá trị lớn nhất thường là giá "Bán"
+    return Math.max(...values.filter(v => v > 24000 && v < 26000));
   } catch { return 25450; }
 }
 
+/* ===== WORLD GOLD (XAU) ===== */
 async function getWorldGoldPrice() {
-  try {
-    const res = await axios.get("https://api.gold-api.com/price/XAU", { timeout: 5000 });
-    return res.data.price || 2350;
-  } catch { return 2350; }
+  const data = await fetchWithRetry("https://api.gold-api.com/price/XAU");
+  return data?.price || 2350;
 }
 
-// Thay bằng logic lấy giá SJC thực tế của bạn
+/* ===== SJC PRICE (Cập nhật lấy giá thật từ Webgia) ===== */
 async function getSJCPrice() {
-  return 90000000; 
+  try {
+    const html = await fetchWithRetry("https://webgia.com/gia-vang/sjc/");
+    if (!html) return 85000000;
+    const clean = html.replace(/\s+/g, " ");
+    // Regex tìm số có dạng 8x.xxx.000 hoặc 9x.xxx.000
+    const nums = clean.match(/[0-9]{2}\.[0-9]{3}\.[0-9]{3}/g);
+    if (nums) {
+      const values = nums.map(n => parseInt(n.replace(/\./g, "")));
+      // Lấy giá trị cao nhất (thường là giá bán ra của SJC)
+      return Math.max(...values.filter(v => v > 50000000));
+    }
+    return 85000000;
+  } catch { return 85000000; }
 }
 
 /* ===== SAVE LOGIC ===== */
 async function saveHistory(entry) {
   try {
+    const today = getTodayVN();
+    const firstToday = await History.findOne({ date: today }).sort({ createdAt: 1 });
     const last = await History.findOne().sort({ createdAt: -1 });
-    // Chỉ lưu nếu giá SJC thay đổi
-    if (!last || last.sjc !== entry.sjc) {
+
+    // Lưu nếu: Bản ghi đầu tiên trong ngày HOẶC giá SJC thay đổi so với lần gần nhất
+    if (!firstToday || !last || last.sjc !== entry.sjc) {
       await History.create(entry);
-      console.log("💾 Đã lưu bản ghi mới vào MongoDB");
-      
+      console.log(`💾 Saved SJC: ${entry.sjc} at ${new Date().toISOString()}`);
+
       const count = await History.countDocuments();
       if (count > 200) {
         const oldest = await History.findOne().sort({ createdAt: 1 });
@@ -86,25 +112,29 @@ async function saveHistory(entry) {
 /* ===== UPDATE MAIN ===== */
 async function updateData() {
   try {
-    const usd = await getUSDRate();
-    const xau = await getWorldGoldPrice();
-    const sjc = await getSJCPrice();
+    const [usd, xau, sjc] = await Promise.all([
+      getUSDRate(),
+      getWorldGoldPrice(),
+      getSJCPrice()
+    ]);
 
     const worldVND = xau * usd * (37.5 / 31.1035);
     const diff = sjc - worldVND;
-    const percent = ((diff / worldVND) * 100).toFixed(2) + "%";
+    const percent = (diff / worldVND) * 100;
 
     latestData = {
-      time: new Date().toISOString(), // LUÔN LƯU DẠNG CHUẨN ISO
+      time: new Date().toISOString(), // Lưu dạng ISO chuẩn
       date: getTodayVN(),
-      usd, xau, sjc,
+      usd,
+      xau,
+      sjc,
       worldVND: Math.round(worldVND),
       diff: Math.round(diff),
-      percent
+      percent: percent.toFixed(2) + "%"
     };
 
     await saveHistory(latestData);
-  } catch (e) { console.log("❌ Update error:", e.message); }
+  } catch (e) { console.log("❌ UPDATE ERROR:", e); }
 }
 
 cron.schedule("*/2 * * * *", updateData);
@@ -120,6 +150,6 @@ app.delete("/api/history", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log("🚀 Server running on port", PORT);
+  console.log("🚀 Server running on", PORT);
   updateData();
 });
