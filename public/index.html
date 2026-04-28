@@ -91,7 +91,7 @@ header {
     display: none; /* Ẩn nút update trên header mobile theo bản gốc của bạn */
   }
 
-  .container { padding-top: 20px; } 
+  .container { padding-top: 10px; } 
   .grid { grid-template-columns: 1fr; gap: 0.8rem; } 
   .card-value { font-size: 1.5rem; } 
 }
@@ -546,10 +546,10 @@ window.addEventListener("touchend", (e) => {
     pullContainer.classList.remove('ready');
     pullContainer.classList.add('refreshing');
     pullContainer.style.top = "20px"; 
-    textEl.innerText = "Đang phân tích...";
+    textEl.innerText = "Updating...";
     
     load().then(() => {
-      textEl.innerText = "Cập nhật thành công!";
+      textEl.innerText = "Success!";
       
       // Dừng nhấp nháy, set các cột full màu xanh
       pullContainer.classList.remove('refreshing');
