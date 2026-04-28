@@ -31,7 +31,7 @@ const HistorySchema = new mongoose.Schema({
   sjc: Number,
   worldVND: Number,
   diff: Number,
-  percent: String
+  percent: String,
   status: String
 }, { timestamps: true });
 
