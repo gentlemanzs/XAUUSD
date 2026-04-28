@@ -8,7 +8,8 @@
 <style>
 :root { 
   --bg-color: #f8fafc; 
-  --header-bg: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); 
+  --header-old: #0f172a; /* Màu Header cũ */
+  --header-cyber: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); /* Màu Cyber mới */
   --card-bg: #ffffff; 
   --primary-text: #1e293b; 
   --secondary-text: #64748b; 
@@ -27,10 +28,10 @@ body {
   overscroll-behavior-y: contain; 
 }
 
-/* HEADER CẢI TIẾN: PHONG CÁCH CYBER GRADIENT */
+/* --- STYLE MẶC ĐỊNH CHO MÁY TÍNH (HEADER CŨ) --- */
 header { 
-  padding: 0.8rem 2rem; 
-  background: var(--header-bg); 
+  padding: 1rem 2rem; 
+  background: var(--header-old); 
   color: white; 
   display: flex; 
   justify-content: space-between; 
@@ -39,52 +40,63 @@ header {
   top: 0; left: 0; width: 100%; 
   box-sizing: border-box; 
   z-index: 1000; 
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
-/* LOGO CẢI TIẾN: HIỆU ỨNG KIM LOẠI */
 .brand { 
-  font-size: 1.3rem; 
-  font-weight: 800; 
-  letter-spacing: 0.5px;
-  background: linear-gradient(to right, #ffffff, #94a3b8);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-size: 1.25rem; 
+  font-weight: 700; 
+  color: white; 
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.brand span {
-  color: #3b82f6;
-  -webkit-text-fill-color: #3b82f6;
-  text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
-}
+.brand span { color: var(--accent-color); }
 
-/* NÚT UPDATE CẢI TIẾN: PHONG CÁCH PREMIUM */
 #updateBtn { 
-  background: linear-gradient(to bottom right, #3b82f6, #2563eb); 
+  background: var(--accent-color); 
   color: white; 
   border: none; 
-  padding: 10px 24px; 
-  border-radius: 10px; 
-  font-weight: 700; 
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-  transition: all 0.3s ease;
-  text-transform: uppercase;
-  font-size: 0.85rem;
-  letter-spacing: 0.5px;
-}
-#updateBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
-  filter: brightness(1.1);
-}
-#updateBtn:active {
-  transform: translateY(0);
+  padding: 10px 20px; 
+  border-radius: 8px; 
+  font-weight: 600; 
+  cursor: pointer; 
 }
 
+/* --- STYLE RIÊNG CHO ĐIỆN THOẠI (HEADER CYBER) --- */
+@media (max-width: 640px) {
+  header { 
+    padding: 0.8rem 1rem; 
+    background: var(--header-cyber); 
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Logo kim loại trên điện thoại */
+  .brand { 
+    font-size: 1.1rem; 
+    font-weight: 800; 
+    background: linear-gradient(to right, #ffffff, #94a3b8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .brand span {
+    color: #3b82f6;
+    -webkit-text-fill-color: #3b82f6;
+    text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  }
+
+  /* Nút Update Premium trên điện thoại */
+  #updateBtn { 
+    display: none; /* Ẩn nút update trên header mobile theo bản gốc của bạn */
+  }
+
+  .container { padding-top: 85px; } 
+  .grid { grid-template-columns: 1fr; gap: 0.8rem; } 
+  .card-value { font-size: 1.5rem; } 
+}
+
+/* --- CÁC THÀNH PHẦN KHÁC --- */
 .container { width: 100%; max-width: 1200px; margin: 0 auto; background: var(--bg-color); min-height: 100vh; padding: 100px 15px 3rem 15px; box-sizing: border-box; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
 .card { background: var(--card-bg); border-radius: 16px; padding: 1.5rem; border: 1px solid var(--border-color); transition: 0.3s; }
@@ -121,7 +133,6 @@ th:first-child, td:first-child { text-align: left; }
 .chart-card { padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); }
 .chart-scroll-container { width: 100%; overflow-x: auto; margin-top: 1rem; }
 .chart-inner-wrapper { min-width: 800px; height: 350px; }
-@media (max-width: 640px) { header { padding: 0.8rem 1rem; } #updateBtn { display: none; } .container { padding-top: 85px; } .grid { grid-template-columns: 1fr; gap: 0.8rem; } .card-value { font-size: 1.5rem; } }
 </style>
 </head>
 <body>
@@ -396,26 +407,165 @@ function updateChart(data) {
 
 load();
 
+/* ===== HIỆU ỨNG PULL TO REFRESH: NHỊP ĐẬP THỊ TRƯỜNG (CYBER PULSE) ===== */
 const style = document.createElement('style');
-style.innerHTML = `.cyber-pull-container { position: fixed; top: -80px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 15px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); padding: 12px 24px; border-radius: 40px; border: 1px solid rgba(59, 130, 246, 0.3); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); z-index: 9999; transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none; } .pulse-bar { width: 5px; height: 4px; border-radius: 2px; background: #3b82f6; transition: 0.3s; } .refreshing .pulse-bar { animation: pulseWave 0.5s infinite alternate; } @keyframes pulseWave { from { height: 4px; } to { height: 20px; } }`;
+style.innerHTML = `
+  .cyber-pull-container {
+    position: fixed; top: -80px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 15px;
+    background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px);
+    padding: 12px 24px; border-radius: 40px;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    z-index: 9999;
+    transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s, box-shadow 0.3s;
+    pointer-events: none;
+  }
+  
+  /* Trạng thái đã kéo đủ lực */
+  .cyber-pull-container.ready {
+    border-color: rgba(16, 185, 129, 0.8);
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.2);
+  }
+
+  .pulse-bars {
+    display: flex; gap: 4px; align-items: flex-end; height: 24px;
+  }
+  .pulse-bar {
+    width: 5px; height: 4px; border-radius: 2px;
+    background: #3b82f6; 
+    transition: background 0.3s;
+  }
+  
+  /* Đổi màu khi sẵn sàng */
+  .cyber-pull-container.ready .pulse-bar { background: #10b981; }
+  
+  /* Animation khi đang tải */
+  .cyber-pull-container.refreshing .pulse-bar {
+    background: #10b981;
+    animation: pulseWave 0.5s ease-in-out infinite alternate;
+  }
+  .cyber-pull-container.refreshing .pulse-bar:nth-child(1) { animation-delay: 0.0s; }
+  .cyber-pull-container.refreshing .pulse-bar:nth-child(2) { animation-delay: 0.1s; }
+  .cyber-pull-container.refreshing .pulse-bar:nth-child(3) { animation-delay: 0.2s; }
+  .cyber-pull-container.refreshing .pulse-bar:nth-child(4) { animation-delay: 0.3s; }
+
+  @keyframes pulseWave {
+    0% { height: 4px; box-shadow: none; }
+    100% { height: 24px; box-shadow: 0 0 10px #10b981; }
+  }
+
+  .cyber-text {
+    color: #94a3b8; font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif;
+    transition: color 0.3s;
+  }
+  .cyber-pull-container.ready .cyber-text { color: #10b981; text-shadow: 0 0 8px rgba(16,185,129,0.4); }
+`;
 document.head.appendChild(style);
-const pullContainer = document.createElement("div"); pullContainer.className = "cyber-pull-container";
-pullContainer.innerHTML = `<div style="display:flex; gap:4px; align-items:flex-end; height:24px;">${'<div class="pulse-bar"></div>'.repeat(4)}</div><div style="color:white; font-size:14px; font-weight:600;">Đang đồng bộ...</div>`;
+
+// Tạo giao diện HTML
+const pullContainer = document.createElement("div");
+pullContainer.className = "cyber-pull-container";
+pullContainer.innerHTML = `
+  <div class="pulse-bars">
+    <div class="pulse-bar" id="bar1"></div>
+    <div class="pulse-bar" id="bar2"></div>
+    <div class="pulse-bar" id="bar3"></div>
+    <div class="pulse-bar" id="bar4"></div>
+  </div>
+  <div class="cyber-text">Đồng bộ dữ liệu...</div>
+`;
 document.body.appendChild(pullContainer);
-let startY = 0; let isPulling = false;
-window.addEventListener("touchstart", (e) => { if (window.scrollY <= 0) { startY = e.touches[0].clientY; isPulling = true; } });
-window.addEventListener("touchmove", (e) => {
-  if (!isPulling) return;
-  const diff = e.touches[0].clientY - startY;
-  if (diff > 0) { pullContainer.style.top = `${Math.min(diff * 0.4 - 80, 20)}px`; }
+
+// Logic kéo thả
+let startY = 0; 
+let isPulling = false;
+let isRefreshing = false;
+const pullThreshold = 120; // Độ dài kéo để kích hoạt
+const textEl = pullContainer.querySelector('.cyber-text');
+const bars = [
+  document.getElementById('bar1'),
+  document.getElementById('bar2'),
+  document.getElementById('bar3'),
+  document.getElementById('bar4')
+];
+
+// Chiều cao tối đa các cột sẽ đạt được khi kéo
+const targetHeights = [12, 24, 16, 20]; 
+
+window.addEventListener("touchstart", (e) => { 
+  if (window.scrollY <= 0 && !isRefreshing) { 
+    startY = e.touches[0].clientY; 
+    isPulling = true; 
+  } 
 }, { passive: false });
+
+window.addEventListener("touchmove", (e) => {
+  if (!isPulling || isRefreshing) return;
+  const currentY = e.touches[0].clientY;
+  const diff = currentY - startY;
+  
+  if (diff > 0 && window.scrollY <= 0) {
+    if (e.cancelable) e.preventDefault();
+    
+    // Kéo thẻ trượt xuống
+    const moveY = Math.min(diff * 0.4, 90); 
+    pullContainer.style.top = `${-80 + moveY}px`;
+    
+    // Tỷ lệ kéo (từ 0 đến 1)
+    const pullRatio = Math.min(diff / pullThreshold, 1);
+    
+    // Hiệu ứng ĐỘNG: Cột cao lên theo lực ngón tay
+    bars.forEach((bar, index) => {
+      // Chiều cao cơ bản là 4px, cộng thêm phần trăm tăng trưởng
+      const height = 4 + (targetHeights[index] - 4) * pullRatio;
+      bar.style.height = `${height}px`;
+    });
+    
+    if (diff > pullThreshold) {
+      pullContainer.classList.add('ready');
+      textEl.innerText = "Thả tay để tải mới!";
+    } else {
+      pullContainer.classList.remove('ready');
+      textEl.innerText = "Kéo thêm chút nữa...";
+    }
+  }
+}, { passive: false });
+
 window.addEventListener("touchend", (e) => {
-  const diff = e.changedTouches[0].clientY - startY;
-  if (isPulling && diff > 120) {
-    pullContainer.classList.add('refreshing'); pullContainer.style.top = "20px";
-    load().then(() => { setTimeout(() => { pullContainer.style.top = "-80px"; pullContainer.classList.remove('refreshing'); }, 1000); });
-  } else { pullContainer.style.top = "-80px"; }
+  if (!isPulling || isRefreshing) return;
   isPulling = false;
+  const diff = e.changedTouches[0].clientY - startY;
+  
+  // Dọn dẹp style inline để CSS Animation có thể chạy
+  bars.forEach(bar => bar.style.height = '');
+  
+  if (diff > pullThreshold) {
+    isRefreshing = true;
+    pullContainer.classList.remove('ready');
+    pullContainer.classList.add('refreshing');
+    pullContainer.style.top = "20px"; 
+    textEl.innerText = "Đang cập nhật...";
+    
+    load().then(() => {
+      textEl.innerText = "Cập nhật thành công!";
+      
+      // Dừng nhấp nháy, set các cột full màu xanh
+      pullContainer.classList.remove('refreshing');
+      pullContainer.classList.add('ready');
+      bars.forEach((bar, idx) => bar.style.height = `${targetHeights[idx]}px`);
+      
+      setTimeout(() => { 
+        pullContainer.style.top = "-80px"; 
+        setTimeout(() => { 
+          isRefreshing = false;
+          pullContainer.classList.remove('ready');
+        }, 300);
+      }, 1200);
+    });
+  } else {
+    pullContainer.style.top = "-80px";
+  }
 });
 </script>
 </body>
