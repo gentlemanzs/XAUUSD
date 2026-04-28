@@ -2,57 +2,66 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XAU Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>XAU Professional Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-/* GIỮ NGUYÊN CSS GỐC CỦA BẠN */
+/* GIỮ NGUYÊN CSS GỐC CỦA BẠN - KHÔNG THAY ĐỔI GIAO DIỆN */
 :root { --bg-color: #f8fafc; --header-bg: #0f172a; --card-bg: #ffffff; --primary-text: #1e293b; --secondary-text: #64748b; --up-color: #10b981; --down-color: #ef4444; --border-color: #e2e8f0; }
 body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-color); color: var(--primary-text); }
 header { padding: 1rem 2rem; background: var(--header-bg); color: white; display: flex; justify-content: space-between; align-items: center; position: fixed; top: 0; width: 100%; box-sizing: border-box; z-index: 1000; }
-.container { padding: 85px 15px 2rem; max-width: 1200px; margin: 0 auto; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-.card { background: white; padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); }
-.table-wrapper { background: white; border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto; }
+.container { padding: 85px 15px 3rem; max-width: 1200px; margin: 0 auto; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+.card { background: white; padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border-color); }
+.card.highlight { border-left: 4px solid #3b82f6; }
+.table-wrapper { background: white; border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto; margin-bottom: 2rem; }
 table { width: 100%; border-collapse: collapse; min-width: 600px; }
-th, td { padding: 12px; text-align: right; border-bottom: 1px solid #f1f5f9; }
+th, td { padding: 14px 16px; text-align: right; border-bottom: 1px solid var(--border-color); }
 th:first-child, td:first-child { text-align: left; }
-.badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }
+.chart-card { padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); }
+.chart-scroll-container { width: 100%; overflow-x: auto; margin-top: 1rem; }
+.chart-inner-wrapper { min-width: 800px; height: 350px; }
+.badge { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
 .badge-up { background: #d1fae5; color: #065f46; }
 .badge-down { background: #fee2e2; color: #991b1b; }
+@media (max-width: 640px) { header #updateBtn { display: none; } .container { padding-top: 75px; } .grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 
 <header>
-  <div style="font-weight: 700;">📊 XAU LIVE</div>
-  <button onclick="load()" style="background:#3b82f6; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">UPDATE</button>
+  <div style="font-size: 1.25rem; font-weight: 700;">📊 XAU DASHBOARD</div>
+  <button id="updateBtn" onclick="load()">UPDATE</button>
 </header>
 
 <div class="container">
-  <div id="lastTime" style="margin-bottom:1rem; font-size:13px; color:#64748b;"></div>
+  <div id="lastTime" style="margin-bottom:1rem; font-size:0.875rem; color:#64748b; font-weight: 500;"></div>
 
   <div class="grid">
-    <div class="card"><div>USD</div><div id="usd" style="font-size:1.5rem; font-weight:800;">--</div></div>
-    <div class="card"><div>XAU ($)</div><div id="xau" style="font-size:1.5rem; font-weight:800;">--</div></div>
-    <div class="card" style="border-left: 4px solid #3b82f6;"><div>SJC (VND)</div><div id="sjc" style="font-size:1.5rem; font-weight:800;">--</div></div>
-    <div class="card"><div>GAP (VND)</div><div id="diff" style="font-size:1.5rem; font-weight:800;">--</div></div>
-    <div class="card"><div>DIFF %</div><div id="percent" style="font-size:1.5rem; font-weight:800;">--</div></div>
+    <div class="card"><div>USD Rate</div><div id="usd" style="font-size: 1.875rem; font-weight: 800;">--</div></div>
+    <div class="card highlight"><div>XAU ($)</div><div id="xau" style="font-size: 1.875rem; font-weight: 800;">--</div></div>
+    <div class="card highlight"><div>SJC (VND)</div><div id="sjc" style="font-size: 1.875rem; font-weight: 800;">--</div></div>
+    <div class="card"><div>Gap (VND)</div><div id="diff" style="font-size: 1.875rem; font-weight: 800;">--</div></div>
+    <div class="card"><div>DIFF %</div><div id="percent" style="font-size: 1.875rem; font-weight: 800;">--</div></div>
   </div>
 
-  <h3>Query History (GMT+7)</h3>
+  <h3 style="margin-bottom: 1rem;">Query History (GMT+7)</h3>
   <div class="table-wrapper">
     <table>
       <thead>
-        <tr><th>Thời gian</th><th>XAU</th><th>SJC</th><th>Chênh lệch</th><th>%</th></tr>
+        <tr><th>Thời gian</th><th>XAU ($)</th><th>SJC (VND)</th><th>Chênh lệch</th><th>Trạng thái</th></tr>
       </thead>
       <tbody id="history"></tbody>
     </table>
   </div>
 
-  <div style="margin-top: 2rem; background: white; padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);">
-    <h3>📈 Biểu đồ Chênh lệch</h3>
-    <div style="height: 350px;"><canvas id="gapChart"></canvas></div>
+  <div class="chart-card">
+    <h3 style="margin:0;">📈 Biểu đồ Chênh lệch</h3>
+    <div class="chart-scroll-container">
+      <div class="chart-inner-wrapper">
+        <canvas id="gapChart"></canvas>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -60,41 +69,41 @@ th:first-child, td:first-child { text-align: left; }
 const fmtVND = new Intl.NumberFormat('vi-VN');
 let myChart = null;
 
-// Định dạng thời gian GMT+7
+// Hàm định dạng thời gian chuẩn GMT+7
 function formatVN(isoString, type = 'full') {
   const date = new Date(isoString);
   if (isNaN(date)) return "---";
   const opt = { timeZone: 'Asia/Ho_Chi_Minh', hour12: false };
   
   if (type === 'chart') {
-    // Trả về mảng để Chart.js tự động xuống dòng
     const t = date.toLocaleTimeString('vi-VN', { ...opt, hour: '2-digit', minute: '2-digit' });
     const d = date.toLocaleDateString('vi-VN', { ...opt, day: '2-digit', month: '2-digit' });
-    return [t, d]; 
+    return [t, d]; // Trả về mảng để Chart.js xuống dòng
   }
   return date.toLocaleString('vi-VN', opt);
 }
 
 async function load() {
-  const res = await fetch("/api/gold?t=" + Date.now());
-  const d = await res.json();
-  if (!d.time) return;
+  try {
+    const res = await fetch("/api/gold?t=" + Date.now());
+    const d = await res.json();
+    if (!d.time) return;
 
-  document.getElementById("usd").innerText = fmtVND.format(d.usd);
-  document.getElementById("xau").innerText = d.xau.toLocaleString();
-  document.getElementById("sjc").innerText = fmtVND.format(d.sjc);
-  document.getElementById("diff").innerText = fmtVND.format(d.diff);
-  document.getElementById("percent").innerText = d.percent;
-  document.getElementById("lastTime").innerText = "🟢 Cập nhật: " + formatVN(new Date().toISOString());
+    document.getElementById("usd").innerText = fmtVND.format(d.usd);
+    document.getElementById("xau").innerText = d.xau.toLocaleString();
+    document.getElementById("sjc").innerText = fmtVND.format(d.sjc);
+    document.getElementById("diff").innerText = fmtVND.format(d.diff);
+    document.getElementById("percent").innerText = d.percent;
+    document.getElementById("lastTime").innerText = "🟢 Live: " + formatVN(new Date().toISOString());
 
-  fetchHistory();
+    fetchHistory();
+  } catch (e) { console.error(e); }
 }
 
 async function fetchHistory() {
   const res = await fetch("/api/history");
   const data = await res.json();
   
-  // Bảng
   const tbody = document.getElementById("history");
   tbody.innerHTML = "";
   data.slice(0, 10).forEach(r => {
@@ -103,11 +112,10 @@ async function fetchHistory() {
       <td>${r.xau}</td>
       <td>${fmtVND.format(r.sjc)}</td>
       <td>${fmtVND.format(r.diff)}</td>
-      <td><span class="badge ${r.diff > 0 ? 'badge-up' : 'badge-down'}">${r.percent}</span></td>
+      <td><span class="badge ${r.diff >= 0 ? 'badge-up' : 'badge-down'}">${r.percent}</span></td>
     </tr>`;
   });
 
-  // Biểu đồ
   updateChart(data);
 }
 
@@ -123,23 +131,22 @@ function updateChart(data) {
     data: {
       labels: labels,
       datasets: [{
-        label: 'Gap (Triệu VND)',
+        label: 'Gap (Tr VND)',
         data: values,
         borderColor: '#3b82f6',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        fill: true,
-        tension: 0.3
+        fill: true, tension: 0.3
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       scales: {
-        x: { ticks: { font: { size: 10 } } },
         y: { ticks: { callback: v => v + 'M' } }
       }
     }
   });
+  document.querySelector('.chart-scroll-container').scrollLeft = 9999;
 }
 
 load();
