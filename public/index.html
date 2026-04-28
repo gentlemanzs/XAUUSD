@@ -302,7 +302,7 @@ function updateChart(data) {
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: { 
-          y: { beginAtZero: false, ticks: { callback: v => Number(v).toFixed(1) 'M' } },
+          y: { beginAtZero: false, ticks: { callback: v => v + 'M' } },
           x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
         }
       }
