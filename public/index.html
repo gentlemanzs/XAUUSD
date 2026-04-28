@@ -91,13 +91,13 @@ header {
     display: none; /* Ẩn nút update trên header mobile theo bản gốc của bạn */
   }
 
-  .container { padding-top: 85px; } 
+  .container { padding-top: 65px; } 
   .grid { grid-template-columns: 1fr; gap: 0.8rem; } 
   .card-value { font-size: 1.5rem; } 
 }
 
 /* --- CÁC THÀNH PHẦN KHÁC --- */
-.container { width: 100%; max-width: 1200px; margin: 0 auto; background: var(--bg-color); min-height: 100vh; padding: 100px 15px 3rem 15px; box-sizing: border-box; }
+.container { width: 100%; max-width: 1200px; margin: 0 auto; background: var(--bg-color); min-height: 100vh; padding: 80px 15px 3rem 15px; box-sizing: border-box; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
 .card { background: var(--card-bg); border-radius: 16px; padding: 1.5rem; border: 1px solid var(--border-color); transition: 0.3s; }
 .card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
@@ -545,7 +545,7 @@ window.addEventListener("touchend", (e) => {
     pullContainer.classList.remove('ready');
     pullContainer.classList.add('refreshing');
     pullContainer.style.top = "20px"; 
-    textEl.innerText = "Đang cập nhật...";
+    textEl.innerText = "Cập nhật...";
     
     load().then(() => {
       textEl.innerText = "Cập nhật thành công!";
