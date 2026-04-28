@@ -7,7 +7,7 @@ const cheerio = require("cheerio");
 
 const app = express();
 app.use(cors());
-app.use(express.json()); // QUAN TRỌNG: Cho phép server đọc body JSON để xóa nhiều log
+app.use(express.json()); // Cho phép server đọc body JSON để xóa nhiều log
 app.use(express.static("public"));
 
 const PORT = process.env.PORT || 3000;
@@ -167,10 +167,9 @@ async function updateData() {
   }
 }
 
-/* ===== LOGIC KHUNG GIỜ GIAO DỊCH GMT+7 ===== */
-/* ===== LOGIC KHUNG GIỜ GIAO DỊCH GMT+7 (Đã cấu hình TZ env) ===== */
+/* ===== LOGIC KHUNG GIỜ GIAO DỊCH (ĐÃ CÓ BIẾN TZ TRÊN RAILWAY) ===== */
 function isWithinTradingHours() {
-  const now = new Date(); // Mặc định đã là giờ VN do biến TZ trên Railway
+  const now = new Date(); 
   
   const day = now.getDay(); 
   const hour = now.getHours();
@@ -178,9 +177,9 @@ function isWithinTradingHours() {
   
   const timeVal = hour + minute / 60;
 
-  if (day === 0) return false; // Chủ Nhật
-  if (day === 1 && timeVal < 8.5) return false; // Sáng T2 trước 8h30
-  if (day === 6 && timeVal > 10.5) return false; // Sáng T7 sau 10h30
+  if (day === 0) return false;
+  if (day === 1 && timeVal < 8.5) return false;
+  if (day === 6 && timeVal > 10.5) return false;
   
   return true;
 }
