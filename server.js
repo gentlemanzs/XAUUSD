@@ -96,8 +96,8 @@ async function getSJCPrice() {
     const $ = cheerio.load(html);
     
     // Tìm chính xác thẻ td chứa chữ "Vàng SJC 1L", lùi ra thẻ cha (tr), rồi lấy cột số 4 (index 3)
-    const sellPriceText = $('td:contains("Vàng SJC 1L")').first().parent().find('td').eq(3).text().trim();
-    
+    // const sellPriceText = $('td:contains("Vàng SJC 5")').first().parent().find('td').eq(3).text().trim();
+     const sellPriceText = $('td:contains("Vàng SJC 5 chỉ")').first().parent().find('td').eq(3).text().trim();
     if (sellPriceText) {
       const pricePerChi = parseInt(sellPriceText.replace(/\./g, ""), 10);
       if (!isNaN(pricePerChi)) {
