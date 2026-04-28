@@ -221,7 +221,7 @@ async function updateData() {
   }
 }
 /* ===== CRON ===== */
-cron.schedule("*/15 * * * *", updateData);
+cron.schedule("*/2 * * * *", updateData);
 
 /* ===== API ===== */
 app.get("/api/gold", (req, res) => {
@@ -242,5 +242,4 @@ app.delete("/api/history", async (req, res) => {
 app.listen(PORT, () => {
   console.log("🚀 Server running on", PORT);
   updateData();
-});
 });
