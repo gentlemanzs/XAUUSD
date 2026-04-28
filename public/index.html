@@ -186,18 +186,32 @@ let myChart = null;
 
 async function load() {
   try {
-   await fetch("/api/update", { method: "POST" });
+
+    // 🟢 1. LẤY DỮ LIỆU CŨ NGAY (hiển thị tức thì)
     const res = await fetch(`${API}?t=${Date.now()}`);
     const d = await res.json();
     renderMain(d);
-    if (lastSJCValue === null || d.sjc !== lastSJCValue) {
-      lastSJCValue = d.sjc;
-      await fetchHistory();
-    }
-    elements.lastTime.innerHTML = `🟢 Live: ${new Date().toLocaleString('vi-VN', {
-  timeZone: 'Asia/Ho_Chi_Minh'
-})}`;
-  } catch(e) { console.error(e); }
+
+    // 🟢 2. GỌI UPDATE NGẦM (KHÔNG await)
+    fetch("/api/update", { method: "POST" });
+
+    // 🟢 3. ĐỢI 1 CHÚT RỒI LOAD LẠI (lấy dữ liệu mới)
+    setTimeout(async () => {
+      const res2 = await fetch(`${API}?t=${Date.now()}`);
+      const d2 = await res2.json();
+
+      renderMain(d2);
+
+      if (lastSJCValue === null || d2.sjc !== lastSJCValue) {
+        lastSJCValue = d2.sjc;
+        await fetchHistory();
+      }
+
+    }, 1500); // có thể chỉnh 1000–3000ms
+
+  } catch(e) {
+    console.error(e);
+  }
 }
 function parseVNTime(timeStr) {
   return new Date(timeStr + ' GMT+7');
