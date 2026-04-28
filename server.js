@@ -32,6 +32,7 @@ const HistorySchema = new mongoose.Schema({
   worldVND: Number,
   diff: Number,
   percent: String
+  status: String
 }, { timestamps: true });
 
 const History = mongoose.model("History", HistorySchema);
@@ -64,14 +65,16 @@ async function fetchWithRetry(url, retries = 3) {
 async function getUSDRate() {
   try {
     const html = await fetchWithRetry("https://webgia.com/ty-gia/vietcombank/");
-    const clean = html.replace(/\s+/g, " ");
-    const nums = clean.match(/[0-9]{2,3}\.[0-9]{3},[0-9]{2}/g);
-    const values = nums.map(n =>
-      parseFloat(n.replace(/\./g, "").replace(",", "."))
-    );
-    return Math.max(...values.filter(v => v > 20000 && v < 30000));
+    if (!html) return 1000;
+    const $ = cheerio.load(html);
+    
+    // Tìm hàng chứa chữ USD, sau đó lấy giá trị ở cột tỷ giá Bán (thường là cột cuối hoặc áp chót)
+    const sellPriceText = $('td:contains("USD")').parent().find('td').last().text().trim(); 
+    const rate = parseFloat(sellPriceText.replace(/\./g, "").replace(",", "."));
+    
+    return isNaN(rate) ? 1000 : rate;
   } catch {
-    return 26000;
+    return 1000;
   }
 }
 
@@ -125,67 +128,94 @@ async function getSJCPrice() {
 /* ===== SAVE LOGIC ===== */
 async function saveHistory(entry) {
   try {
-    const today = getToday();
-
-    // record đầu ngày
-    const firstToday = await History.findOne({ date: today }).sort({ createdAt: 1 });
-
-    // record cuối cùng
     const last = await History.findOne().sort({ createdAt: -1 });
-
-    // ✔ lưu nếu:
-    // 1. chưa có record hôm nay (giá đầu ngày)
-    // 2. SJC thay đổi
-    if (!firstToday || !last || last.sjc !== entry.sjc) {
+    
+    // Chỉ lưu nếu giá SJC hoặc XAU có sự thay đổi so với lần lưu trước
+    if (!last || last.sjc !== entry.sjc || last.xau !== entry.xau) {
       await History.create(entry);
-      console.log("💾 Saved:", entry.sjc);
+      console.log("💾 Đã lưu biến động mới vào database.");
 
-      // giữ max 200 record
+      // Tự động xóa bản ghi cũ nếu vượt quá 200 (Giữ dung lượng thấp cho Atlas)
       const count = await History.countDocuments();
       if (count > 200) {
-        const oldest = await History.findOne().sort({ createdAt: 1 });
-        if (oldest) await History.deleteOne({ _id: oldest._id });
+        await History.findOneAndDelete({}, { sort: { createdAt: 1 } });
       }
-    } else {
-      console.log("⏭ Skip (no change)");
     }
-
   } catch (e) {
-    console.log("❌ Save error:", e);
+    console.log("❌ Lỗi lưu DB:", e);
   }
 }
 
 /* ===== UPDATE ===== */
+/* ===== UPDATE ===== */
 async function updateData() {
   try {
-    const [usd, xau, sjc] = await Promise.all([
-  getUSDRate(),
-  getWorldGoldPrice(),
-  getSJCPrice()
-]);
+    // 1. Cào dữ liệu từ các nguồn
+    let [usd, xau, sjc] = await Promise.all([
+      getUSDRate(),
+      getWorldGoldPrice(),
+      getSJCPrice()
+    ]);
 
+    // Lấy bản ghi mới nhất từ database để làm phương án dự phòng (fallback)
+    const lastRecord = await History.findOne().sort({ createdAt: -1 });
+
+    // 2. Kiểm tra và xử lý Fallback
+    // Nếu cào lỗi (giá bằng 0 hoặc dùng giá mặc định), ta lấy lại giá trị cũ từ DB
+    let isFallback = false;
+
+    if (sjc <= 0 && lastRecord) {
+      sjc = lastRecord.sjc;
+      isFallback = true;
+    }
+    
+    if (xau <= 0 && lastRecord) {
+      xau = lastRecord.xau;
+      isFallback = true;
+    }
+
+    // Riêng USD, nếu hàm trả về 1000 (giá mặc định khi lỗi) thì thử lấy lại giá cũ
+    if (usd === 1000 && lastRecord) {
+      usd = lastRecord.usd;
+    }
+
+    // Nếu không có cả dữ liệu mới lẫn dữ liệu cũ (DB trống), dừng xử lý
+    if (sjc <= 0 || xau <= 0) {
+      console.log("⚠️ Không có dữ liệu để cập nhật.");
+      return;
+    }
+
+    // 3. Tính toán các chỉ số chênh lệch
     const worldVND = xau * usd * (37.5 / 31.1035);
     const diff = sjc - worldVND;
     const percent = (diff / worldVND) * 100;
 
+    // 4. Cập nhật vào biến Global latestData
     latestData = {
-      time: new Date().toLocaleString("vi-VN"),
+      // Đảm bảo giờ hiển thị là giờ Việt Nam dù Deploy trên Railway (server quốc tế)
+      time: new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }),
       date: getToday(),
-      usd,
-      xau,
-      sjc,
+      usd: usd,
+      xau: xau,
+      sjc: sjc,
       worldVND: Math.round(worldVND),
       diff: Math.round(diff),
-      percent: percent.toFixed(2) + "%"
+      percent: percent.toFixed(2) + "%",
+      status: isFallback ? "Delayed" : "Live" // Gắn nhãn để UI nhận biết
     };
 
-    await saveHistory(latestData);
+    // 5. Lưu vào lịch sử
+    // Chỉ gọi hàm lưu nếu không phải là dữ liệu Fallback (để tránh làm rác biểu đồ)
+    if (!isFallback) {
+      await saveHistory(latestData);
+    } else {
+      console.log("🟡 Đang hiển thị dữ liệu tạm thời (Fallback), không lưu vào History.");
+    }
 
   } catch (e) {
-    console.log("❌ UPDATE ERROR:", e);
+    console.log("❌ Lỗi nghiêm trọng trong quá trình Update:", e);
   }
 }
-
 /* ===== CRON ===== */
 cron.schedule("*/2 * * * *", updateData);
 
