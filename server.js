@@ -126,20 +126,24 @@ async function getSJCPrice() {
 }
 
 /* ===== SAVE LOGIC ===== */
+/* ===== SAVE LOGIC ===== */
 async function saveHistory(entry) {
   try {
     const last = await History.findOne().sort({ createdAt: -1 });
     
-    // Chỉ lưu nếu giá SJC hoặc XAU có sự thay đổi so với lần lưu trước
-    if (!last || last.sjc !== entry.sjc || last.xau !== entry.xau) {
+    // SỬA TẠI ĐÂY: Chỉ giữ lại điều kiện kiểm tra SJC
+    if (!last || last.sjc !== entry.sjc) {
       await History.create(entry);
-      console.log("💾 Đã lưu biến động mới vào database.");
+      console.log("💾 Đã lưu biến động SJC mới vào database.");
 
-      // Tự động xóa bản ghi cũ nếu vượt quá 200 (Giữ dung lượng thấp cho Atlas)
+      // Tự động xóa bản ghi cũ nếu vượt quá 200
       const count = await History.countDocuments();
       if (count > 200) {
         await History.findOneAndDelete({}, { sort: { createdAt: 1 } });
       }
+    } else {
+      // Nếu SJC không đổi, logic sẽ rơi vào đây và không lưu gì cả
+      console.log("⏭ SJC không đổi, bỏ qua lưu lịch sử.");
     }
   } catch (e) {
     console.log("❌ Lỗi lưu DB:", e);
