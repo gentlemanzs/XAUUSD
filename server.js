@@ -204,12 +204,6 @@ app.get("/api/history", async (req, res) => {
   res.json(data);
 });
 
-// Xóa toàn bộ lịch sử (Không cần pass)
-app.delete("/api/history", async (req, res) => {
-  await History.deleteMany({});
-  res.json({ ok: true });
-});
-
 // Xóa 1 hoặc nhiều bản ghi cùng lúc theo danh sách ID
 app.post("/api/history/bulk-delete", async (req, res) => {
   try {
