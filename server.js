@@ -4,11 +4,16 @@ const cron = require("node-cron");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const cheerio = require("cheerio");
+const compression = require("compression"); // Thư viện nén GZIP
+const https = require("https"); // Thư viện cấu hình Keep-Alive
 
 const app = express();
+app.use(compression()); // Bật nén GZIP để giảm 70% dung lượng băng thông
 app.use(cors());
 app.use(express.json()); // Cho phép server đọc body JSON để xóa nhiều log
-app.use(express.static("public"));
+
+// Thêm maxAge để tận dụng Browser Cache cho file tĩnh (HTML, CSS, JS, Ảnh)
+app.use(express.static("public", { maxAge: "1d" })); 
 
 const PORT = process.env.PORT || 3000;
 
@@ -33,6 +38,9 @@ const HistorySchema = new mongoose.Schema({
   status: String
 }, { timestamps: true });
 
+// Đánh Index cho createdAt giúp Database sort nhanh như chớp và không bị nghẽn RAM
+HistorySchema.index({ createdAt: -1 });
+
 const History = mongoose.model("History", HistorySchema);
 
 let latestData = null;
@@ -49,11 +57,15 @@ function getRandomUA() {
 }
 
 /* ===== FETCH ===== */
+// Tạo Agent giữ kết nối mở sẵn (Keep-Alive) giúp tăng tốc độ cào dữ liệu
+const httpsAgent = new https.Agent({ keepAlive: true });
+
 async function fetchWithRetry(url, retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
       const res = await axios.get(url, { 
         timeout: 10000,
+        httpsAgent, // Áp dụng Keep-Alive
         headers: { "User-Agent": getRandomUA(), "Accept-Language": "vi-VN,vi;q=0.9" }
       });
       return res.data;
@@ -200,7 +212,8 @@ app.get("/api/gold", (req, res) => {
 });
 
 app.get("/api/history", async (req, res) => {
-  const data = await History.find().sort({ createdAt: -1 });
+  // Thêm .lean() trả về JSON thuần giúp API nhanh gấp 2-3 lần
+  const data = await History.find().sort({ createdAt: -1 }).lean();
   res.json(data);
 });
 
