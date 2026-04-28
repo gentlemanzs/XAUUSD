@@ -32,6 +32,15 @@ th:first-child, td:first-child { text-align: left; }
 .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
 .badge-up { background: rgba(16, 185, 129, 0.1); color: var(--up-color); }
 .badge-down { background: rgba(239, 68, 68, 0.1); color: var(--down-color); }
+
+/* Nút xóa lẻ */
+.btn-delete-row {
+  background: transparent; border: 1px solid #ef4444; color: #ef4444;
+  border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 0.85rem; font-weight: bold;
+  transition: 0.2s;
+}
+.btn-delete-row:hover { background: #ef4444; color: white; }
+
 .chart-card { padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); }
 .chart-scroll-container { width: 100%; overflow-x: auto; margin-top: 1rem; }
 .chart-inner-wrapper { min-width: 800px; height: 350px; }
@@ -70,7 +79,7 @@ th:first-child, td:first-child { text-align: left; }
   <div class="table-wrapper">
     <table>
       <thead>
-        <tr><th>Time</th><th>XAU ($)</th><th>SJC (VND)</th><th>Gap (VND)</th><th>%</th></tr>
+        <tr><th>Time</th><th>XAU ($)</th><th>SJC (VND)</th><th>Gap (VND)</th><th>%</th><th style="text-align: center;">Xóa</th></tr>
       </thead>
       <tbody id="history"></tbody>
     </table>
@@ -166,6 +175,7 @@ function renderHistory(data) {
       <td>${fmtVND.format(r.sjc)}</td>
       <td>${fmtVND.format(r.diff)}</td>
       <td><span class="badge ${r.percent.includes('-') ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>
+      <td style="text-align: center;"><button class="btn-delete-row" onclick="deleteSingleRecord('${r._id}')">🗑️</button></td>
     `;
     elements.historyTable.appendChild(row);
   });
@@ -231,6 +241,29 @@ function applyFilter() {
   updateChart(filtered);
 }
 
+// Xóa 1 bản ghi cụ thể
+async function deleteSingleRecord(id) {
+  const secretKey = prompt("Vui lòng nhập Mã Bí Mật để xóa dòng này:");
+  if (!secretKey) return;
+  if (!confirm("Bạn có chắc chắn muốn xóa bản ghi này?")) return;
+  
+  try {
+    const res = await fetch(`${HIST_API}/${id}`, { 
+      method: 'DELETE',
+      headers: { 'x-admin-key': secretKey } 
+    });
+    
+    if (!res.ok) {
+      alert("Mã bí mật không chính xác!");
+      return;
+    }
+    
+    alert("Đã xóa bản ghi thành công!");
+    await fetchHistory(); // Tải lại bảng và biểu đồ ngay lập tức
+  } catch(e) { console.error("Error", e); alert("Lỗi mạng!"); }
+}
+
+// Xóa toàn bộ lịch sử
 async function clearAllHistory() {
   const secretKey = prompt("Vui lòng nhập Mã Bí Mật để xác nhận xóa toàn bộ DB:");
   if (!secretKey) return;
@@ -256,7 +289,7 @@ async function clearAllHistory() {
 
 load();
 
-/* ===== CYBER PULSE EFFECT (Giữ nguyên) ===== */
+/* ===== CYBER PULSE EFFECT ===== */
 const style = document.createElement('style');
 style.innerHTML = `.cyber-pull-container { position: fixed; top: -80px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 15px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); padding: 12px 24px; border-radius: 40px; border: 1px solid rgba(59, 130, 246, 0.3); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); z-index: 9999; transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s, box-shadow 0.3s; pointer-events: none; } .cyber-pull-container.ready { border-color: rgba(16, 185, 129, 0.8); box-shadow: 0 0 25px rgba(16, 185, 129, 0.2); } .pulse-bars { display: flex; gap: 4px; align-items: flex-end; height: 24px; } .pulse-bar { width: 5px; height: 4px; border-radius: 2px; background: #3b82f6; transition: background 0.3s; } .cyber-pull-container.ready .pulse-bar { background: #10b981; } .cyber-pull-container.refreshing .pulse-bar { background: #10b981; animation: pulseWave 0.5s ease-in-out infinite alternate; } .cyber-pull-container.refreshing .pulse-bar:nth-child(1) { animation-delay: 0.0s; } .cyber-pull-container.refreshing .pulse-bar:nth-child(2) { animation-delay: 0.1s; } .cyber-pull-container.refreshing .pulse-bar:nth-child(3) { animation-delay: 0.2s; } .cyber-pull-container.refreshing .pulse-bar:nth-child(4) { animation-delay: 0.3s; } @keyframes pulseWave { 0% { height: 4px; box-shadow: none; } 100% { height: 24px; box-shadow: 0 0 10px #10b981; } } .cyber-text { color: #94a3b8; font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif; transition: color 0.3s; } .cyber-pull-container.ready .cyber-text { color: #10b981; text-shadow: 0 0 8px rgba(16,185,129,0.4); }`;
 document.head.appendChild(style);

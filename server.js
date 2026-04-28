@@ -211,6 +211,7 @@ app.get("/api/history", async (req, res) => {
   res.json(data);
 });
 
+// Xóa toàn bộ lịch sử
 app.delete("/api/history", async (req, res) => {
   const userKey = req.headers['x-admin-key'];
   if (userKey !== ADMIN_KEY) {
@@ -218,6 +219,20 @@ app.delete("/api/history", async (req, res) => {
   }
   await History.deleteMany({});
   res.json({ ok: true });
+});
+
+// Xóa 1 bản ghi cụ thể theo ID
+app.delete("/api/history/:id", async (req, res) => {
+  const userKey = req.headers['x-admin-key'];
+  if (userKey !== ADMIN_KEY) {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
+  try {
+    await History.findByIdAndDelete(req.params.id);
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: "Không thể xóa bản ghi này" });
+  }
 });
 
 /* ===== START ===== */
