@@ -92,35 +92,36 @@ async function getWorldGoldPrice() {
 /* ===== SJC ===== */
 /* ===== SJC ===== */
 /* ===== SJC ===== */
+/* ===== SJC ===== */
 async function getSJCPrice() {
   try {
     const html = await fetchWithRetry("https://webgia.com/gia-vang/sjc/");
     if (!html) {
-      console.log("⚠️ Không tải được web, sử dụng giá fallback.");
-      return 168; // Giá fallback (đã nhân 10)
+      console.log("⚠️ Không tải được web, trả về 0.");
+      return 0; // Fallback là 0
     }
 
     const $ = cheerio.load(html);
     
-    // Tìm đến dòng chứa "Vàng SJC 5 chỉ", lấy cột Bán ra
-    const sellPriceText = $('td:contains("Vàng SJC 5 chỉ")').first().parent().find('td').eq(3).text().trim();
+    // Tìm ô chứa "Vàng SJC 1L"
+    const nameCell = $('td:contains("Vàng SJC 1L")').first();
+    const sellPriceText = nameCell.next().next().text().trim();
     
-    // In ra text cào được để kiểm tra trên màn hình log của Railway
     console.log("👉 Text giá cào được từ webgia:", sellPriceText);
 
     if (sellPriceText) {
       const pricePerChi = parseInt(sellPriceText.replace(/\./g, ""), 10);
       if (!isNaN(pricePerChi)) {
         console.log("✅ Giá 1 chỉ quy ra số:", pricePerChi);
-        return pricePerChi * 10; // Quy ra 1 lượng để lưu
+        return pricePerChi * 10;
       }
     }
 
-    console.log("⚠️ Lấy được web nhưng không tìm thấy giá trị, dùng fallback.");
-    return 168; 
+    console.log("⚠️ Lấy được web nhưng không tìm thấy giá trị, trả về 0.");
+    return 0; // Fallback là 0
   } catch (error) {
-    console.error("❌ Lỗi lấy giá SJC 5 chỉ:", error.message);
-    return 168;
+    console.error("❌ Lỗi lấy giá SJC 1L:", error.message);
+    return 0; // Fallback là 0
   }
 }
 
