@@ -79,7 +79,17 @@ async function getWorldGoldPrice() {
 
 /* ===== SJC ===== */
 async function getSJCPrice() {
-  return 168800000; // production: thay bằng API thật
+  try {
+    const html = await fetchWithRetry("https://webgia.com/gia-vang/sjc/");
+    const clean = html.replace(/\s+/g, " ");
+    const nums = clean.match(/[0-9]{2,3}\.[0-9]{3},[0-9]{2}/g);
+    const values = nums.map(n =>
+      parseFloat(n.replace(/\./g, "").replace(",", "."))
+    );
+    return Math.max(...values.filter(v => v > 10000000 && v < 40000000));
+  } catch {
+    return Error;
+  }
 }
 
 /* ===== SAVE LOGIC ===== */
