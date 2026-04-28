@@ -110,32 +110,6 @@ th:first-child, td:first-child { text-align: left; }
   .card-value { font-size: 1.5rem; }
 }
 
-/* Đèn tín hiệu trạng thái */
-.status-indicator {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 4px;
-  vertical-align: middle;
-}
-
-.status-live {
-  background-color: var(--up-color);
-  box-shadow: 0 0 8px var(--up-color);
-  animation: pulse-live 2s infinite; /* Hiệu ứng nhấp nháy */
-}
-
-.status-delayed {
-  background-color: #f59e0b; /* Màu cam vàng */
-  box-shadow: 0 0 8px #f59e0b;
-}
-
-@keyframes pulse-live {
-  0% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.1); }
-  100% { opacity: 1; transform: scale(1); }
-}
 </style>
 </head>
 <body>
@@ -214,48 +188,29 @@ async function load() {
   try {
     const res = await fetch(`${API}?t=${Date.now()}`);
     const d = await res.json();
-    
-    // Gọi hàm này để nó tự quyết định hiện Live hay Delayed dựa vào dữ liệu server
-    renderMain(d); 
-    
+    renderMain(d);
     if (lastSJCValue === null || d.sjc !== lastSJCValue) {
       lastSJCValue = d.sjc;
       await fetchHistory();
     }
-    // KHÔNG viết đè elements.lastTime ở đây nữa
+    elements.lastTime.innerHTML = `🟢 Live: ${new Date().toLocaleString('vi-VN', {
+  timeZone: 'Asia/Ho_Chi_Minh'
+})}`;
   } catch(e) { console.error(e); }
 }
-
+function parseVNTime(timeStr) {
+  return new Date(timeStr + ' GMT+7');
 }
 function renderMain(d) {
-  if (!d || !d.sjc) return;
-
-  // 1. Cập nhật các con số giá cả
   elements.usd.innerText = fmtVND.format(d.usd);
   elements.xau.innerText = fmtXAU.format(d.xau);
-  elements.sjc.innerText = fmtVND.format(d.sjc);
   elements.diff.innerText = fmtVND.format(d.diff);
   elements.percent.innerText = d.percent;
-
-  // 2. Xử lý màu sắc cho mức chênh lệch (Gap)
-  if (d.diff > 0) {
-    elements.diff.className = "card-value change-up";
-  } else {
-    elements.diff.className = "card-value change-down";
-  }
-
-  // 3. Cập nhật Trạng thái sử dụng Class CSS thay vì Emoji
-  const isLive = d.status === 'Live';
-  const statusClass = isLive ? 'status-live' : 'status-delayed';
-  const statusText = isLive ? 'Trực tiếp' : 'Dự phòng';
-  const textColor = isLive ? 'var(--up-color)' : '#f59e0b';
-
-  // Sử dụng class .status-indicator đã khai báo trong thẻ <style>
-  elements.lastTime.innerHTML = `
-    <span class="status-indicator ${statusClass}"></span>
-    <span style="color: ${textColor}; font-weight: bold;">${statusText}</span> 
-    <span style="color: var(--secondary-text); margin-left: 5px;">| ${d.time}</span>
-  `;
+  const key = "sjcMorning_" + new Date().toISOString().slice(0,10);
+  let morning = localStorage.getItem(key) || localStorage.setItem(key, d.sjc) || d.sjc;
+  const change = d.sjc - parseFloat(morning);
+  const isUp = change >= 0;
+  elements.sjc.innerHTML = `<div>${fmtVND.format(d.sjc)}</div><div class="sjc-sub ${isUp ? 'change-up' : 'change-down'}">${isUp ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}</div>`;
 }
 
 async function fetchHistory() {
@@ -267,6 +222,19 @@ async function fetchHistory() {
   } catch(e) { console.error(e); }
 }
 
+function formatVNTime(timeStr) {
+  const d = parseVNTime(timeStr);
+
+  // Nếu parse được → dùng luôn
+  if (!isNaN(d)) {
+    return d.toLocaleString('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh'
+    });
+  }
+
+  // Nếu lỗi → giữ nguyên text gốc (fallback)
+  return timeStr;
+}
 
 function renderHistory(data) {
   elements.historyTable.innerHTML = "";
@@ -293,14 +261,20 @@ function updateChart(data) {
   
   // Dữ liệu từ trái (cũ) qua phải (mới)
   const labels = data.map(r => {
-  // Sử dụng trực tiếp trường createdAt từ MongoDB (chuẩn ISO)
-  const d = new Date(r.createdAt); 
-  
-  return d.toLocaleTimeString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit'
+    const d = parseVNTime(r.time);
+
+    // Nếu parse được
+    if (!isNaN(d)) {
+      return d.toLocaleTimeString('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // Nếu lỗi → giữ nguyên (tránh Invalid Date)
+    return r.time;
   });
-});
   
   const gaps = data.map(r => r.diff / 1000000);
 
@@ -351,7 +325,7 @@ function applyFilter() {
   if (!selectedDate) return;
 
   const filtered = historyData.filter(r => {
-    const d = new Date(r.createdAt);
+    const d = parseVNTime(r.time);
     const formatted = d.toLocaleDateString('sv-SE', {
   timeZone: 'Asia/Ho_Chi_Minh'
 });
