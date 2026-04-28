@@ -44,13 +44,16 @@ function getToday() {
 }
 
 /* ===== FETCH ===== */
+/* ===== FETCH ===== */
 async function fetchWithRetry(url) {
   try {
     const res = await axios.get(url, { 
-      timeout: 5000,
+      timeout: 10000, // Tăng thời gian chờ lên 10s
       headers: {
-        // Thêm User-Agent để tránh bị webgia.com chặn request từ server
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Cache-Control": "no-cache"
       }
     });
     return res.data;
@@ -88,27 +91,36 @@ async function getWorldGoldPrice() {
 /* ===== SJC ===== */
 /* ===== SJC ===== */
 /* ===== SJC ===== */
+/* ===== SJC ===== */
 async function getSJCPrice() {
   try {
     const html = await fetchWithRetry("https://webgia.com/gia-vang/sjc/");
-    if (!html) return 168800000;
+    if (!html) {
+      console.log("⚠️ Không tải được web, sử dụng giá fallback.");
+      return 168; // Giá fallback (đã nhân 10)
+    }
 
     const $ = cheerio.load(html);
     
-    // Tìm chính xác thẻ td chứa chữ "Vàng SJC 1L", lùi ra thẻ cha (tr), rồi lấy cột số 4 (index 3)
-    // const sellPriceText = $('td:contains("Vàng SJC 5")').first().parent().find('td').eq(3).text().trim();
-     const sellPriceText = $('td:contains("Vàng SJC 5 chỉ")').first().parent().find('td').eq(3).text().trim();
+    // Tìm đến dòng chứa "Vàng SJC 5 chỉ", lấy cột Bán ra
+    const sellPriceText = $('td:contains("Vàng SJC 5 chỉ")').first().parent().find('td').eq(3).text().trim();
+    
+    // In ra text cào được để kiểm tra trên màn hình log của Railway
+    console.log("👉 Text giá cào được từ webgia:", sellPriceText);
+
     if (sellPriceText) {
       const pricePerChi = parseInt(sellPriceText.replace(/\./g, ""), 10);
       if (!isNaN(pricePerChi)) {
-        return pricePerChi * 10;
+        console.log("✅ Giá 1 chỉ quy ra số:", pricePerChi);
+        return pricePerChi * 10; // Quy ra 1 lượng để lưu
       }
     }
 
-    return 168800000;
+    console.log("⚠️ Lấy được web nhưng không tìm thấy giá trị, dùng fallback.");
+    return 168; 
   } catch (error) {
-    console.error("❌ Lỗi lấy giá SJC:", error.message);
-    return 168800000;
+    console.error("❌ Lỗi lấy giá SJC 5 chỉ:", error.message);
+    return 168;
   }
 }
 
