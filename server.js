@@ -122,7 +122,8 @@ async function updateData(triggerSource = "Tự động") {
     if (usd === 1000 && lastRecord) usd = lastRecord.usd;
 
     if (sjc <= 0 || xau <= 0) {
-        console.log("❌ Lỗi nghiêm trọng: Không thể lấy dữ liệu và không có bản sao lưu.");
+        console.log("❌ LỖI NGHIÊM TRỌNG: Không thể cào dữ liệu từ cả 3 nguồn và cũng không có bản lưu dự phòng!");
+        console.log(`   👉 Chi tiết lỗi cào: SJC=${sjc}, XAU=${xau}, USD=${usd}`);
         return; 
     }
 
@@ -142,25 +143,34 @@ async function updateData(triggerSource = "Tự động") {
       status: sjc > 0 ? "Live" : "Delayed"
     };
 
+    // --- IN BẢNG LOG KẾT QUẢ CÀO (DÀNH CHO DEPLOY) ---
+    console.log("----------------------------------------");
+    console.log("📊 KẾT QUẢ CÀO DỮ LIỆU:");
+    console.log(`   💵 USD: ${latestData.usd.toLocaleString('vi-VN')} VNĐ`);
+    console.log(`   🌍 XAU: ${latestData.xau.toLocaleString('en-US')} USD/oz`);
+    console.log(`   🧈 SJC: ${latestData.sjc.toLocaleString('vi-VN')} VNĐ`);
+    console.log(`   ⚖️ GAP: ${latestData.diff.toLocaleString('vi-VN')} VNĐ (${latestData.percent})`);
+    console.log("----------------------------------------");
+
     // --- LƯU DATABASE ---
     if (sjc > 0 && (!lastRecord || lastRecord.sjc !== sjc)) {
       const dbEntry = { ...latestData };
       delete dbEntry.updatedAt; 
       await History.create(dbEntry);
-      console.log(`   💾 DB: Đã lưu bản ghi SJC mới là ${sjc}`);
+      console.log(`   💾 DB: Đã lưu bản ghi SJC mới là ${sjc.toLocaleString('vi-VN')}`);
       
       const count = await History.countDocuments();
       if (count > 200) await History.findOneAndDelete({}, { sort: { createdAt: 1 } });
     } else {
-      console.log(`   ⏩ DB: Giá SJC không đổi (${sjc}), không lưu rác.`);
+      console.log(`   ⏩ DB: Giá SJC không đổi (${sjc.toLocaleString('vi-VN')}), không lưu rác.`);
     }
 
     // --- ĐẨY DỮ LIỆU SSE CHO CLIENT ---
     clients.forEach(c => c.write(`data: ${JSON.stringify(latestData)}\n\n`));
-    console.log(`   ✅ Đã đẩy Realtime xuống ${clients.length} client(s).`);
+    console.log(`   ✅ Đã đẩy Realtime xuống ${clients.length} client(s) đang kết nối.`);
 
   } catch (e) {
-    console.log("❌ Lỗi hệ thống trong UpdateData:", e);
+    console.log("❌ LỖI HỆ THỐNG (TRY-CATCH) TRONG UPDATE-DATA:", e.message);
   } finally {
     isUpdating = false;
   }
