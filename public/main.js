@@ -206,11 +206,8 @@ function updateChart(data) {
   const scrollContainer = document.querySelector('.chart-scroll-container');
   const containerWidth = scrollContainer.clientWidth || window.innerWidth;
 
-  // 1. Cấu hình khoảng cách (Quy đổi cm ra pixel)
-  const maxSpacing = 110; // ~3cm (Khoảng cách lý tưởng khi ít điểm)
-  const minSpacing = 75;  // ~2cm (Khoảng cách ép nhỏ nhất khi nhiều điểm)
-  
-  // Tính số lượng điểm lý tưởng để lấp đầy màn hình mà không vượt quá 3cm/điểm
+  const maxSpacing = 110; 
+  const minSpacing = 75;  
   const minPointsToFill = Math.ceil(containerWidth / maxSpacing);
 
   const labels = reversedData.map(r => {
@@ -220,24 +217,37 @@ function updateChart(data) {
   const gaps = reversedData.map(r => r.diff / 1000000);
 
   // --- TRỊ BỆNH KÉO GIÃN: CHÈN ĐIỂM ẢO ---
-  // Nếu có dữ liệu nhưng lại quá ít (chưa đủ lấp đầy màn hình)
   if (totalPoints > 0 && totalPoints < minPointsToFill) {
     const padCount = minPointsToFill - totalPoints;
     for (let i = 0; i < padCount; i++) {
-      labels.push(''); // Thêm nhãn rỗng để tạo ô lưới chạy dài sang phải
-      gaps.push(null); // Giá trị null để Chart.js không vẽ thêm đường thẳng
+      labels.push(''); 
+      gaps.push(null); 
     }
   }
 
-  // 2. Tính toán chiều rộng để bật thanh cuộn (Dựa trên số điểm THẬT)
+  // --- THÊM LOGIC TRỊ BỆNH CHẠM ĐÁY/CHẠM NÓC TRỤC Y ---
+  const validGaps = gaps.filter(g => g !== null);
+  let yMin = 0;
+  let yMax = 0;
+
+  if (validGaps.length > 0) {
+    const minVal = Math.min(...validGaps);
+    const maxVal = Math.max(...validGaps);
+    const range = maxVal - minVal;
+
+    // Nới lề trên/dưới thêm 20%. Nếu dữ liệu đang đứng im (range = 0), tự nới biên độ 0.5M (500k)
+    const padding = range === 0 ? 0.5 : range * 0.2; 
+    
+    yMin = minVal - padding;
+    yMax = maxVal + padding;
+  }
+
   const calculatedWidth = totalPoints * minSpacing;
 
   if (calculatedWidth > containerWidth) {
-    // Nếu dồn mỗi điểm 2cm rồi mà vẫn tràn -> Bật kích thước tuyệt đối để có thanh cuộn ngang
     wrapper.style.setProperty('width', calculatedWidth + 'px', 'important');
     wrapper.style.setProperty('min-width', calculatedWidth + 'px', 'important');
   } else {
-    // Nếu số lượng điểm vừa phải -> Chiếm 100% màn hình
     wrapper.style.setProperty('width', '100%', 'important');
     wrapper.style.setProperty('min-width', '100%', 'important');
   }
@@ -245,6 +255,9 @@ function updateChart(data) {
   if (myChart) {
     myChart.data.labels = labels;
     myChart.data.datasets[0].data = gaps;
+    // Cập nhật lại trục Y linh hoạt khi có dữ liệu mới
+    myChart.options.scales.y.suggestedMin = yMin;
+    myChart.options.scales.y.suggestedMax = yMax;
     myChart.update();
   } else {
     myChart = new Chart(ctx, {
@@ -267,6 +280,8 @@ function updateChart(data) {
         plugins: { legend: { display: false } },
         scales: {
           y: {
+            suggestedMin: yMin, // Điểm bắt đầu của vạch dưới cùng
+            suggestedMax: yMax, // Điểm kết thúc của vạch trên cùng
             beginAtZero: false,
             ticks: {
               maxTicksLimit: 6,
@@ -285,7 +300,6 @@ function updateChart(data) {
     });
   }
   
-  // Tự động cuộn sang bên phải cùng để luôn xem được dữ liệu mới nhất
   const container = document.querySelector('.chart-scroll-container');
   setTimeout(() => { container.scrollLeft = container.scrollWidth; }, 200);
 }
