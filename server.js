@@ -191,8 +191,10 @@ async function updateData(triggerSource = "Tự động") {
     }
 
     // --- ĐẨY DỮ LIỆU SSE CHO CLIENT ---
-    clients.forEach(c => c.write(`data: ${JSON.stringify(latestData)}\n\n`));
-    if (typeof c.flush === "function") c.flush();
+    clients.forEach(c => {
+      c.write(`data: ${JSON.stringify(latestData)}\n\n`);
+      if (typeof c.flush === "function") c.flush();
+    });
     console.log(`   ✅ Đã đẩy Realtime xuống ${clients.length} client(s) đang kết nối.`);
 
   } catch (e) {
