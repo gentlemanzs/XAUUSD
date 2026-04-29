@@ -195,9 +195,13 @@ async function updateData(triggerSource = "Tự động") {
     const worldVND = xau * usd * (37.5 / 31.1035);
     const diff = sjc - worldVND;
 
-    // SỬA TẠI ĐÂY: Tính gapChange dựa trên bản ghi thực tế trong DB
-    // Nếu trong DB chưa có dữ liệu, gapChange sẽ là 0
-    const gapChange = dbLastRecord ? (currentDiff - dbLastRecord.diff) : 0;
+    // --- TÍNH TOÁN GAP HIỆN TẠI ---
+    const worldVND = xau * usd * (37.5 / 31.1035);
+    const currentDiff = Math.round(sjc - worldVND);
+
+    // --- TÍNH GAP CHANGE: CŨ TRỪ MỚI (CHỈ KHAI BÁO 1 LẦN) ---
+    // Logic: Gap trong DB (Cũ) - Gap vừa tính (Mới)
+    const gapChange = dbLastRecord ? (dbLastRecord.diff - currentDiff) : 0;
     
     // --- MỚI: Tìm giá đóng cửa ngày hôm trước để tính Change ---
     const yesterday = new Date();
@@ -212,8 +216,7 @@ async function updateData(triggerSource = "Tự động") {
     // Nếu không có giá hôm qua (mới chạy app), dùng chính giá hiện tại làm mốc
     const referenceSJC = lastDayRecord ? lastDayRecord.sjc : sjc;
     const sjcChange = sjc - referenceSJC;
-    // Lấy diff hiện tại trừ đi diff của bản ghi gần nhất trong lịch sử
-    const gapChange = (lastRecord ? lastRecord.diff : Math.round(diff)) - Math.round(diff);
+   
 
    // --- LƯU VÀO RAM CACHE ---
     latestData = {
