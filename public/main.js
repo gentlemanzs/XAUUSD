@@ -90,27 +90,27 @@ function renderTable() {
   const displayStyle = isExpanded ? "table-cell" : "none";
   document.getElementById('selectAll').checked = false;
 
-  // 1. Tạo một biến chuỗi rỗng để gom mã HTML
-  let htmlString = "";
+  // TỐI ƯU HIỆU NĂNG: Sử dụng DOM ảo thay vì chuỗi Text HTML
+  const fragment = document.createDocumentFragment();
 
-  // 2. Chạy vòng lặp để nối các dòng thành 1 cục chuỗi duy nhất
   displayData.forEach(r => {
-    htmlString += `
-      <tr>
-        <td>${formatVNDateTime(r.createdAt)}</td>
-        <td>${fmtXAU.format(r.xau)}</td>
-        <td>${fmtVND.format(r.sjc)}</td>
-        <td>${fmtVND.format(r.diff)}</td>
-        <td><span class="badge ${r.percent.includes('-') ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>
-        <td class="col-action" style="display: ${displayStyle}; text-align: center;">
-          <input type="checkbox" class="log-checkbox" value="${r._id}">
-        </td>
-      </tr>
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${formatVNDateTime(r.createdAt)}</td>
+      <td>${fmtXAU.format(r.xau)}</td>
+      <td>${fmtVND.format(r.sjc)}</td>
+      <td>${fmtVND.format(r.diff)}</td>
+      <td><span class="badge ${r.percent.includes('-') ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>
+      <td class="col-action" style="display: ${displayStyle}; text-align: center;">
+        <input type="checkbox" class="log-checkbox" value="${r._id}">
+      </td>
     `;
+    fragment.appendChild(tr);
   });
 
-  // 3. Chèn 1 lần duy nhất vào bảng
-  elements.historyTable.innerHTML = htmlString;
+  // Làm sạch bảng và chèn DOM ảo vào 1 lần duy nhất (Rất mượt)
+  elements.historyTable.innerHTML = "";
+  elements.historyTable.appendChild(fragment);
   
   renderPagination();
 }
@@ -307,8 +307,6 @@ function updateChart(data) {
 /* KHỞI CHẠY LẦN ĐẦU (F5) SẼ YÊU CẦU SERVER ÉP CÀO LẠI (FORCE = TRUE) */
 load(true);
 
-/* Đổi nút button Update chạy thành Force Mode: onclick="load(true)" (Hãy cập nhật html phía trên) */
-document.getElementById("updateBtn").onclick = () => load(true);
 
 
 /* ===== HIỆU ỨNG PULL TO REFRESH ===== */

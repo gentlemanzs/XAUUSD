@@ -45,15 +45,6 @@ header {
 }
 .brand span { color: var(--accent-color); }
 
-#updateBtn { 
-  background: var(--accent-color); 
-  color: white; 
-  border: none; 
-  padding: 10px 20px; 
-  border-radius: 8px; 
-  font-weight: 600; 
-  cursor: pointer; 
-}
 
 /* --- STYLE RIÊNG CHO ĐIỆN THOẠI (HEADER CYBER) --- */
 @media (max-width: 640px) {
@@ -78,12 +69,7 @@ header {
     text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
   }
 
-  /* Nút Update Premium trên điện thoại */
-  #updateBtn { 
-    display: none; /* Ẩn nút update trên header mobile theo bản gốc của bạn */
-  }
-
-  .container { 
+    .container { 
     padding-top: 70px !important; /* Thay vì 10px, hãy dùng khoảng 50px-55px */
     margin-top: 0; 
   } 
