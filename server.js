@@ -211,12 +211,15 @@ app.get("/api/gold", async (req, res) => {
   const force = req.query.force;
   const now = Date.now();
   
-  if (force === "true" && !isUpdating && (now - lastUpdateTime > 15000)) {
+  // Kiểm tra: Nếu là force update, không bị kẹt tiến trình cũ, và đã trôi qua hơn 60000ms (1 phút)
+  if (force === "true" && !isUpdating && (now - lastUpdateTime > 60000)) {
     console.log("\n⚡ Nhận yêu cầu Force Update từ Web (F5 hoặc Pull)...");
     isUpdating = true;
-    await updateData("Pull-to-Refresh"); // Truyền tên vào
+    await updateData("Pull-to-Refresh"); // Đợi cào xong
     lastUpdateTime = Date.now();
     isUpdating = false;
+  } else if (force === "true" && (now - lastUpdateTime <= 60000)) {
+    
   }
   
   res.json(latestData || {});

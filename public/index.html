@@ -386,19 +386,28 @@ async function deleteSelected() {
 }
 
 function updateChart(data) {
-  const ctx = document.getElementById('gapChart').getContext('2d');
+  const chartCanvas = document.getElementById('gapChart');
+  const ctx = chartCanvas.getContext('2d');
   const reversedData = [...data].reverse();
+  const totalPoints = reversedData.length;
+
+  // Cấu hình: 10 điểm dữ liệu trên 1 khung hình điện thoại
+  const pointsOnScreen = 10;
+  // Tính toán chiều rộng container: nếu có 20 điểm thì rộng 200%, 30 điểm rộng 300%...
+  const dynamicWidth = Math.max(100, (totalPoints / pointsOnScreen) * 100);
   
+  // Áp dụng độ rộng mới cho thẻ cha của canvas để tạo hiệu ứng cuộn
+  chartCanvas.parentElement.style.width = dynamicWidth + "%";
+
   const labels = reversedData.map(r => {
     const d = new Date(r.createdAt);
     if (isNaN(d)) return '';
     return [
       d.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' }),
-      d.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric' })
+      d.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit' })
     ];
   });
 
-  // Chuyển đổi đơn vị sang Triệu đồng (M)
   const gaps = reversedData.map(r => r.diff / 1000000);
 
   if (myChart) {
@@ -411,54 +420,58 @@ function updateChart(data) {
       data: {
         labels: labels,
         datasets: [{
-          label: 'Gap (M)', 
-          data: gaps, 
-          borderColor: '#3b82f6', 
+          label: 'Gap (M)',
+          data: gaps,
+          borderColor: '#3b82f6',
           backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          borderWidth: 2,          
-          fill: true, 
-          tension: 0.3, 
-          pointRadius: 3,         
-          hitRadius: 15
+          borderWidth: 2,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 4,
+          hitRadius: 20
         }]
       },
-      options: { 
-        responsive: true, 
-        maintainAspectRatio: false, 
-        plugins: { legend: { display: false } },
-        scales: { 
-          y: { 
-            min: 10, // Mốc bắt đầu là 10M
-            max: 30, // Mốc kết thúc là 30M
-            ticks: { 
-              stepSize: 1, // Khoảng cách giữa các mốc là 1M (10, 11, 12...)
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            min: 10,
+            max: 30,
+            ticks: {
+              stepSize: 1, // Hiển thị cách nhau đúng 1 đơn vị (10, 11, 12...)
+              autoSkip: false, // Không tự động ẩn mốc để đảm bảo hiện đủ từ 10M-30M
               callback: function(value) {
-                return value + 'M'; // Hậu tố M sau con số
+                return value + 'M';
               },
               color: '#64748b',
-              font: { size: 11 }
+              font: { size: 10, weight: '600' }
             },
-            grid: {
-              color: 'rgba(226, 232, 240, 0.5)' // Làm mờ đường lưới để dễ nhìn
-            }
-          }, 
-          x: { 
-            ticks: { 
-              autoSkip: true, 
-              maxTicksLimit: 6, 
-              maxRotation: 0,
+            grid: { color: 'rgba(226, 232, 240, 0.8)' }
+          },
+          x: {
+            ticks: {
+              autoSkip: false, // Hiện đủ nhãn cho 10 điểm trên màn hình
               color: '#64748b',
-              font: { size: 10 }
+              font: { size: 9 },
+              maxRotation: 0,
+              minRotation: 0
             },
             grid: { display: false }
-          } 
-        } 
-      } 
+          }
+        }
+      }
     });
   }
-  
+
+  // Tự động cuộn về cuối biểu đồ (dữ liệu mới nhất)
   const scroller = document.querySelector('.chart-scroll-container');
-  setTimeout(() => { scroller.scrollLeft = scroller.scrollWidth; }, 100);
+  setTimeout(() => {
+    scroller.scrollLeft = scroller.scrollWidth;
+  }, 150);
 }
 
 /* KHỞI CHẠY LẦN ĐẦU (F5) SẼ YÊU CẦU SERVER ÉP CÀO LẠI (FORCE = TRUE) */
