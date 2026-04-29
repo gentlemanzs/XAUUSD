@@ -1,184 +1,164 @@
 const express = require("express");
-const axios = require("axios");
 const cron = require("node-cron");
 const cors = require("cors");
-const path = require("path");
-const fs = require("fs"); // Thêm fs để quản lý file
+const mongoose = require("mongoose");
+const cheerio = require("cheerio");
+const compression = require("compression");
 
 const app = express();
+app.use(compression());
 app.use(cors());
+app.use(express.json());
 
-/* 🔥 PORT FIX */
+// TỐI ƯU: Bỏ maxAge để điện thoại không bị dính bộ nhớ đệm CSS/JS cũ
+app.use(express.static("public")); 
+
 const PORT = process.env.PORT || 3000;
 
-/* 🔥 SERVE FRONTEND */
-app.use(express.static("public"));
+/* ===== CONNECT MONGO ===== */
+mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000 })
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch(err => { console.error("❌ MongoDB error:", err); process.exit(1); });
 
-/* 🔥 PATH CONFIG */
-const DATA_DIR = path.join(__dirname, "data");
-const DATA_FILE = path.join(DATA_DIR, "history.json");
+/* ===== SCHEMA ===== */
+const HistorySchema = new mongoose.Schema({
+  usd: Number, xau: Number, sjc: Number, worldVND: Number,
+  diff: Number, percent: String, status: String
+}, { timestamps: true });
 
-// Đảm bảo thư mục data tồn tại
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
+HistorySchema.index({ createdAt: -1 });
+const History = mongoose.model("History", HistorySchema);
 
+// TỐI ƯU: Biến RAM Cache để không phải gọi Database liên tục
 let latestData = null;
+let clients = []; 
+let lastUpdateTime = 0; 
+let isUpdating = false; 
 
-/* ===== CONFIG ===== */
-const CONFIG = {
-  TIMEOUT: 5000,
-  RETRY: 2
-};
+/* ===== FETCH HELPERS (Native Fetch Node 18+) ===== */
+async function fetchWithRetry(url, isJson = false) {
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+      signal: AbortSignal.timeout(8000) 
+    });
+    return isJson ? await res.json() : await res.text();
+  } catch (e) { return null; }
+}
 
-/* ===== HELPER FETCH ===== */
-async function fetchWithRetry(url) {
-  for (let i = 0; i < CONFIG.RETRY; i++) {
-    try {
-      const res = await axios.get(url, {
-        timeout: CONFIG.TIMEOUT,
-        headers: { "User-Agent": "Mozilla/5.0" }
-      });
-      return res.data;
-    } catch (e) {
-      console.log(`⚠️ Retry ${i + 1} fail: ${url}`);
+/* ===== UPDATE LOGIC ===== */
+async function updateData(triggerSource = "Tự động") {
+  if (isUpdating) return;
+  isUpdating = true;
+  try {
+    console.log(`\n▶ [${triggerSource}] Bắt đầu cào dữ liệu lúc ${new Date().toLocaleTimeString('vi-VN')}`);
+    
+    const [htmlVCB, dataXAU, htmlSJC] = await Promise.all([
+      fetchWithRetry("https://webgia.com/ty-gia/vietcombank/"),
+      fetchWithRetry("https://api.gold-api.com/price/XAU", true),
+      fetchWithRetry("https://webgia.com/gia-vang/sjc/")
+    ]);
+
+    // TỐI ƯU: Lấy dữ liệu cũ từ RAM thay vì chọc vào Database
+    let lastRecord = latestData; 
+    if (!lastRecord) {
+      lastRecord = await History.findOne().sort({ createdAt: -1 }).lean();
     }
-  }
-  return null;
-}
-
-/* ===== USD ===== */
-async function getUSDRate() {
-  try {
-    console.log("🔎 Fetch USD từ webgia...");
-
-    const html = await fetchWithRetry("https://webgia.com/ty-gia/vietcombank/");
-    if (!html) throw "Fetch fail";
-
-    const clean = html.replace(/\s+/g, " ");
-
-    const nums = clean.match(/[0-9]{2,3}\.[0-9]{3},[0-9]{2}/g);
-
-    if (!nums || nums.length === 0) throw "Không tìm thấy số";
-
-    const values = nums.map(n =>
-      parseFloat(n.replace(/\./g, "").replace(",", "."))
-    );
-
-    const usdValues = values.filter(v => v > 20000 && v < 30000);
-
-    if (usdValues.length === 0) throw "Không có giá hợp lệ";
-
-    return Math.max(...usdValues);
-
-  } catch (e) {
-    console.log("❌ USD fallback");
-    return 26000;
-  }
-}
-
-/* ===== XAU ===== */
-async function getWorldGoldPrice() {
-  try {
-    const data = await fetchWithRetry("https://api.gold-api.com/price/XAU");
-
-    if (data && data.price) return data.price;
-
-    throw "API lỗi";
-  } catch {
-    return 2350;
-  }
-}
-
-/* ===== SJC ===== */
-async function getSJCPrice() {
-  return 168800000;
-}
-
-/* ===== SAVE HISTORY ===== */
-function saveHistory(entry) {
-  try {
-    let history = [];
-    if (fs.existsSync(DATA_FILE)) {
-      const fileData = fs.readFileSync(DATA_FILE, "utf-8");
-      history = JSON.parse(fileData || "[]");
+    
+    let usd = 1000, xau = 2350, sjc = 0;
+    if (htmlVCB) {
+      const $ = cheerio.load(htmlVCB);
+      const rate = $('td:contains("USD")').parent().find('td').last().text().trim();
+      usd = parseFloat(rate.replace(/\./g, "").replace(",", ".")) || 1000;
+    }
+    xau = dataXAU?.price || 2350;
+    if (htmlSJC) {
+      const $ = cheerio.load(htmlSJC);
+      const priceText = $('td:contains("Vàng SJC 1L")').first().next().next().text().trim();
+      sjc = (parseInt(priceText.replace(/\./g, ""), 10) * 10) || 0;
     }
 
-    // Kiểm tra bản ghi cuối cùng để tránh lưu trùng dữ liệu liên tục
-    const lastEntry = history[history.length - 1];
-    if (!lastEntry || lastEntry.sjc !== entry.sjc || lastEntry.xau !== entry.xau) {
-      history.push(entry);
-      
-      // Giữ lại tối đa 200 bản ghi để tránh file quá nặng
-      if (history.length > 200) history.shift();
+    // Fallback nếu webgia lỗi
+    if (sjc <= 0 && lastRecord) sjc = lastRecord.sjc;
+    if (usd === 1000 && lastRecord) usd = lastRecord.usd;
 
-      fs.writeFileSync(DATA_FILE, JSON.stringify(history, null, 2));
-      console.log("💾 Đã lưu vào data/history.json");
-    }
-  } catch (e) {
-    console.log("❌ Lỗi lưu file history:", e);
-  }
-}
-
-/* ===== UPDATE ===== */
-async function updateData() {
-  console.log("\n⏳ Updating...");
-
-  try {
-    const usd = await getUSDRate();
-    const xau = await getWorldGoldPrice();
-    const sjc = await getSJCPrice();
+    if (sjc <= 0 || xau <= 0) return; // Lỗi hoàn toàn thì hủy
 
     const worldVND = xau * usd * (37.5 / 31.1035);
     const diff = sjc - worldVND;
-    const percent = (diff / worldVND) * 100;
 
+    // Lưu vào RAM Cache
     latestData = {
-      time: new Date().toLocaleString("vi-VN"), // Chuyển sang string để lưu json đẹp hơn
-      usd,
-      xau,
-      sjc,
-      worldVND: Math.round(worldVND),
-      diff: Math.round(diff),
-      percent: percent.toFixed(2) + "%"
+      updatedAt: new Date(), usd, xau, sjc,
+      worldVND: Math.round(worldVND), diff: Math.round(diff),
+      percent: ((diff / worldVND) * 100).toFixed(2) + "%",
+      status: sjc > 0 ? "Live" : "Delayed"
     };
 
-    saveHistory(latestData); // Thực hiện lưu vào file
-    console.log("✅ DONE");
+    // Chỉ ghi vào DB nếu giá SJC thay đổi
+    if (sjc > 0 && (!lastRecord || lastRecord.sjc !== sjc)) {
+      const dbEntry = { ...latestData };
+      delete dbEntry.updatedAt; // Xóa key thừa trước khi lưu DB
+      await History.create(dbEntry);
+      console.log(`   💾 DB: Đã lưu bản ghi SJC mới là ${sjc}`);
+      
+      const count = await History.countDocuments();
+      if (count > 200) await History.findOneAndDelete({}, { sort: { createdAt: 1 } });
+    } else {
+      console.log(`   ⏩ DB: Giá SJC không đổi (${sjc}), không lưu rác.`);
+    }
 
+    // Bơm dữ liệu Realtime
+    clients.forEach(c => c.write(`data: ${JSON.stringify(latestData)}\n\n`));
+    console.log(`   ✅ Đã đẩy Realtime xuống ${clients.length} client(s).`);
   } catch (e) {
-    console.log("❌ UPDATE ERROR:", e);
+    console.log("❌ Lỗi cập nhật:", e);
+  } finally {
+    isUpdating = false;
+    lastUpdateTime = Date.now();
   }
 }
 
-/* ===== CRON ===== */
-cron.schedule("*/2 * * * *", updateData);
+/* ===== API & SSE ===== */
+app.get("/api/stream", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  clients.push(res);
+  req.on("close", () => clients = clients.filter(c => c !== res));
+});
 
-/* ===== API ===== */
-app.get("/api/gold", (req, res) => {
-  if (!latestData) {
-    return res.json({ message: "No data yet, please wait..." });
+// Ép Force Update với 60s cooldown
+app.get("/api/gold", async (req, res) => {
+  const force = req.query.force;
+  const now = Date.now();
+  if (force === "true" && !isUpdating && (now - lastUpdateTime > 60000)) {
+    console.log("\n⚡ Nhận yêu cầu Force Update từ Web (F5 hoặc Pull)...");
+    await updateData("Pull-to-Refresh");
+  } else if (force === "true" && (now - lastUpdateTime <= 60000)) {
+    console.log(`⏳ Bỏ qua Force Update: Cooldown còn ${Math.round((60000 - (now - lastUpdateTime))/1000)}s.`);
   }
-  res.json(latestData);
+  res.json(latestData || {});
 });
 
-// Thêm API để frontend có thể lấy lịch sử từ file
-app.get("/api/history", (req, res) => {
-  if (fs.existsSync(DATA_FILE)) {
-    const data = fs.readFileSync(DATA_FILE, "utf-8");
-    res.json(JSON.parse(data || "[]"));
-  } else {
-    res.json([]);
-  }
+app.get("/api/history", async (req, res) => {
+  const data = await History.find().sort({ createdAt: -1 }).limit(100).lean();
+  res.json(data);
 });
 
-/* ===== ROOT (serve index.html) ===== */
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/index.html"));
+app.post("/api/history/bulk-delete", async (req, res) => {
+  try {
+    const { ids } = req.body;
+    await History.deleteMany({ _id: { $in: ids } });
+    res.json({ ok: true });
+  } catch (error) { res.status(500).json({ error: "Lỗi xóa" }); }
 });
+
+/* ===== CRONJOB ===== */
+cron.schedule("*/ * * * *", () => updateData("Cronjob"));
 
 /* ===== START ===== */
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  updateData();
+  updateData("Khởi động Server");
 });
