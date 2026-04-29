@@ -56,11 +56,18 @@ function renderMain(d) {
   elements.xau.innerText = fmtXAU.format(d.xau);
   elements.diff.innerText = fmtVND.format(d.diff);
   elements.percent.innerText = d.percent;
-  const key = "sjcMorning_" + new Date().toISOString().slice(0,10);
-  let morning = localStorage.getItem(key) || localStorage.setItem(key, d.sjc) || d.sjc;
-  const change = d.sjc - parseFloat(morning);
+
+  // Sử dụng trực tiếp con số sjcChange do Server tính toán
+  const change = d.sjcChange || 0;
   const isUp = change >= 0;
-  elements.sjc.innerHTML = `<div>${fmtVND.format(d.sjc)}</div><div class="sjc-sub ${isUp ? 'change-up' : 'change-down'}">${isUp ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}</div>`;
+  
+  elements.sjc.innerHTML = `
+    <div>${fmtVND.format(d.sjc)}</div>
+    <div class="sjc-sub ${isUp ? 'change-up' : 'change-down'}">
+      ${isUp ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}
+    </div>
+  `;
+
   const updateTime = new Date(d.updatedAt);
   const timeStr = isNaN(updateTime) ? new Date().toLocaleTimeString('vi-VN') : updateTime.toLocaleTimeString('vi-VN');
   elements.lastTime.innerHTML = `${d.status === "Delayed" ? "🟡 Tạm thời (Fallback)" : "🟢 Live"} - Cập nhật: ${timeStr}`;

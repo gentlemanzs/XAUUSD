@@ -131,12 +131,27 @@ async function updateData(triggerSource = "Tự động") {
     const worldVND = xau * usd * (37.5 / 31.1035);
     const diff = sjc - worldVND;
 
+    // --- MỚI: Tìm giá đóng cửa ngày hôm trước để tính Change ---
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(23, 59, 59, 999);
+
+    // Tìm bản ghi cuối cùng của ngày hôm qua hoặc cũ hơn
+    const lastDayRecord = await History.findOne({
+      createdAt: { $lte: yesterday }
+    }).sort({ createdAt: -1 }).lean();
+
+    // Nếu không có giá hôm qua (mới chạy app), dùng chính giá hiện tại làm mốc
+    const referenceSJC = lastDayRecord ? lastDayRecord.sjc : sjc;
+    const sjcChange = sjc - referenceSJC;
+
     // --- LƯU VÀO RAM CACHE ---
     latestData = {
       updatedAt: new Date(), 
       usd, 
       xau, 
       sjc,
+      sjcChange: sjcChange, // Gửi con số chênh lệch chuẩn từ Server
       worldVND: Math.round(worldVND), 
       diff: Math.round(diff),
       percent: ((diff / worldVND) * 100).toFixed(2) + "%",
