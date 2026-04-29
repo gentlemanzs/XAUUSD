@@ -116,25 +116,35 @@ async function saveHistory(entry) {
     const last = await History.findOne().sort({ createdAt: -1 });
     if (!last || last.sjc !== entry.sjc) {
       await History.create(entry);
-      console.log(`💾 Lịch sử: Đã lưu SJC mới là ${entry.sjc}`);
+      console.log(`   💾 DB: Đã lưu bản ghi SJC mới là ${entry.sjc}`);
       const count = await History.countDocuments();
       if (count > 200) await History.findOneAndDelete({}, { sort: { createdAt: 1 } });
+    } else {
+      console.log(`   ⏩ DB: Giá SJC không đổi (${entry.sjc}), bỏ qua lưu lịch sử mới.`);
     }
   } catch (e) { console.log("❌ Lỗi lưu DB:", e); }
 }
 
 /* ===== UPDATE (HỖ TRỢ REALTIME EVENT) ===== */
-async function updateData() {
+// Thêm tham số triggerSource để biết ai gọi lệnh cào (Cron hay Web)
+async function updateData(triggerSource = "Tự động") {
   try {
+    console.log(`\n▶ [${triggerSource}] Bắt đầu cào dữ liệu lúc ${new Date().toLocaleTimeString('vi-VN')}`);
+    
     let [usd, xau, sjc] = await Promise.all([ getUSDRate(), getWorldGoldPrice(), getSJCPrice() ]);
+    console.log(`   ↳ Kết quả thô: USD=${usd}, XAU=${xau}, SJC=${sjc}`);
+
     const lastRecord = await History.findOne().sort({ createdAt: -1 });
     let isFallback = false;
 
-    if (sjc <= 0 && lastRecord) { sjc = lastRecord.sjc; isFallback = true; }
-    if (xau <= 0 && lastRecord) { xau = lastRecord.xau; isFallback = true; }
-    if (usd === 1000 && lastRecord) { usd = lastRecord.usd; }
+    if (sjc <= 0 && lastRecord) { sjc = lastRecord.sjc; isFallback = true; console.log("   ⚠️ Lỗi cào SJC, dùng fallback."); }
+    if (xau <= 0 && lastRecord) { xau = lastRecord.xau; isFallback = true; console.log("   ⚠️ Lỗi cào XAU, dùng fallback."); }
+    if (usd === 1000 && lastRecord) { usd = lastRecord.usd; console.log("   ⚠️ Lỗi cào USD, dùng fallback."); }
 
-    if (sjc <= 0 || xau <= 0) return;
+    if (sjc <= 0 || xau <= 0) {
+        console.log("   ❌ Dữ liệu lỗi hoàn toàn (0đ), hủy tiến trình cập nhật.");
+        return;
+    }
 
     const worldVND = xau * usd * (37.5 / 31.1035);
     const diff = sjc - worldVND;
@@ -149,10 +159,16 @@ async function updateData() {
       status: isFallback ? "Delayed" : "Live"
     };
 
-    if (!isFallback) await saveHistory(latestData);
+    // Nếu không xài fallback thì mới lưu DB
+    if (!isFallback) {
+        await saveHistory(latestData);
+    } else {
+        console.log(`   ⏩ Đang dùng dữ liệu dự phòng (Fallback), không lưu DB.`);
+    }
     
     // ĐẨY DỮ LIỆU REALTIME XUỐNG TẤT CẢ CÁC TRANG WEB ĐANG MỞ
     clients.forEach(client => client.write(`data: ${JSON.stringify(latestData)}\n\n`));
+    console.log(`   ✅ Đã đẩy dữ liệu Realtime xuống ${clients.length} client(s) đang mở web.`);
     
   } catch (e) { console.log("❌ Lỗi cập nhật:", e); }
 }
@@ -174,8 +190,7 @@ function isWithinTradingHours() {
 /* ===== CRON JOB KHUNG GIỜ ===== */
 cron.schedule("*/15 * * * *", () => {
   if (isWithinTradingHours()) {
-    console.log("🔄 Bắt đầu cronjob cập nhật dữ liệu...");
-    updateData(); // Chạy xong sẽ tự đẩy event xuống frontend
+    updateData("Cronjob"); // Truyền tên vào
   }
 });
 
@@ -196,11 +211,10 @@ app.get("/api/gold", async (req, res) => {
   const force = req.query.force;
   const now = Date.now();
   
-  // Nếu user kéo thả (Pull to refresh) hoặc F5 -> Gọi cào dữ liệu ngay nếu quá 15s cooldown
   if (force === "true" && !isUpdating && (now - lastUpdateTime > 15000)) {
-    console.log("⚡ Nhận yêu cầu Force Update từ Web (F5 hoặc Pull)...");
+    console.log("\n⚡ Nhận yêu cầu Force Update từ Web (F5 hoặc Pull)...");
     isUpdating = true;
-    await updateData(); // Đợi cào xong
+    await updateData("Pull-to-Refresh"); // Truyền tên vào
     lastUpdateTime = Date.now();
     isUpdating = false;
   }
@@ -224,5 +238,5 @@ app.post("/api/history/bulk-delete", async (req, res) => {
 /* ===== START ===== */
 app.listen(PORT, () => {
   console.log("🚀 Server đang chạy trên port", PORT);
-  updateData(); // Lần đầu boot server
+  updateData("Khởi động Server"); // Lần đầu boot server
 });
