@@ -35,6 +35,13 @@ let latestData = null;
 let clients = []; 
 let isUpdating = false; 
 
+// 🔥 HEARTBEAT giữ kết nối SSE không bị chết
+setInterval(() => {
+  clients.forEach(c => {
+    c.write(":\n\n"); // ping nhẹ, client sẽ ignore
+  });
+}, 20000); // mỗi 20 giây
+
 // Biến RAM Cache riêng cho USD (1 tiếng)
 let cachedUsdRate = 1000;
 let lastUsdFetchTime = 0;

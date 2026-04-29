@@ -16,6 +16,7 @@ let historyData = [];
 let currentData = []; 
 let lastSJCValue = null; 
 let myChart = null;
+let lastChartSignature = "";
 let isExpanded = false; 
 let currentPage = 1;
 // Thêm đoạn này vào để chống spam API
@@ -232,6 +233,21 @@ async function deleteSelected() {
 }
 
 function updateChart(data) {
+    // 1. Kiểm tra an toàn nếu không có dữ liệu
+  if (!data || data.length === 0) return;
+
+  // 2. TẠO CHỮ KÝ DỮ LIỆU
+  // data[0] là bản ghi mới nhất (vì mảng sort từ mới đến cũ)
+  const currentSignature = `${data.length}_${data[0].createdAt}`;
+
+  // 3. KIỂM TRA CHỮ KÝ
+  if (currentSignature === lastChartSignature) {
+    // Nếu chữ ký y hệt lần vẽ trước -> Dữ liệu không đổi -> Hủy vẽ!
+    return; 
+  }
+
+  // 4. LƯU LẠI CHỮ KÝ MỚI ĐỂ DÀNH CHO LẦN SAU
+  lastChartSignature = currentSignature;
   const chartCanvas = document.getElementById('gapChart');
   const ctx = chartCanvas.getContext('2d');
   const reversedData = [...data].reverse();
