@@ -141,7 +141,7 @@ th:first-child, td:first-child { text-align: left; }
 /* Tối ưu riêng cho điện thoại */
 @media (max-width: 640px) {
   .chart-inner-wrapper { 
-        height: 250px !important;    /* Giảm chiều cao một chút để cân đối trên mobile */
+        height: 280px !important;    /* Giảm chiều cao một chút để cân đối trên mobile */
   }
 }
 </style>
@@ -390,24 +390,19 @@ function updateChart(data) {
   const reversedData = [...data].reverse();
   const totalPoints = reversedData.length;
 
-  // Cấu hình: 10 điểm dữ liệu trên 1 khung hình điện thoại
+  // Cấu hình: Hiển thị đúng 10 điểm trên một chiều rộng màn hình
   const pointsOnScreen = 10;
-  // Tính toán chiều rộng container: nếu có 20 điểm thì rộng 200%, 30 điểm rộng 300%...
   const dynamicWidth = Math.max(100, (totalPoints / pointsOnScreen) * 100);
   
-  // ÉP BUỘC CHIỀU RỘNG MỚI (Thêm 2 dòng này)
-  chartCanvas.parentElement.style.setProperty('width', dynamicWidth + '%', 'important');
-  chartCanvas.parentElement.style.setProperty('min-width', dynamicWidth + '%', 'important');
+  // Ép chiều rộng wrapper để tạo thanh cuộn ngang
+  const wrapper = chartCanvas.parentElement;
+  wrapper.style.setProperty('width', dynamicWidth + '%', 'important');
+  wrapper.style.setProperty('min-width', dynamicWidth + '%', 'important');
 
   const labels = reversedData.map(r => {
     const d = new Date(r.createdAt);
-    if (isNaN(d)) return '';
-    return [
-      d.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' }),
-      d.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit' })
-    ];
+    return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
   });
-
   const gaps = reversedData.map(r => r.diff / 1000000);
 
   if (myChart) {
@@ -420,58 +415,42 @@ function updateChart(data) {
       data: {
         labels: labels,
         datasets: [{
-          label: 'Gap (M)',
           data: gaps,
           borderColor: '#3b82f6',
           backgroundColor: 'rgba(59, 130, 246, 0.1)',
           borderWidth: 2,
           fill: true,
           tension: 0.3,
-          pointRadius: 4,
-          hitRadius: 20
+          pointRadius: 3
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false }
-        },
+        plugins: { legend: { display: false } },
         scales: {
           y: {
-            min: 10,
-            max: 30,
+            // Tự động điều chỉnh khoảng giá trị dựa trên dữ liệu (Tối giản)
+            beginAtZero: false,
             ticks: {
-              stepSize: 1, // Hiển thị cách nhau đúng 1 đơn vị (10, 11, 12...)
-              autoSkip: false, // Không tự động ẩn mốc để đảm bảo hiện đủ từ 10M-30M
-              callback: function(value) {
-                return value + 'M';
-              },
+              maxTicksLimit: 6, // Chỉ hiển thị tối đa 6 mốc giá trị để cột Y không bị dày
+              callback: (val) => val.toFixed(1) + 'M',
               color: '#64748b',
-              font: { size: 10, weight: '600' }
+              font: { size: 11 }
             },
-            grid: { color: 'rgba(226, 232, 240, 0.8)' }
+            grid: { color: 'rgba(226, 232, 240, 0.6)' }
           },
           x: {
-            ticks: {
-              autoSkip: false, // Hiện đủ nhãn cho 10 điểm trên màn hình
-              color: '#64748b',
-              font: { size: 9 },
-              maxRotation: 0,
-              minRotation: 0
-            },
+            ticks: { autoSkip: false, color: '#64748b', font: { size: 10 } },
             grid: { display: false }
           }
         }
       }
     });
   }
-
-  // Tự động cuộn về cuối biểu đồ (dữ liệu mới nhất)
-  const scroller = document.querySelector('.chart-scroll-container');
-  setTimeout(() => {
-    scroller.scrollLeft = scroller.scrollWidth;
-  }, 150);
+  // Cuộn về phía dữ liệu mới nhất (bên phải cùng)
+  const container = document.querySelector('.chart-scroll-container');
+  setTimeout(() => { container.scrollLeft = container.scrollWidth; }, 200);
 }
 
 /* KHỞI CHẠY LẦN ĐẦU (F5) SẼ YÊU CẦU SERVER ÉP CÀO LẠI (FORCE = TRUE) */
