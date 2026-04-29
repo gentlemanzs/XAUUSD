@@ -175,8 +175,6 @@ async function updateData(triggerSource = "Tự động") {
     const isSjcLive = sjcPrice > 0;
     const isXauLive = !!(dataXAU && dataXAU.price);
 
-    // SỬA TẠI ĐÂY: Luôn lấy bản ghi thực tế cuối cùng từ Database để so sánh Gap
-    const dbLastRecord = await History.findOne().sort({ createdAt: -1 }).lean().catch(() => null);
     // --- Xử lý FALLBACK (Nếu hỏng thì dùng lastRecord) ---
     let sjc = isSjcLive ? sjcPrice : (lastRecord ? lastRecord.sjc : 0);
     let xau = isXauLive ? dataXAU.price : (lastRecord ? lastRecord.xau : 2350);
@@ -192,16 +190,9 @@ async function updateData(triggerSource = "Tự động") {
     }
 
     // --- TÍNH TOÁN ---
-        const diff = sjc - worldVND;
-
-    // --- TÍNH TOÁN GAP HIỆN TẠI ---
     const worldVND = xau * usd * (37.5 / 31.1035);
-    const currentDiff = Math.round(sjc - worldVND);
+    const diff = sjc - worldVND;
 
-    // --- TÍNH GAP CHANGE: CŨ TRỪ MỚI (CHỈ KHAI BÁO 1 LẦN) ---
-    // Logic: Gap trong DB (Cũ) - Gap vừa tính (Mới)
-    const gapChange = dbLastRecord ? (dbLastRecord.diff - currentDiff) : 0;
-    
     // --- MỚI: Tìm giá đóng cửa ngày hôm trước để tính Change ---
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
@@ -215,7 +206,8 @@ async function updateData(triggerSource = "Tự động") {
     // Nếu không có giá hôm qua (mới chạy app), dùng chính giá hiện tại làm mốc
     const referenceSJC = lastDayRecord ? lastDayRecord.sjc : sjc;
     const sjcChange = sjc - referenceSJC;
-   
+    // Lấy diff hiện tại trừ đi diff của bản ghi gần nhất trong lịch sử
+    const gapChange = (lastRecord ? lastRecord.diff : Math.round(diff)) - Math.round(diff);
 
    // --- LƯU VÀO RAM CACHE ---
     latestData = {
