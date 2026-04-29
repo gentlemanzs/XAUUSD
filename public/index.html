@@ -4,12 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>XAU Professional Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
 <style>
 :root { 
   --bg-color: #f8fafc; 
-  --header-old: #0f172a; /* Màu Header cũ */
-  --header-cyber: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); /* Màu Cyber mới */
+  --header-cyber: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); 
   --card-bg: #ffffff; 
   --primary-text: #1e293b; 
   --secondary-text: #64748b; 
@@ -20,185 +19,185 @@
 }
 
 body { 
-  margin: 0; 
-  font-family: 'Inter', -apple-system, system-ui, sans-serif; 
-  background: var(--bg-color) !important; 
-  color: var(--primary-text); 
-  overflow-x: hidden; 
-  overscroll-behavior-y: contain; 
+  margin: 0; font-family: 'Inter', -apple-system, system-ui, sans-serif; 
+  background: var(--bg-color); color: var(--primary-text); 
+  overflow-x: hidden; overscroll-behavior-y: contain; 
 }
 
-/* --- STYLE MẶC ĐỊNH CHO MÁY TÍNH (HEADER CŨ) --- */
-header { 
-  padding: 1rem 2rem; 
-  background: var(--header-old); 
-  color: white; 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
-  position: fixed; 
-  top: 0; left: 0; width: 100%; 
-  box-sizing: border-box; 
-  z-index: 1000; 
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+.header {
+  background: var(--header-cyber); color: white;
+  padding: 24px 20px; text-align: center;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  position: relative; overflow: hidden;
 }
-
-.brand { 
-  font-size: 1.25rem; 
-  font-weight: 700; 
-  color: white; 
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.header::after {
+  content: ''; position: absolute; top: 0; left: -100%;
+  width: 50%; height: 100%;
+  background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0) 100%);
+  animation: sweep 4s infinite;
 }
-.brand span { color: var(--accent-color); }
+@keyframes sweep { 0% { left: -100%; } 100% { left: 200%; } }
+.header h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 1px; }
+.header p { margin: 8px 0 0; font-size: 13px; color: #cbd5e1; opacity: 0.9; }
 
-#updateBtn { 
-  background: var(--accent-color); 
-  color: white; 
-  border: none; 
-  padding: 10px 20px; 
-  border-radius: 8px; 
-  font-weight: 600; 
-  cursor: pointer; 
+.container { padding: 20px; max-width: 1200px; margin: 0 auto; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 24px; }
+.card {
+  background: var(--card-bg); border-radius: 16px; padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.02);
+  border: 1px solid var(--border-color);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
+.card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08); }
+.card-title { font-size: 14px; color: var(--secondary-text); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 12px; }
+.card-value { font-size: 32px; font-weight: 800; color: var(--primary-text); display: flex; align-items: baseline; gap: 8px; }
+.card-value.highlight { color: var(--accent-color); }
+.sjc-sub { font-size: 14px; padding: 4px 8px; border-radius: 6px; font-weight: 600; }
+.change-up { background: rgba(16, 185, 129, 0.1); color: var(--up-color); }
+.change-down { background: rgba(239, 68, 68, 0.1); color: var(--down-color); }
 
-/* --- STYLE RIÊNG CHO ĐIỆN THOẠI (HEADER CYBER) --- */
-@media (max-width: 640px) {
-  header { 
-    padding: 0.8rem 1rem; 
-    background: var(--header-cyber); 
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  /* Logo kim loại trên điện thoại */
-  .brand { 
-    font-size: 1.1rem; 
-    font-weight: 800; 
-    background: linear-gradient(to right, #ffffff, #94a3b8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .brand span {
-    color: #3b82f6;
-    -webkit-text-fill-color: #3b82f6;
-    text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
-  }
-
-  /* Nút Update Premium trên điện thoại */
-  #updateBtn { 
-    display: none; /* Ẩn nút update trên header mobile theo bản gốc của bạn */
-  }
-
-  .container { 
-    padding-top: 70px !important; /* Thay vì 10px, hãy dùng khoảng 50px-55px */
-    margin-top: 0; 
-  } 
-  .grid { grid-template-columns: 1fr; gap: 0.8rem; } 
-  .card-value { font-size: 1.5rem; } 
+.chart-container {
+  background: var(--card-bg); border-radius: 16px; padding: 24px; margin-bottom: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border-color);
 }
+.chart-scroll-container {
+  width: 100%; overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: thin; scrollbar-color: var(--accent-color) var(--border-color);
+  border-radius: 8px;
+}
+.chart-scroll-container::-webkit-scrollbar { height: 6px; }
+.chart-scroll-container::-webkit-scrollbar-track { background: var(--border-color); border-radius: 4px; }
+.chart-scroll-container::-webkit-scrollbar-thumb { background: var(--accent-color); border-radius: 4px; }
 
-/* --- CÁC THÀNH PHẦN KHÁC --- */
-.container { width: 100%; max-width: 1200px; margin: 0 auto; background: var(--bg-color); min-height: 100vh; padding: 80px 15px 3rem 15px; box-sizing: border-box; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-.card { background: var(--card-bg); border-radius: 16px; padding: 1.5rem; border: 1px solid var(--border-color); transition: 0.3s; }
-.card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
-.card.highlight { border-left: 4px solid var(--accent-color); }
-.card-title { font-size: 0.75rem; color: var(--secondary-text); text-transform: uppercase; font-weight: 700; }
-.card-value { font-size: 1.875rem; font-weight: 800; margin-top: 0.5rem; }
-.sjc-sub { font-size: 0.875rem; margin-top: 0.25rem; display: flex; align-items: center; gap: 4px; }
-.change-up { color: var(--up-color); } .change-down { color: var(--down-color); }
+/* Wrapper cho biểu đồ kéo dài */
+.chart-inner-wrapper { position: relative; height: 350px; }
 
-#filterBox { display: none; background: white; padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 1.5rem; gap: 10px; align-items: center; flex-wrap: wrap; }
-input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
-.btn-filter, .btn-delete-multi { border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; color: white; transition: 0.2s; }
-.btn-filter { background: var(--accent-color); } 
-.btn-delete-multi { background: #f97316; } .btn-delete-multi:hover { background: #ea580c; }
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.section-title { font-size: 18px; font-weight: 700; color: var(--primary-text); display: flex; align-items: center; gap: 8px; }
+.btn-toggle {
+  background: var(--bg-color); border: 1px solid var(--border-color); color: var(--primary-text);
+  width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-weight: bold;
+  display: flex; align-items: center; justify-content: center; transition: 0.2s;
+}
+.btn-toggle:hover { background: var(--border-color); }
 
-.table-wrapper { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto; margin-bottom: 2rem; }
-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; min-width: 600px; }
-th { background: #f1f5f9; padding: 14px 16px; text-align: right; color: var(--secondary-text); }
-td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; }
+.filter-box {
+  display: none; flex-wrap: wrap; gap: 12px; background: var(--bg-color);
+  padding: 16px; border-radius: 12px; margin-bottom: 16px; border: 1px solid var(--border-color);
+}
+.filter-box input {
+  padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;
+  font-family: inherit; font-size: 14px; outline: none; background: var(--card-bg);
+}
+.filter-box input:focus { border-color: var(--accent-color); }
+.btn {
+  padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px;
+}
+.btn-primary { background: var(--accent-color); color: white; }
+.btn-primary:hover { background: #2563eb; }
+.btn-danger { background: #fee2e2; color: var(--down-color); border: 1px solid #fca5a5; }
+.btn-danger:hover { background: #fecaca; }
+
+.table-wrapper { background: var(--card-bg); border-radius: 16px; overflow: hidden; border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+table { width: 100%; border-collapse: collapse; text-align: right; }
+th, td { padding: 16px; border-bottom: 1px solid var(--border-color); font-size: 14px; }
+th { background: #f8fafc; color: var(--secondary-text); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; font-size: 12px; position: sticky; top: 0; z-index: 10; }
 th:first-child, td:first-child { text-align: left; }
-.badge { padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
+tr:hover { background: #f1f5f9; }
+.badge { padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 13px; display: inline-block; }
 .badge-up { background: rgba(16, 185, 129, 0.1); color: var(--up-color); }
 .badge-down { background: rgba(239, 68, 68, 0.1); color: var(--down-color); }
-.col-action { display: none; text-align: center; }
-.log-checkbox, #selectAll { width: 16px; height: 16px; cursor: pointer; }
+input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--down-color); cursor: pointer; }
 
-.pagination { display: flex; justify-content: center; gap: 8px; padding: 15px; border-top: 1px solid var(--border-color); }
-.page-btn { padding: 6px 12px; border: 1px solid var(--border-color); background: var(--card-bg); border-radius: 6px; cursor: pointer; color: var(--primary-text); font-weight: 600; transition: 0.2s;}
+.pagination { display: flex; justify-content: center; gap: 8px; padding: 20px; background: var(--card-bg); border-top: 1px solid var(--border-color); }
+.page-btn {
+  padding: 8px 14px; border: 1px solid var(--border-color); background: white;
+  border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--secondary-text); transition: 0.2s;
+}
 .page-btn.active { background: var(--accent-color); color: white; border-color: var(--accent-color); }
-.page-btn:hover:not(:disabled):not(.active) { background: #f1f5f9; }
+.page-btn:hover:not(.active):not(:disabled) { background: #f1f5f9; }
 .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.chart-card { padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); }
-.chart-scroll-container { width: 100%; overflow-x: auto; margin-top: 1rem; }
-/* Mặc định cho máy tính */
-.chart-inner-wrapper { min-width: 800px; height: 320px; }
-
-/* Tối ưu riêng cho điện thoại */
+/* Tối ưu Mobile */
 @media (max-width: 640px) {
+  .header { padding: 20px 16px; }
+  .header h1 { font-size: 20px; }
+  .container { padding: 12px; }
+  .card { padding: 16px; }
+  .card-value { font-size: 24px; }
+  .filter-box { flex-direction: column; }
+  .filter-box input, .filter-box button { width: 100%; box-sizing: border-box; }
+  th, td { padding: 12px 8px; font-size: 13px; }
+  .badge { font-size: 12px; padding: 2px 6px; }
   .chart-inner-wrapper { 
-        height: 280px !important;    /* Giảm chiều cao một chút để cân đối trên mobile */
+    height: 280px !important; 
+    /* ĐÃ XÓA min-width: 100% ĐỂ BIỂU ĐỒ TRƯỢT ĐƯỢC */
   }
 }
 </style>
 </head>
 <body>
-
-<header>
-  <div class="brand"><span>📊</span> XAU DASHBOARD</div>
-  <button id="updateBtn" onclick="load()">UPDATE</button>
-</header>
+<div class="header">
+  <h1>XAU PRO DASHBOARD</h1>
+  <p id="lastTime">Đang kết nối...</p>
+</div>
 
 <div class="container">
-  <div id="lastTime" style="margin-bottom:1rem; font-size:0.875rem; color:#64748b; font-weight: 500;">Đang kết nối...</div>
-
   <div class="grid">
-    <div class="card"><div class="card-title">💵 USD Exchange</div><div id="usd" class="card-value">--</div></div>
-    <div class="card highlight"><div class="card-title">🌍 Global XAU (oz)</div><div id="xau" class="card-value">--</div></div>
-    <div class="card highlight"><div class="card-title">🧈 SJC Gold </div><div id="sjc" class="card-value">--</div></div>
-    <div class="card"><div class="card-title">⚖️ Market Gap</div><div id="diff" class="card-value">--</div></div>
-    <div class="card"><div class="card-title">📊 DIFF %</div><div id="percent" class="card-value">--</div></div>
+    <div class="card">
+      <div class="card-title">💵 Tỷ Giá USD (VCB)</div>
+      <div class="card-value" id="usd">--</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🌍 Vàng TG (USD/oz)</div>
+      <div class="card-value" id="xau">--</div>
+    </div>
+    <div class="card" style="border: 2px solid var(--accent-color);">
+      <div class="card-title">🇻🇳 Vàng SJC (VND/Lượng)</div>
+      <div class="card-value" id="sjc" style="flex-direction: column; align-items: flex-start; gap: 4px;">--</div>
+    </div>
   </div>
 
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-    <div style="font-size: 1.2rem; font-weight: 700;">Query History</div>
-    <button onclick="toggleFilterBox()" id="toggleBtn" style="background:transparent; border:none; font-size:1.8rem; cursor:pointer; color:#64748b;">+</button>
+  <div class="chart-container">
+    <div class="section-header">
+      <div class="section-title">📉 Biểu Đồ Chênh Lệch (Gap)</div>
+      <div style="font-size: 20px; font-weight: 800; color: var(--accent-color);" id="diff">--</div>
+    </div>
+    <div class="chart-scroll-container">
+      <div class="chart-inner-wrapper">
+        <canvas id="gapChart"></canvas>
+      </div>
+    </div>
   </div>
 
-  <div id="filterBox">
-    <input type="date" id="startDate" title="Từ ngày">
-    <span style="color: var(--secondary-text); font-weight: bold;">-</span>
-    <input type="date" id="endDate" title="Đến ngày">
-    <button class="btn-filter" onclick="applyFilter()">Apply</button>
-    <button class="btn-delete-multi" onclick="deleteSelected()">Clear</button>
+  <div class="section-header">
+    <div class="section-title">
+      <button class="btn-toggle" id="toggleBtn" onclick="toggleFilterBox()">+</button>
+      Lịch Sử Biến Động
+    </div>
+    <button class="btn btn-primary" id="updateBtn">Làm Mới (F5)</button>
+  </div>
+
+  <div class="filter-box" id="filterBox">
+    <input type="date" id="startDate" placeholder="Từ ngày">
+    <input type="date" id="endDate" placeholder="Đến ngày">
+    <button class="btn btn-primary" onclick="applyFilter()">Lọc</button>
+    <button class="btn btn-danger" onclick="deleteSelected()" style="margin-left: auto;">Xóa Chọn</button>
   </div>
 
   <div class="table-wrapper">
     <table>
       <thead>
         <tr>
-          <th>Time</th><th>XAU ($)</th><th>SJC (VND)</th><th>Gap (VND)</th><th>%</th>
-          <th id="actionHeader" class="col-action" style="text-align: center;">
-            <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)" title="Chọn tất cả">
+          <th>Thời gian</th><th>XAU</th><th>SJC</th><th>Gap</th><th>% Gap</th>
+          <th class="col-action" style="display: none; text-align: center;" id="actionHeader">
+            <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)">
           </th>
         </tr>
       </thead>
       <tbody id="history"></tbody>
     </table>
-    <div id="pagination" class="pagination" style="display: none;"></div>
-  </div>
-
-  <div class="chart-card">
-    <div style="font-size: 1.1rem; font-weight: 700;">📈 XAU-SJC Gap</div>
-    <div class="chart-scroll-container">
-      <div class="chart-inner-wrapper">
-        <canvas id="gapChart"></canvas>
-      </div>
-    </div>
+    <div class="pagination" id="pagination" style="display: none;"></div>
   </div>
 </div>
 
@@ -208,7 +207,7 @@ const HIST_API = "/api/history";
 const elements = {
   usd: document.getElementById("usd"), xau: document.getElementById("xau"),
   sjc: document.getElementById("sjc"), diff: document.getElementById("diff"),
-  percent: document.getElementById("percent"), lastTime: document.getElementById("lastTime"),
+  lastTime: document.getElementById("lastTime"),
   historyTable: document.getElementById("history"), filterBox: document.getElementById("filterBox"),
   startDate: document.getElementById("startDate"), endDate: document.getElementById("endDate"), toggleBtn: document.getElementById("toggleBtn"),
   actionHeader: document.getElementById("actionHeader"), pagination: document.getElementById("pagination")
@@ -224,24 +223,33 @@ let myChart = null;
 let isExpanded = false; 
 let currentPage = 1;
 
-/* ===== NHẬN REALTIME DỮ LIỆU TỪ SERVER MÀ KHÔNG CẦN RELOAD ===== */
+/* ===== NHẬN REALTIME (SSE) & TỐI ƯU GHI THẲNG VÀO RAM WEB ===== */
 const evtSource = new EventSource("/api/stream");
 evtSource.onmessage = (event) => {
   const d = JSON.parse(event.data);
   if (!d || Object.keys(d).length === 0) return;
   
-  // Hiệu ứng nháy màu báo có data mới
   elements.lastTime.style.color = "#10b981";
-  setTimeout(() => elements.lastTime.style.color = "#64748b", 2000);
+  setTimeout(() => elements.lastTime.style.color = "#cbd5e1", 2000);
   
   renderMain(d);
-  if (lastSJCValue === null || d.sjc !== lastSJCValue) {
+
+  if (lastSJCValue === null) {
     lastSJCValue = d.sjc;
     fetchHistory();
+  } else if (d.sjc !== lastSJCValue) {
+    lastSJCValue = d.sjc;
+    // TỐI ƯU CỰC MẠNH: Thêm phần tử vào đầu mảng thay vì tốn mạng gọi API tải lại
+    historyData.unshift({
+        createdAt: d.updatedAt, xau: d.xau, sjc: d.sjc, diff: d.diff, percent: d.percent,
+        _id: "temp_" + Date.now()
+    });
+    if (historyData.length > 100) historyData.pop(); 
+    applyFilter(); // Tự động vẽ lại bảng và biểu đồ
   }
 };
 
-/* ===== TẢI DỮ LIỆU (CÓ THỂ ÉP BUỘC SERVER CÀO LIỀN) ===== */
+/* ===== TẢI LẦN ĐẦU / ÉP TẢI ===== */
 async function load(isForce = false) {
   try {
     const forceParam = isForce ? "&force=true" : "";
@@ -249,7 +257,8 @@ async function load(isForce = false) {
     const d = await res.json();
     if (!d || Object.keys(d).length === 0) return;
     renderMain(d);
-    if (lastSJCValue === null || d.sjc !== lastSJCValue) {
+    
+    if (lastSJCValue === null) {
       lastSJCValue = d.sjc;
       await fetchHistory();
     }
@@ -259,25 +268,24 @@ async function load(isForce = false) {
 function renderMain(d) {
   elements.usd.innerText = fmtVND.format(d.usd);
   elements.xau.innerText = fmtXAU.format(d.xau);
-  elements.diff.innerText = fmtVND.format(d.diff);
-  elements.percent.innerText = d.percent;
+  elements.diff.innerText = fmtVND.format(d.diff) + " ₫ (" + d.percent + ")";
+  
   const key = "sjcMorning_" + new Date().toISOString().slice(0,10);
   let morning = localStorage.getItem(key) || localStorage.setItem(key, d.sjc) || d.sjc;
   const change = d.sjc - parseFloat(morning);
   const isUp = change >= 0;
+  
   elements.sjc.innerHTML = `<div>${fmtVND.format(d.sjc)}</div><div class="sjc-sub ${isUp ? 'change-up' : 'change-down'}">${isUp ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}</div>`;
   const updateTime = new Date(d.updatedAt);
   const timeStr = isNaN(updateTime) ? new Date().toLocaleTimeString('vi-VN') : updateTime.toLocaleTimeString('vi-VN');
-  elements.lastTime.innerHTML = `${d.status === "Delayed" ? "🟡 Tạm thời (Fallback)" : "🟢 Live"} - Cập nhật: ${timeStr}`;
+  elements.lastTime.innerHTML = `${d.status === "Delayed" ? "🟡 Tạm thời" : "🟢 Live"} - ${timeStr}`;
 }
 
 async function fetchHistory() {
   try {
     const res = await fetch(HIST_API);
     historyData = await res.json(); 
-    currentData = [...historyData]; 
-    renderTable(); 
-    updateChart(currentData);
+    applyFilter();
   } catch(e) { console.error(e); }
 }
 
@@ -295,6 +303,7 @@ function renderTable() {
   const displayData = currentData.slice(startIdx, endIdx);
   const displayStyle = isExpanded ? "table-cell" : "none";
   document.getElementById('selectAll').checked = false;
+  
   displayData.forEach(r => {
     const row = document.createElement("tr");
     row.innerHTML = `
@@ -317,22 +326,24 @@ function renderPagination() {
   if (!isExpanded || currentData.length <= 20) { pag.style.display = "none"; return; }
   pag.style.display = "flex"; pag.innerHTML = "";
   const totalPages = Math.ceil(currentData.length / 20);
+  
   const prevBtn = document.createElement("button");
-  prevBtn.className = "page-btn"; prevBtn.innerText = "« Trước";
+  prevBtn.className = "page-btn"; prevBtn.innerText = "«";
   prevBtn.disabled = currentPage === 1;
   prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; renderTable(); } };
   pag.appendChild(prevBtn);
+  
   let startPage = Math.max(1, currentPage - 2);
   let endPage = Math.min(totalPages, startPage + 4);
-  if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
   for (let i = startPage; i <= endPage; i++) {
     const btn = document.createElement("button");
     btn.className = `page-btn ${i === currentPage ? "active" : ""}`; btn.innerText = i;
     btn.onclick = () => { currentPage = i; renderTable(); };
     pag.appendChild(btn);
   }
+  
   const nextBtn = document.createElement("button");
-  nextBtn.className = "page-btn"; nextBtn.innerText = "Sau »";
+  nextBtn.className = "page-btn"; nextBtn.innerText = "»";
   nextBtn.disabled = currentPage === totalPages;
   nextBtn.onclick = () => { if (currentPage < totalPages) { currentPage++; renderTable(); } };
   pag.appendChild(nextBtn);
@@ -366,42 +377,52 @@ function applyFilter() {
 }
 
 function toggleSelectAll(source) {
-  const checkboxes = document.querySelectorAll('.log-checkbox');
-  checkboxes.forEach(cb => cb.checked = source.checked);
+  document.querySelectorAll('.log-checkbox').forEach(cb => cb.checked = source.checked);
 }
 
 async function deleteSelected() {
   const checkedBoxes = document.querySelectorAll('.log-checkbox:checked');
-  if (checkedBoxes.length === 0) { alert("Vui lòng tích chọn ít nhất 1 dòng để xóa."); return; }
-  if (!confirm(`Bạn có chắc chắn muốn xóa ${checkedBoxes.length} bản ghi đã chọn?`)) return;
+  if (checkedBoxes.length === 0) return;
+  if (!confirm(`Xóa ${checkedBoxes.length} bản ghi?`)) return;
   const ids = Array.from(checkedBoxes).map(cb => cb.value);
   try {
     const res = await fetch('/api/history/bulk-delete', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids: ids })
     });
-    if (res.ok) await fetchHistory(); else alert("Lỗi khi xóa dữ liệu!");
-  } catch(e) { console.error(e); alert("Lỗi mạng!"); }
+    if (res.ok) { lastSJCValue = null; await load(); }
+  } catch(e) {}
 }
 
+/* ===== BIỂU ĐỒ (TỐI ƯU GIAO DIỆN & TRƯỢT NGANG 10 ĐIỂM) ===== */
 function updateChart(data) {
+  // Nếu Chart.js chưa tải xong qua defer, đợi 100ms thử lại
+  if (typeof Chart === 'undefined') {
+    setTimeout(() => updateChart(data), 100);
+    return;
+  }
+  
   const chartCanvas = document.getElementById('gapChart');
   const ctx = chartCanvas.getContext('2d');
   const reversedData = [...data].reverse();
   const totalPoints = reversedData.length;
 
-  // Cấu hình: Hiển thị đúng 10 điểm trên một chiều rộng màn hình
+  // Tính chiều rộng 10 điểm = 100% màn hình
   const pointsOnScreen = 10;
   const dynamicWidth = Math.max(100, (totalPoints / pointsOnScreen) * 100);
   
-  // Ép chiều rộng wrapper để tạo thanh cuộn ngang
+  // ÉP BUỘC CHIỀU RỘNG CHART ĐỂ TẠO THANH CUỘN (Tối ưu Mobile)
   const wrapper = chartCanvas.parentElement;
   wrapper.style.setProperty('width', dynamicWidth + '%', 'important');
   wrapper.style.setProperty('min-width', dynamicWidth + '%', 'important');
 
   const labels = reversedData.map(r => {
     const d = new Date(r.createdAt);
-    return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    if (isNaN(d)) return '';
+    return [
+      d.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' }),
+      d.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit' })
+    ];
   });
   const gaps = reversedData.map(r => r.diff / 1000000);
 
@@ -416,90 +437,62 @@ function updateChart(data) {
         labels: labels,
         datasets: [{
           data: gaps,
-          borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          borderWidth: 2,
-          fill: true,
-          tension: 0.3,
-          pointRadius: 3
+          borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderWidth: 2, fill: true, tension: 0.3, pointRadius: 4, hitRadius: 20
         }]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
           y: {
-            // Tự động điều chỉnh khoảng giá trị dựa trên dữ liệu (Tối giản)
             beginAtZero: false,
             ticks: {
-              maxTicksLimit: 6, // Chỉ hiển thị tối đa 6 mốc giá trị để cột Y không bị dày
-              callback: (val) => val.toFixed(1) + 'M',
-              color: '#64748b',
-              font: { size: 11 }
+              maxTicksLimit: 6, // Chỉ hiện tối đa 6 mốc giá để không bị rối mắt
+              callback: val => val.toFixed(1) + 'M',
+              color: '#64748b', font: { size: 11, weight: '600' }
             },
             grid: { color: 'rgba(226, 232, 240, 0.6)' }
           },
           x: {
-            ticks: { autoSkip: false, color: '#64748b', font: { size: 10 } },
+            ticks: { autoSkip: false, color: '#64748b', font: { size: 9 }, maxRotation: 0 },
             grid: { display: false }
           }
         }
       }
     });
   }
-  // Cuộn về phía dữ liệu mới nhất (bên phải cùng)
-  const container = document.querySelector('.chart-scroll-container');
-  setTimeout(() => { container.scrollLeft = container.scrollWidth; }, 200);
+  
+  // Tự động kéo thanh cuộn về điểm mới nhất
+  const scroller = document.querySelector('.chart-scroll-container');
+  setTimeout(() => { scroller.scrollLeft = scroller.scrollWidth; }, 150);
 }
 
-/* KHỞI CHẠY LẦN ĐẦU (F5) SẼ YÊU CẦU SERVER ÉP CÀO LẠI (FORCE = TRUE) */
-load(true);
-
-/* Đổi nút button Update chạy thành Force Mode: onclick="load(true)" (Hãy cập nhật html phía trên) */
 document.getElementById("updateBtn").onclick = () => load(true);
 
-
-/* ===== HIỆU ỨNG PULL TO REFRESH ===== */
+/* ===== PULL TO REFRESH ===== */
 const style = document.createElement('style');
 style.innerHTML = `
   .cyber-pull-container {
     position: fixed; top: -80px; left: 50%; transform: translateX(-50%);
     display: flex; align-items: center; gap: 15px;
     background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px);
-    padding: 12px 24px; border-radius: 40px;
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    z-index: 9999;
+    padding: 12px 24px; border-radius: 40px; border: 1px solid rgba(59, 130, 246, 0.3);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); z-index: 9999;
     transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s, box-shadow 0.3s;
     pointer-events: none;
   }
-  .cyber-pull-container.ready {
-    border-color: rgba(16, 185, 129, 0.8); box-shadow: 0 0 25px rgba(16, 185, 129, 0.2);
-  }
+  .cyber-pull-container.ready { border-color: rgba(16, 185, 129, 0.8); box-shadow: 0 0 25px rgba(16, 185, 129, 0.2); }
   .pulse-bars { display: flex; gap: 4px; align-items: flex-end; height: 24px; }
-  .pulse-bar {
-    width: 5px; height: 4px; border-radius: 2px;
-    background: #3b82f6; transition: background 0.3s;
-  }
+  .pulse-bar { width: 5px; height: 4px; border-radius: 2px; background: #3b82f6; transition: background 0.3s; }
   .cyber-pull-container.ready .pulse-bar { background: #10b981; }
-  .cyber-pull-container.refreshing .pulse-bar {
-    background: #10b981; animation: pulseWave 0.5s ease-in-out infinite alternate;
-  }
+  .cyber-pull-container.refreshing .pulse-bar { background: #10b981; animation: pulseWave 0.5s ease-in-out infinite alternate; }
   .cyber-pull-container.refreshing .pulse-bar:nth-child(1) { animation-delay: 0.0s; }
   .cyber-pull-container.refreshing .pulse-bar:nth-child(2) { animation-delay: 0.1s; }
   .cyber-pull-container.refreshing .pulse-bar:nth-child(3) { animation-delay: 0.2s; }
   .cyber-pull-container.refreshing .pulse-bar:nth-child(4) { animation-delay: 0.3s; }
-
-  @keyframes pulseWave {
-    0% { height: 4px; box-shadow: none; }
-    100% { height: 24px; box-shadow: 0 0 10px #10b981; }
-  }
-
-  .cyber-text {
-    color: #94a3b8; font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif;
-    transition: color 0.3s;
-  }
+  @keyframes pulseWave { 0% { height: 4px; } 100% { height: 24px; box-shadow: 0 0 10px #10b981; } }
+  .cyber-text { color: #94a3b8; font-size: 14px; font-weight: 600; transition: color 0.3s; }
   .cyber-pull-container.ready .cyber-text { color: #10b981; text-shadow: 0 0 8px rgba(16,185,129,0.4); }
 `;
 document.head.appendChild(style);
@@ -511,19 +504,13 @@ pullContainer.innerHTML = `
     <div class="pulse-bar" id="bar1"></div><div class="pulse-bar" id="bar2"></div>
     <div class="pulse-bar" id="bar3"></div><div class="pulse-bar" id="bar4"></div>
   </div>
-  <div class="cyber-text">Đồng bộ dữ liệu...</div>
+  <div class="cyber-text">Đồng bộ...</div>
 `;
 document.body.appendChild(pullContainer);
 
-let startY = 0; 
-let isPulling = false;
-let isRefreshing = false;
-const pullThreshold = 120; 
-const textEl = pullContainer.querySelector('.cyber-text');
-const bars = [
-  document.getElementById('bar1'), document.getElementById('bar2'),
-  document.getElementById('bar3'), document.getElementById('bar4')
-];
+let startY = 0, isPulling = false, isRefreshing = false;
+const pullThreshold = 120, textEl = pullContainer.querySelector('.cyber-text');
+const bars = [ document.getElementById('bar1'), document.getElementById('bar2'), document.getElementById('bar3'), document.getElementById('bar4') ];
 const targetHeights = [12, 24, 16, 20]; 
 
 window.addEventListener("touchstart", (e) => { 
@@ -533,22 +520,13 @@ window.addEventListener("touchstart", (e) => {
 window.addEventListener("touchmove", (e) => {
   if (!isPulling || isRefreshing) return;
   const diff = e.touches[0].clientY - startY;
-  
   if (diff > 0 && window.scrollY <= 0) {
     if (e.cancelable) e.preventDefault();
-    const moveY = Math.min(diff * 0.4, 90); 
-    pullContainer.style.top = `${-80 + moveY}px`;
+    pullContainer.style.top = `${-80 + Math.min(diff * 0.4, 90)}px`;
     const pullRatio = Math.min(diff / pullThreshold, 1);
-    
-    bars.forEach((bar, index) => {
-      bar.style.height = `${4 + (targetHeights[index] - 4) * pullRatio}px`;
-    });
-    
-    if (diff > pullThreshold) {
-      pullContainer.classList.add('ready'); textEl.innerText = "Thả tay để tải mới!";
-    } else {
-      pullContainer.classList.remove('ready'); textEl.innerText = "Kéo thêm chút nữa...";
-    }
+    bars.forEach((bar, index) => bar.style.height = `${4 + (targetHeights[index] - 4) * pullRatio}px`);
+    if (diff > pullThreshold) { pullContainer.classList.add('ready'); textEl.innerText = "Thả tay để tải mới!"; } 
+    else { pullContainer.classList.remove('ready'); textEl.innerText = "Kéo thêm chút nữa..."; }
   }
 }, { passive: false });
 
@@ -556,34 +534,26 @@ window.addEventListener("touchend", (e) => {
   if (!isPulling || isRefreshing) return;
   isPulling = false;
   const diff = e.changedTouches[0].clientY - startY;
-  
   bars.forEach(bar => bar.style.height = '');
-  
   if (diff > pullThreshold) {
     isRefreshing = true;
-    pullContainer.classList.remove('ready');
-    pullContainer.classList.add('refreshing');
-    pullContainer.style.top = "20px"; 
-    textEl.innerText = "Updating...";
+    pullContainer.classList.remove('ready'); pullContainer.classList.add('refreshing');
+    pullContainer.style.top = "20px"; textEl.innerText = "Updating...";
     
-    // Yêu cầu tải dữ liệu dạng FORCE (ép gọi updateData)
     load(true).then(() => {
       textEl.innerText = "Success!";
-      pullContainer.classList.remove('refreshing');
-      pullContainer.classList.add('ready');
+      pullContainer.classList.remove('refreshing'); pullContainer.classList.add('ready');
       bars.forEach((bar, idx) => bar.style.height = `${targetHeights[idx]}px`);
-      
       setTimeout(() => { 
         pullContainer.style.top = "-80px"; 
-        setTimeout(() => { 
-          isRefreshing = false; pullContainer.classList.remove('ready');
-        }, 300);
-      }, 1200);
+        setTimeout(() => { isRefreshing = false; pullContainer.classList.remove('ready'); }, 300);
+      }, 1000);
     });
-  } else {
-    pullContainer.style.top = "-80px";
-  }
+  } else { pullContainer.style.top = "-80px"; }
 });
+
+// Chạy lần đầu khi mở web
+window.addEventListener('DOMContentLoaded', () => load(true));
 </script>
 </body>
 </html>
