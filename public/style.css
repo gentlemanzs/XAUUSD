@@ -91,8 +91,8 @@ header {
 #filterBox { display: none; background: white; padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 1.5rem; gap: 10px; align-items: center; flex-wrap: wrap; }
 input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
 .btn-filter, .btn-delete-multi { border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; color: white; transition: 0.2s; }
-.btn-filter { background: var(--accent-color); } 
-.btn-delete-multi { background: #f97316; } .btn-delete-multi:hover { background: #ea580c; }
+.btn-filter { background: #475569; } 
+.btn-delete-multi { background: #475569; } .btn-delete-multi:hover { background: #5a5958; }
 
 .table-wrapper { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto; margin-bottom: 2rem; }
 table { width: 100%; border-collapse: collapse; font-size: 0.95rem; min-width: 600px; }
@@ -100,8 +100,8 @@ th { background: #f1f5f9; padding: 14px 16px; text-align: right; color: var(--se
 td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; }
 th:first-child, td:first-child { text-align: left; }
 .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
-.badge-up { background: rgba(16, 185, 129, 0.1); color: var(--up-color); }
-.badge-down { background: rgba(239, 68, 68, 0.1); color: var(--down-color); }
+.badge-up { background: rgba(251, 252, 251, 0.1); color: #000408 ; }
+.badge-down { background: rgba(255, 255, 255, 0.1); color: #000408; }
 .col-action { display: none; text-align: center; }
 .log-checkbox, #selectAll { width: 16px; height: 16px; cursor: pointer; }
 
