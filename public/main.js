@@ -22,11 +22,16 @@ let currentPage = 1;
 // Thêm đoạn này vào để chống spam API
 let historyTimeout;
 
-function safeFetchHistory() {
+function safeFetchHistory(isInit = false) {
   clearTimeout(historyTimeout);
+  // Nếu là lần tải trang đầu tiên, bỏ qua bộ đếm thời gian
+  if (isInit) {
+    fetchHistory();
+    return;
+  }
   historyTimeout = setTimeout(() => {
     fetchHistory();
-  }, 300); // 300ms là đủ
+  }, 100);
 }
 
 const dateCache = new Map();
@@ -42,24 +47,32 @@ evtSource.onmessage = (event) => {
   
   renderMain(d);
   if (lastSJCValue === null || d.sjc !== lastSJCValue) {
-    lastSJCValue = d.sjc;
-    safeFetchHistory();
-  }
+  const isFirstLoad = lastSJCValue === null;
+  lastSJCValue = d.sjc;
+  safeFetchHistory(isFirstLoad); // Truyền cờ isFirstLoad vào
+}
 };
 
 /* ===== TẢI DỮ LIỆU (CÓ THỂ ÉP BUỘC SERVER CÀO LIỀN) ===== */
-async function load(isForce = false) {
+async function load() {
   try {
-    const forceParam = isForce ? "&force=true" : "";
-    const res = await fetch(`${API}?t=${Date.now()}${forceParam}`);
+    // Chỉ gọi API với timestamp để chống trình duyệt lưu cache
+    const res = await fetch(`${API}?t=${Date.now()}`);
     const d = await res.json();
+    
     if (!d || Object.keys(d).length === 0) return;
+    
     renderMain(d);
+    
+    // Logic cập nhật dữ liệu và gọi history
     if (lastSJCValue === null || d.sjc !== lastSJCValue) {
+      const isFirstLoad = lastSJCValue === null;
       lastSJCValue = d.sjc;
-      safeFetchHistory();
+      safeFetchHistory(isFirstLoad);
     }
-  } catch(e) { console.error(e); }
+  } catch(e) { 
+    console.error(e); 
+  }
 }
 
 function renderMain(d) {
@@ -356,7 +369,7 @@ function updateChart(data) {
 }
 
 /* KHỞI CHẠY LẦN ĐẦU (F5) SẼ YÊU CẦU SERVER ÉP CÀO LẠI (FORCE = TRUE) */
-load(true);
+load();
 
 
 
