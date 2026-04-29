@@ -167,6 +167,15 @@ function applyFilter() {
   renderTable(); 
   updateChart(currentData);
 }
+// Hàm Bỏ lọc (Xóa trắng ngày tháng và hiển thị lại toàn bộ dữ liệu)
+function resetFilter() {
+  elements.startDate.value = "";
+  elements.endDate.value = "";
+  currentData = [...historyData]; // Trả lại dữ liệu gốc
+  currentPage = 1; 
+  renderTable(); 
+  updateChart(currentData);
+}
 
 function toggleSelectAll(source) {
   const checkboxes = document.querySelectorAll('.log-checkbox');
@@ -193,14 +202,23 @@ function updateChart(data) {
   const reversedData = [...data].reverse();
   const totalPoints = reversedData.length;
 
-  // Cấu hình: Hiển thị đúng 10 điểm trên một chiều rộng màn hình
-  const pointsOnScreen = 10;
-  const dynamicWidth = Math.max(100, (totalPoints / pointsOnScreen) * 100);
-  
-  // Ép chiều rộng wrapper để tạo thanh cuộn ngang
   const wrapper = chartCanvas.parentElement;
-  wrapper.style.setProperty('width', dynamicWidth + '%', 'important');
-  wrapper.style.setProperty('min-width', dynamicWidth + '%', 'important');
+  const scrollContainer = document.querySelector('.chart-scroll-container');
+  const containerWidth = scrollContainer.clientWidth || window.innerWidth;
+
+  // 75px tương đương tối đa 2cm khoảng cách giữa các điểm
+  const minWidthPerPoint = 75; 
+  const calculatedWidth = totalPoints * minWidthPerPoint;
+
+  // Nếu số điểm quá nhiều làm biểu đồ dài hơn màn hình -> Bật thanh cuộn ngang
+  if (calculatedWidth > containerWidth) {
+    wrapper.style.setProperty('width', calculatedWidth + 'px', 'important');
+    wrapper.style.setProperty('min-width', calculatedWidth + 'px', 'important');
+  } else {
+    // Nếu ít điểm -> Cho biểu đồ giãn đều 100% màn hình
+    wrapper.style.setProperty('width', '100%', 'important');
+    wrapper.style.setProperty('min-width', '100%', 'important');
+  }
 
   const labels = reversedData.map(r => {
     const d = new Date(r.createdAt);
@@ -233,10 +251,9 @@ function updateChart(data) {
         plugins: { legend: { display: false } },
         scales: {
           y: {
-            // Tự động điều chỉnh khoảng giá trị dựa trên dữ liệu (Tối giản)
             beginAtZero: false,
             ticks: {
-              maxTicksLimit: 6, // Chỉ hiển thị tối đa 6 mốc giá trị để cột Y không bị dày
+              maxTicksLimit: 6,
               callback: (val) => val.toFixed(1) + 'M',
               color: '#64748b',
               font: { size: 11 }
@@ -251,7 +268,8 @@ function updateChart(data) {
       }
     });
   }
-  // Cuộn về phía dữ liệu mới nhất (bên phải cùng)
+  
+  // Tự động cuộn sang bên phải cùng để xem dữ liệu mới nhất
   const container = document.querySelector('.chart-scroll-container');
   setTimeout(() => { container.scrollLeft = container.scrollWidth; }, 200);
 }
