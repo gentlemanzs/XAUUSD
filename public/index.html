@@ -141,8 +141,7 @@ th:first-child, td:first-child { text-align: left; }
 /* Tối ưu riêng cho điện thoại */
 @media (max-width: 640px) {
   .chart-inner-wrapper { 
-    min-width: 100% !important; /* Ép khung biểu đồ không được rộng quá màn hình */
-    height: 250px !important;    /* Giảm chiều cao một chút để cân đối trên mobile */
+        height: 250px !important;    /* Giảm chiều cao một chút để cân đối trên mobile */
   }
 }
 </style>
@@ -396,8 +395,9 @@ function updateChart(data) {
   // Tính toán chiều rộng container: nếu có 20 điểm thì rộng 200%, 30 điểm rộng 300%...
   const dynamicWidth = Math.max(100, (totalPoints / pointsOnScreen) * 100);
   
-  // Áp dụng độ rộng mới cho thẻ cha của canvas để tạo hiệu ứng cuộn
-  chartCanvas.parentElement.style.width = dynamicWidth + "%";
+  // ÉP BUỘC CHIỀU RỘNG MỚI (Thêm 2 dòng này)
+  chartCanvas.parentElement.style.setProperty('width', dynamicWidth + '%', 'important');
+  chartCanvas.parentElement.style.setProperty('min-width', dynamicWidth + '%', 'important');
 
   const labels = reversedData.map(r => {
     const d = new Date(r.createdAt);
