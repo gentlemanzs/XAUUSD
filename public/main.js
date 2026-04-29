@@ -387,3 +387,21 @@ window.addEventListener("touchend", (e) => {
     pullContainer.style.top = "-80px";
   }
 });
+// ... (code cũ) ...
+  } else {
+    pullContainer.style.top = "-80px";
+  }
+});
+
+/* ===== ĐĂNG KÝ PWA (SERVICE WORKER) ===== */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then((registration) => {
+        console.log('PWA Service Worker đăng ký thành công:', registration.scope);
+      })
+      .catch((error) => {
+        console.log('Lỗi đăng ký Service Worker:', error);
+      });
+  });
+}
