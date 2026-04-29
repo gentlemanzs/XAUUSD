@@ -369,8 +369,8 @@ window.addEventListener("touchend", (e) => {
     pullContainer.style.top = "20px"; 
     textEl.innerText = "Updating...";
     
-    // Yêu cầu tải dữ liệu dạng FORCE (ép gọi updateData)
-    load(true).then(() => {
+    // API giờ chỉ lấy RAM cache, không kích hoạt cào
+    load().then(() => {
       textEl.innerText = "Success!";
       pullContainer.classList.remove('refreshing');
       pullContainer.classList.add('ready');
@@ -387,8 +387,14 @@ window.addEventListener("touchend", (e) => {
     pullContainer.style.top = "-80px";
   }
 });
-// ... (code cũ) ...
-  } else {
-    pullContainer.style.top = "-80px";
-  }
-});
+
+/* ===== HỦY BỎ PWA (SERVICE WORKER) ĐỂ SỬA LỖI MẤT KẾT NỐI ===== */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for(let registration of registrations) {
+      registration.unregister(); 
+      console.log('Đã gỡ bỏ Service Worker thành công!');
+    }
+  });
+}
+
