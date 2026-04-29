@@ -206,25 +206,41 @@ function updateChart(data) {
   const scrollContainer = document.querySelector('.chart-scroll-container');
   const containerWidth = scrollContainer.clientWidth || window.innerWidth;
 
-  // 75px tương đương tối đa 2cm khoảng cách giữa các điểm
-  const minWidthPerPoint = 75; 
-  const calculatedWidth = totalPoints * minWidthPerPoint;
-
-  // Nếu số điểm quá nhiều làm biểu đồ dài hơn màn hình -> Bật thanh cuộn ngang
-  if (calculatedWidth > containerWidth) {
-    wrapper.style.setProperty('width', calculatedWidth + 'px', 'important');
-    wrapper.style.setProperty('min-width', calculatedWidth + 'px', 'important');
-  } else {
-    // Nếu ít điểm -> Cho biểu đồ giãn đều 100% màn hình
-    wrapper.style.setProperty('width', '100%', 'important');
-    wrapper.style.setProperty('min-width', '100%', 'important');
-  }
+  // 1. Cấu hình khoảng cách (Quy đổi cm ra pixel)
+  const maxSpacing = 110; // ~3cm (Khoảng cách lý tưởng khi ít điểm)
+  const minSpacing = 75;  // ~2cm (Khoảng cách ép nhỏ nhất khi nhiều điểm)
+  
+  // Tính số lượng điểm lý tưởng để lấp đầy màn hình mà không vượt quá 3cm/điểm
+  const minPointsToFill = Math.ceil(containerWidth / maxSpacing);
 
   const labels = reversedData.map(r => {
     const d = new Date(r.createdAt);
     return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
   });
   const gaps = reversedData.map(r => r.diff / 1000000);
+
+  // --- TRỊ BỆNH KÉO GIÃN: CHÈN ĐIỂM ẢO ---
+  // Nếu có dữ liệu nhưng lại quá ít (chưa đủ lấp đầy màn hình)
+  if (totalPoints > 0 && totalPoints < minPointsToFill) {
+    const padCount = minPointsToFill - totalPoints;
+    for (let i = 0; i < padCount; i++) {
+      labels.push(''); // Thêm nhãn rỗng để tạo ô lưới chạy dài sang phải
+      gaps.push(null); // Giá trị null để Chart.js không vẽ thêm đường thẳng
+    }
+  }
+
+  // 2. Tính toán chiều rộng để bật thanh cuộn (Dựa trên số điểm THẬT)
+  const calculatedWidth = totalPoints * minSpacing;
+
+  if (calculatedWidth > containerWidth) {
+    // Nếu dồn mỗi điểm 2cm rồi mà vẫn tràn -> Bật kích thước tuyệt đối để có thanh cuộn ngang
+    wrapper.style.setProperty('width', calculatedWidth + 'px', 'important');
+    wrapper.style.setProperty('min-width', calculatedWidth + 'px', 'important');
+  } else {
+    // Nếu số lượng điểm vừa phải -> Chiếm 100% màn hình
+    wrapper.style.setProperty('width', '100%', 'important');
+    wrapper.style.setProperty('min-width', '100%', 'important');
+  }
 
   if (myChart) {
     myChart.data.labels = labels;
@@ -269,7 +285,7 @@ function updateChart(data) {
     });
   }
   
-  // Tự động cuộn sang bên phải cùng để xem dữ liệu mới nhất
+  // Tự động cuộn sang bên phải cùng để luôn xem được dữ liệu mới nhất
   const container = document.querySelector('.chart-scroll-container');
   setTimeout(() => { container.scrollLeft = container.scrollWidth; }, 200);
 }
