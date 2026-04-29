@@ -192,8 +192,7 @@ async function updateData(triggerSource = "Tự động") {
     }
 
     // --- TÍNH TOÁN ---
-    const worldVND = xau * usd * (37.5 / 31.1035);
-    const diff = sjc - worldVND;
+        const diff = sjc - worldVND;
 
     // --- TÍNH TOÁN GAP HIỆN TẠI ---
     const worldVND = xau * usd * (37.5 / 31.1035);
