@@ -155,7 +155,7 @@ app.post("/api/history/bulk-delete", async (req, res) => {
 });
 
 /* ===== CRONJOB ===== */
-cron.schedule("*/5 * * * *", () => updateData("Cronjob"));
+cron.schedule("*/ * * * *", () => updateData("Cronjob"));
 
 /* ===== START ===== */
 app.listen(PORT, () => {
