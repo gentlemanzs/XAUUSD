@@ -10,8 +10,6 @@ app.use(compression());
 app.use(cors());
 app.use(express.json());
 
-// TỐI ƯU: Đưa file tĩnh vào thư mục public (Bạn cần tạo thư mục 'public' và cho index.html, style.css, main.js vào đây)
-// Nếu bạn vẫn để tất cả file ở thư mục gốc, hãy đổi thành app.use(express.static(__dirname));
 const path = require("path");
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -31,12 +29,17 @@ const HistorySchema = new mongoose.Schema({
 HistorySchema.index({ createdAt: -1 });
 const History = mongoose.model("History", HistorySchema);
 
-// Biến RAM Cache để không phải gọi Database liên tục
+// Biến RAM Cache tổng
 let latestData = null;
 let clients = []; 
 let isUpdating = false; 
 
-/* ===== FETCH HELPERS (Native Fetch Node 18+) ===== */
+// Biến RAM Cache riêng cho USD (1 tiếng)
+let cachedUsdRate = 1000;
+let lastUsdFetchTime = 0;
+const USD_CACHE_DURATION = 60 * 60 * 1000; // 1 tiếng tính bằng mili-giây
+
+/* ===== FETCH HELPERS ===== */
 async function fetchWithRetry(url, isJson = false) {
   try {
     const res = await fetch(url, {
@@ -51,36 +54,58 @@ async function fetchWithRetry(url, isJson = false) {
   }
 }
 
-/* ===== UPDATE LOGIC (CÀO DỮ LIỆU) ===== */
+/* ===== HÀM CÀO USD ĐỘC LẬP (CÓ CACHE 1 TIẾNG) ===== */
+async function getUsdRate() {
+  const now = Date.now();
+  // Nếu chưa qua 1 tiếng và đã có dữ liệu trước đó -> Trả về dữ liệu cũ luôn, không cần cào mạng
+  if (now - lastUsdFetchTime < USD_CACHE_DURATION && cachedUsdRate !== 1000) {
+    return cachedUsdRate;
+  }
+
+  // Đã qua 1 tiếng -> Cào XML từ VCB
+  const xml = await fetchWithRetry("https://portal.vietcombank.com.vn/Usercontrols/TVPortal.TyGia/pXML.aspx");
+  if (xml) {
+    // Bật chế độ xmlMode để cheerio đọc chính xác thẻ <Exrate>
+    const $ = cheerio.load(xml, { xmlMode: true });
+    // Lấy giá trị của thuộc tính Sell trong thẻ Exrate có CurrencyCode là USD
+    const sellStr = $('Exrate[CurrencyCode="USD"]').attr('Sell');
+    
+    if (sellStr) {
+      // Dữ liệu mẫu: "26,368.00" -> Xóa dấu phẩy và chuyển thành số nguyên/thập phân
+      const parsedRate = parseFloat(sellStr.replace(/,/g, ""));
+      if (!isNaN(parsedRate)) {
+        cachedUsdRate = parsedRate;
+        lastUsdFetchTime = now;
+        console.log(`   💵 Đã cập nhật tỷ giá USD mới từ VCB XML: ${cachedUsdRate}`);
+        return cachedUsdRate;
+      }
+    }
+  }
+  // Nếu lỗi mạng, trả về giá trị cache gần nhất
+  return cachedUsdRate; 
+}
+
+/* ===== UPDATE LOGIC (CÀO DỮ LIỆU CHÍNH) ===== */
 async function updateData(triggerSource = "Tự động") {
-  if (isUpdating) return; // Khóa chống cào đè
+  if (isUpdating) return; 
   isUpdating = true;
   try {
     console.log(`\n▶ [${triggerSource}] Bắt đầu cào dữ liệu lúc ${new Date().toLocaleTimeString('vi-VN')}`);
     
-    // Chạy song song 3 tác vụ cào để tăng tốc
-    const [htmlVCB, dataXAU, htmlSJC] = await Promise.all([
-      fetchWithRetry("https://webgia.com/ty-gia/vietcombank/"),
+    // Gọi song song 3 hàm lấy dữ liệu
+    const [usdRate, dataXAU, htmlSJC] = await Promise.all([
+      getUsdRate(), // Hàm này sẽ cực kỳ nhanh nếu đang trong thời gian 1 tiếng cache
       fetchWithRetry("https://api.gold-api.com/price/XAU", true),
       fetchWithRetry("https://webgia.com/gia-vang/sjc/")
     ]);
 
-    // Lấy dữ liệu cũ (từ RAM hoặc DB) để làm Fallback (Dự phòng)
     let lastRecord = latestData; 
     if (!lastRecord) {
       lastRecord = await History.findOne().sort({ createdAt: -1 }).lean();
     }
     
-    // Biến mặc định
-    let usd = 1000, xau = 2350, sjc = 0;
-
-    // --- Xử lý USD ---
-    if (htmlVCB) {
-      const $ = cheerio.load(htmlVCB);
-      // Cải thiện logic tìm kiếm ổn định hơn
-      const rate = $('td:contains("USD")').parent().find('td').last().text().trim();
-      usd = parseFloat(rate.replace(/\./g, "").replace(",", ".")) || 1000;
-    }
+    let usd = usdRate; // Sử dụng tỷ giá đã lấy được
+    let xau = 2350, sjc = 0;
     
     // --- Xử lý XAU ---
     xau = dataXAU?.price || 2350;
@@ -92,11 +117,10 @@ async function updateData(triggerSource = "Tự động") {
       sjc = (parseInt(priceText.replace(/\./g, ""), 10) * 10) || 0;
     }
 
-    // --- FALLBACK (KHI WEB LỖI HOẶC CHẶN BOT) ---
+    // --- FALLBACK ---
     if (sjc <= 0 && lastRecord) sjc = lastRecord.sjc;
     if (usd === 1000 && lastRecord) usd = lastRecord.usd;
 
-    // Lỗi hoàn toàn cả mạng lẫn database thì hủy phiên làm việc
     if (sjc <= 0 || xau <= 0) {
         console.log("❌ Lỗi nghiêm trọng: Không thể lấy dữ liệu và không có bản sao lưu.");
         return; 
@@ -119,14 +143,12 @@ async function updateData(triggerSource = "Tự động") {
     };
 
     // --- LƯU DATABASE ---
-    // Chỉ ghi vào DB nếu giá SJC thay đổi thực sự so với lần trước
     if (sjc > 0 && (!lastRecord || lastRecord.sjc !== sjc)) {
       const dbEntry = { ...latestData };
-      delete dbEntry.updatedAt; // Xóa key thừa
+      delete dbEntry.updatedAt; 
       await History.create(dbEntry);
       console.log(`   💾 DB: Đã lưu bản ghi SJC mới là ${sjc}`);
       
-      // Tự động dọn dẹp Database (Giữ lại 200 bản ghi mới nhất)
       const count = await History.countDocuments();
       if (count > 200) await History.findOneAndDelete({}, { sort: { createdAt: 1 } });
     } else {
@@ -140,14 +162,12 @@ async function updateData(triggerSource = "Tự động") {
   } catch (e) {
     console.log("❌ Lỗi hệ thống trong UpdateData:", e);
   } finally {
-    // Mở khóa phiên bản cào
     isUpdating = false;
   }
 }
 
 /* ===== API & SSE ===== */
 
-// Mở kết nối luồng (SSE)
 app.get("/api/stream", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -155,19 +175,14 @@ app.get("/api/stream", (req, res) => {
   
   clients.push(res);
   
-  // Nếu đã có dữ liệu trong RAM, gửi ngay cho client mới kết nối
   if (latestData) {
       res.write(`data: ${JSON.stringify(latestData)}\n\n`);
   }
 
-  // Xóa client khi mất kết nối (đóng tab)
   req.on("close", () => clients = clients.filter(c => c !== res));
 });
 
-// YÊU CẦU MỚI: API chỉ trả về dữ liệu tĩnh đang có, TUYỆT ĐỐI KHÔNG KÍCH HOẠT CÀO (Bỏ force update)
 app.get("/api/gold", async (req, res) => {
-    // Xóa bỏ hoàn toàn logic kiểm tra req.query.force
-    // Chỉ cần trả về dữ liệu cuối cùng nằm trong RAM
     res.json(latestData || {});
 });
 
@@ -185,12 +200,10 @@ app.post("/api/history/bulk-delete", async (req, res) => {
 });
 
 /* ===== CRONJOB (QUẢN LÝ LỊCH TRÌNH) ===== */
-// YÊU CẦU MỚI: Đổi lịch trình cào từ mỗi phút (*/1 * * * *) thành MỖI 5 PHÚT (*/5 * * * *)
 cron.schedule("*/5 * * * *", () => updateData("Cronjob 5 phút"));
 
 /* ===== START ===== */
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  // Lần khởi động server đầu tiên bắt buộc phải cào 1 lần để mồi dữ liệu
   updateData("Khởi động Server");
 });
