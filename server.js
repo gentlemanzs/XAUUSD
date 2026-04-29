@@ -207,7 +207,7 @@ async function updateData(triggerSource = "Tự động") {
     const referenceSJC = lastDayRecord ? lastDayRecord.sjc : sjc;
     const sjcChange = sjc - referenceSJC;
     // Lấy diff hiện tại trừ đi diff của bản ghi gần nhất trong lịch sử
-    const gapChange = Math.round(diff) - (lastRecord ? lastRecord.diff : Math.round(diff));
+    const gapChange = (lastRecord ? lastRecord.diff : Math.round(diff)) - Math.round(diff);
 
    // --- LƯU VÀO RAM CACHE ---
     latestData = {
