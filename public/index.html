@@ -225,9 +225,28 @@ let myChart = null;
 let isExpanded = false; 
 let currentPage = 1;
 
-async function load() {
+/* ===== NHẬN REALTIME DỮ LIỆU TỪ SERVER MÀ KHÔNG CẦN RELOAD ===== */
+const evtSource = new EventSource("/api/stream");
+evtSource.onmessage = (event) => {
+  const d = JSON.parse(event.data);
+  if (!d || Object.keys(d).length === 0) return;
+  
+  // Hiệu ứng nháy màu báo có data mới
+  elements.lastTime.style.color = "#10b981";
+  setTimeout(() => elements.lastTime.style.color = "#64748b", 2000);
+  
+  renderMain(d);
+  if (lastSJCValue === null || d.sjc !== lastSJCValue) {
+    lastSJCValue = d.sjc;
+    fetchHistory();
+  }
+};
+
+/* ===== TẢI DỮ LIỆU (CÓ THỂ ÉP BUỘC SERVER CÀO LIỀN) ===== */
+async function load(isForce = false) {
   try {
-    const res = await fetch(`${API}?t=${Date.now()}`);
+    const forceParam = isForce ? "&force=true" : "";
+    const res = await fetch(`${API}?t=${Date.now()}${forceParam}`);
     const d = await res.json();
     if (!d || Object.keys(d).length === 0) return;
     renderMain(d);
@@ -369,6 +388,7 @@ async function deleteSelected() {
 function updateChart(data) {
   const ctx = document.getElementById('gapChart').getContext('2d');
   const reversedData = [...data].reverse();
+  
   const labels = reversedData.map(r => {
     const d = new Date(r.createdAt);
     if (isNaN(d)) return '';
@@ -377,62 +397,78 @@ function updateChart(data) {
       d.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric' })
     ];
   });
+
+  // Chuyển đổi đơn vị sang Triệu đồng (M)
   const gaps = reversedData.map(r => r.diff / 1000000);
-  const currentLen = labels.length;
-  if (currentLen > 0 && currentLen < 20) {
-    const padCount = Math.ceil(currentLen / 2);
-    for (let i = 0; i < padCount; i++) { labels.push(''); gaps.push(null); }
-  }
+
   if (myChart) {
-    myChart.data.labels = labels; myChart.data.datasets[0].data = gaps; myChart.update();
+    myChart.data.labels = labels;
+    myChart.data.datasets[0].data = gaps;
+    myChart.update();
   } else {
     myChart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: labels,
-        // Tìm đoạn datasets trong hàm updateChart
-datasets: [{
-  label: 'Gap (M)', 
-  data: gaps, 
-  borderColor: '#3b82f6', 
-  backgroundColor: 'rgba(59, 130, 246, 0.1)',
-  borderWidth: 2,          // Giảm độ dày đường kẻ xuống 2 (thay vì 3)
-  fill: true, 
-  tension: 0.3, 
-  pointRadius: 3,         // Giảm kích thước điểm xuống 3 (thay vì 4)
-  hitRadius: 15,          // Tăng vùng chạm để dễ xem tooltip trên điện thoại
-  spanGaps: false 
-}]
+        datasets: [{
+          label: 'Gap (M)', 
+          data: gaps, 
+          borderColor: '#3b82f6', 
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderWidth: 2,          
+          fill: true, 
+          tension: 0.3, 
+          pointRadius: 3,         
+          hitRadius: 15
+        }]
       },
       options: { 
-  responsive: true, 
-  maintainAspectRatio: false, 
-  plugins: { 
-    legend: { display: false } 
-  },
-  scales: { 
-    y: { 
-      ticks: { 
-        callback: v => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(v) + 'M' 
+        responsive: true, 
+        maintainAspectRatio: false, 
+        plugins: { legend: { display: false } },
+        scales: { 
+          y: { 
+            min: 10, // Mốc bắt đầu là 10M
+            max: 30, // Mốc kết thúc là 30M
+            ticks: { 
+              stepSize: 1, // Khoảng cách giữa các mốc là 1M (10, 11, 12...)
+              callback: function(value) {
+                return value + 'M'; // Hậu tố M sau con số
+              },
+              color: '#64748b',
+              font: { size: 11 }
+            },
+            grid: {
+              color: 'rgba(226, 232, 240, 0.5)' // Làm mờ đường lưới để dễ nhìn
+            }
+          }, 
+          x: { 
+            ticks: { 
+              autoSkip: true, 
+              maxTicksLimit: 6, 
+              maxRotation: 0,
+              color: '#64748b',
+              font: { size: 10 }
+            },
+            grid: { display: false }
+          } 
+        } 
       } 
-    }, 
-    x: { 
-      ticks: { 
-        autoSkip: true,     // QUAN TRỌNG: Tự ẩn nhãn nếu màn hình quá hẹp
-        maxTicksLimit: 6,   // Giới hạn hiển thị khoảng 6 mốc thời gian để nhìn cho thoáng
-        maxRotation: 0      // Giữ chữ nằm ngang cho dễ đọc trên điện thoại
-      } 
-    } 
-  } 
-}
     });
   }
+  
   const scroller = document.querySelector('.chart-scroll-container');
   setTimeout(() => { scroller.scrollLeft = scroller.scrollWidth; }, 100);
 }
 
-load();
-/* ===== HIỆU ỨNG PULL TO REFRESH: NHỊP ĐẬP THỊ TRƯỜNG (CYBER PULSE) ===== */
+/* KHỞI CHẠY LẦN ĐẦU (F5) SẼ YÊU CẦU SERVER ÉP CÀO LẠI (FORCE = TRUE) */
+load(true);
+
+/* Đổi nút button Update chạy thành Force Mode: onclick="load(true)" (Hãy cập nhật html phía trên) */
+document.getElementById("updateBtn").onclick = () => load(true);
+
+
+/* ===== HIỆU ỨNG PULL TO REFRESH ===== */
 const style = document.createElement('style');
 style.innerHTML = `
   .cyber-pull-container {
@@ -446,29 +482,17 @@ style.innerHTML = `
     transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s, box-shadow 0.3s;
     pointer-events: none;
   }
-  
-  /* Trạng thái đã kéo đủ lực */
   .cyber-pull-container.ready {
-    border-color: rgba(16, 185, 129, 0.8);
-    box-shadow: 0 0 25px rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.8); box-shadow: 0 0 25px rgba(16, 185, 129, 0.2);
   }
-
-  .pulse-bars {
-    display: flex; gap: 4px; align-items: flex-end; height: 24px;
-  }
+  .pulse-bars { display: flex; gap: 4px; align-items: flex-end; height: 24px; }
   .pulse-bar {
     width: 5px; height: 4px; border-radius: 2px;
-    background: #3b82f6; 
-    transition: background 0.3s;
+    background: #3b82f6; transition: background 0.3s;
   }
-  
-  /* Đổi màu khi sẵn sàng */
   .cyber-pull-container.ready .pulse-bar { background: #10b981; }
-  
-  /* Animation khi đang tải */
   .cyber-pull-container.refreshing .pulse-bar {
-    background: #10b981;
-    animation: pulseWave 0.5s ease-in-out infinite alternate;
+    background: #10b981; animation: pulseWave 0.5s ease-in-out infinite alternate;
   }
   .cyber-pull-container.refreshing .pulse-bar:nth-child(1) { animation-delay: 0.0s; }
   .cyber-pull-container.refreshing .pulse-bar:nth-child(2) { animation-delay: 0.1s; }
@@ -488,71 +512,50 @@ style.innerHTML = `
 `;
 document.head.appendChild(style);
 
-// Tạo giao diện HTML
 const pullContainer = document.createElement("div");
 pullContainer.className = "cyber-pull-container";
 pullContainer.innerHTML = `
   <div class="pulse-bars">
-    <div class="pulse-bar" id="bar1"></div>
-    <div class="pulse-bar" id="bar2"></div>
-    <div class="pulse-bar" id="bar3"></div>
-    <div class="pulse-bar" id="bar4"></div>
+    <div class="pulse-bar" id="bar1"></div><div class="pulse-bar" id="bar2"></div>
+    <div class="pulse-bar" id="bar3"></div><div class="pulse-bar" id="bar4"></div>
   </div>
   <div class="cyber-text">Đồng bộ dữ liệu...</div>
 `;
 document.body.appendChild(pullContainer);
 
-// Logic kéo thả
 let startY = 0; 
 let isPulling = false;
 let isRefreshing = false;
-const pullThreshold = 120; // Độ dài kéo để kích hoạt
+const pullThreshold = 120; 
 const textEl = pullContainer.querySelector('.cyber-text');
 const bars = [
-  document.getElementById('bar1'),
-  document.getElementById('bar2'),
-  document.getElementById('bar3'),
-  document.getElementById('bar4')
+  document.getElementById('bar1'), document.getElementById('bar2'),
+  document.getElementById('bar3'), document.getElementById('bar4')
 ];
-
-// Chiều cao tối đa các cột sẽ đạt được khi kéo
 const targetHeights = [12, 24, 16, 20]; 
 
 window.addEventListener("touchstart", (e) => { 
-  if (window.scrollY <= 0 && !isRefreshing) { 
-    startY = e.touches[0].clientY; 
-    isPulling = true; 
-  } 
+  if (window.scrollY <= 0 && !isRefreshing) { startY = e.touches[0].clientY; isPulling = true; } 
 }, { passive: false });
 
 window.addEventListener("touchmove", (e) => {
   if (!isPulling || isRefreshing) return;
-  const currentY = e.touches[0].clientY;
-  const diff = currentY - startY;
+  const diff = e.touches[0].clientY - startY;
   
   if (diff > 0 && window.scrollY <= 0) {
     if (e.cancelable) e.preventDefault();
-    
-    // Kéo thẻ trượt xuống
     const moveY = Math.min(diff * 0.4, 90); 
     pullContainer.style.top = `${-80 + moveY}px`;
-    
-    // Tỷ lệ kéo (từ 0 đến 1)
     const pullRatio = Math.min(diff / pullThreshold, 1);
     
-    // Hiệu ứng ĐỘNG: Cột cao lên theo lực ngón tay
     bars.forEach((bar, index) => {
-      // Chiều cao cơ bản là 4px, cộng thêm phần trăm tăng trưởng
-      const height = 4 + (targetHeights[index] - 4) * pullRatio;
-      bar.style.height = `${height}px`;
+      bar.style.height = `${4 + (targetHeights[index] - 4) * pullRatio}px`;
     });
     
     if (diff > pullThreshold) {
-      pullContainer.classList.add('ready');
-      textEl.innerText = "Thả tay để tải mới!";
+      pullContainer.classList.add('ready'); textEl.innerText = "Thả tay để tải mới!";
     } else {
-      pullContainer.classList.remove('ready');
-      textEl.innerText = "Kéo thêm chút nữa...";
+      pullContainer.classList.remove('ready'); textEl.innerText = "Kéo thêm chút nữa...";
     }
   }
 }, { passive: false });
@@ -562,7 +565,6 @@ window.addEventListener("touchend", (e) => {
   isPulling = false;
   const diff = e.changedTouches[0].clientY - startY;
   
-  // Dọn dẹp style inline để CSS Animation có thể chạy
   bars.forEach(bar => bar.style.height = '');
   
   if (diff > pullThreshold) {
@@ -572,10 +574,9 @@ window.addEventListener("touchend", (e) => {
     pullContainer.style.top = "20px"; 
     textEl.innerText = "Updating...";
     
-    load().then(() => {
+    // Yêu cầu tải dữ liệu dạng FORCE (ép gọi updateData)
+    load(true).then(() => {
       textEl.innerText = "Success!";
-      
-      // Dừng nhấp nháy, set các cột full màu xanh
       pullContainer.classList.remove('refreshing');
       pullContainer.classList.add('ready');
       bars.forEach((bar, idx) => bar.style.height = `${targetHeights[idx]}px`);
@@ -583,8 +584,7 @@ window.addEventListener("touchend", (e) => {
       setTimeout(() => { 
         pullContainer.style.top = "-80px"; 
         setTimeout(() => { 
-          isRefreshing = false;
-          pullContainer.classList.remove('ready');
+          isRefreshing = false; pullContainer.classList.remove('ready');
         }, 300);
       }, 1200);
     });
