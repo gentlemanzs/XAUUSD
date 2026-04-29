@@ -3,7 +3,7 @@ const HIST_API = "/api/history";
 const elements = {
   usd: document.getElementById("usd"), xau: document.getElementById("xau"),
   sjc: document.getElementById("sjc"), diff: document.getElementById("diff"),
-  percent: document.getElementById("percent"), lastTime: document.getElementById("lastTime"),
+  percent: document.getElementById("percent"), gapChange: document.getElementById("gapChange"), lastTime: document.getElementById("lastTime"),
   historyTable: document.getElementById("history"), filterBox: document.getElementById("filterBox"),
   startDate: document.getElementById("startDate"), endDate: document.getElementById("endDate"), toggleBtn: document.getElementById("toggleBtn"),
   actionHeader: document.getElementById("actionHeader"), pagination: document.getElementById("pagination")
@@ -80,7 +80,22 @@ function renderMain(d) {
   elements.xau.innerText = fmtXAU.format(d.xau);
   elements.diff.innerText = fmtVND.format(d.diff);
   elements.percent.innerText = d.percent;
+// --- PHẦN THÊM MỚI: Cập nhật ô Gap Change ---
+  if (elements.gapChange && d.gapChange !== undefined) {
+    const gVal = d.gapChange;
+    const gPrefix = gVal > 0 ? "+" : ""; // Hiện dấu + nếu số dương
+    elements.gapChange.innerText = gPrefix + fmtVND.format(gVal);
 
+    // Đổi màu dựa trên giá trị âm/dương
+    if (gVal > 0) {
+      elements.gapChange.style.color = "var(--up-color)";
+    } else if (gVal < 0) {
+      elements.gapChange.style.color = "var(--down-color)";
+    } else {
+      elements.gapChange.style.color = "var(--secondary-text)";
+    }
+  }
+  // --------------------------------------------
   // Sử dụng trực tiếp con số sjcChange do Server tính toán
   const change = d.sjcChange || 0;
   const isUp = change >= 0;

@@ -206,6 +206,8 @@ async function updateData(triggerSource = "Tự động") {
     // Nếu không có giá hôm qua (mới chạy app), dùng chính giá hiện tại làm mốc
     const referenceSJC = lastDayRecord ? lastDayRecord.sjc : sjc;
     const sjcChange = sjc - referenceSJC;
+    // Lấy diff hiện tại trừ đi diff của bản ghi gần nhất trong lịch sử
+    const gapChange = Math.round(diff) - (lastRecord ? lastRecord.diff : Math.round(diff));
 
    // --- LƯU VÀO RAM CACHE ---
     latestData = {
@@ -214,6 +216,7 @@ async function updateData(triggerSource = "Tự động") {
       xau, 
       sjc,
       sjcChange: sjcChange, 
+      gapChange: gapChange,
       worldVND: Math.round(worldVND), 
       diff: Math.round(diff),
       percent: ((diff / worldVND) * 100).toFixed(2) + "%",
