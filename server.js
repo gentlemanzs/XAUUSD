@@ -12,7 +12,8 @@ app.use(express.json());
 
 // TỐI ƯU: Đưa file tĩnh vào thư mục public (Bạn cần tạo thư mục 'public' và cho index.html, style.css, main.js vào đây)
 // Nếu bạn vẫn để tất cả file ở thư mục gốc, hãy đổi thành app.use(express.static(__dirname));
-app.use(express.static(__dirname)); 
+const path = require("path");
+app.use(express.static(path.join(__dirname, "public")));
 
 const PORT = process.env.PORT || 3000;
 
