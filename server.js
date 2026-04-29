@@ -175,6 +175,8 @@ async function updateData(triggerSource = "Tự động") {
     const isSjcLive = sjcPrice > 0;
     const isXauLive = !!(dataXAU && dataXAU.price);
 
+    // SỬA TẠI ĐÂY: Luôn lấy bản ghi thực tế cuối cùng từ Database để so sánh Gap
+    const dbLastRecord = await History.findOne().sort({ createdAt: -1 }).lean().catch(() => null);
     // --- Xử lý FALLBACK (Nếu hỏng thì dùng lastRecord) ---
     let sjc = isSjcLive ? sjcPrice : (lastRecord ? lastRecord.sjc : 0);
     let xau = isXauLive ? dataXAU.price : (lastRecord ? lastRecord.xau : 2350);
@@ -193,6 +195,10 @@ async function updateData(triggerSource = "Tự động") {
     const worldVND = xau * usd * (37.5 / 31.1035);
     const diff = sjc - worldVND;
 
+    // SỬA TẠI ĐÂY: Tính gapChange dựa trên bản ghi thực tế trong DB
+    // Nếu trong DB chưa có dữ liệu, gapChange sẽ là 0
+    const gapChange = dbLastRecord ? (currentDiff - dbLastRecord.diff) : 0;
+    
     // --- MỚI: Tìm giá đóng cửa ngày hôm trước để tính Change ---
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
