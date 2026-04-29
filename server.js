@@ -4,7 +4,8 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const cheerio = require("cheerio");
 const compression = require("compression");
-
+const https = require("https");
+const agent = new https.Agent({ keepAlive: true });
 const app = express();
 app.use(compression());
 app.use(cors());
@@ -43,6 +44,7 @@ const USD_CACHE_DURATION = 60 * 60 * 1000; // 1 tiếng tính bằng mili-giây
 async function fetchWithRetry(url, isJson = false) {
   try {
     const res = await fetch(url, {
+      agent: agent, // Thêm dòng này
       headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
       signal: AbortSignal.timeout(8000) 
     });
