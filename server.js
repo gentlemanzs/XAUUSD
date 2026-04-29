@@ -39,6 +39,7 @@ let isUpdating = false;
 setInterval(() => {
   clients.forEach(c => {
     c.write(":\n\n"); // ping nhẹ, client sẽ ignore
+    if (typeof c.flush === "function") c.flush();
   });
 }, 20000); // mỗi 20 giây
 
@@ -191,6 +192,7 @@ async function updateData(triggerSource = "Tự động") {
 
     // --- ĐẨY DỮ LIỆU SSE CHO CLIENT ---
     clients.forEach(c => c.write(`data: ${JSON.stringify(latestData)}\n\n`));
+    if (typeof c.flush === "function") c.flush();
     console.log(`   ✅ Đã đẩy Realtime xuống ${clients.length} client(s) đang kết nối.`);
 
   } catch (e) {
@@ -211,6 +213,7 @@ app.get("/api/stream", (req, res) => {
   
   if (latestData) {
       res.write(`data: ${JSON.stringify(latestData)}\n\n`);
+      if (typeof res.flush === "function") res.flush();
   }
 
   req.on("close", () => clients = clients.filter(c => c !== res));
