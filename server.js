@@ -10,7 +10,7 @@ app.use(compression());
 app.use(cors());
 app.use(express.json());
 
-// TỐI ƯU: Bỏ maxAge để điện thoại không bị dính bộ nhớ đệm CSS/JS cũ
+// TỐI ƯU: Gỡ bỏ cache file tĩnh để cập nhật code mới ngay lập tức
 app.use(express.static("public")); 
 
 const PORT = process.env.PORT || 3000;
@@ -29,13 +29,14 @@ const HistorySchema = new mongoose.Schema({
 HistorySchema.index({ createdAt: -1 });
 const History = mongoose.model("History", HistorySchema);
 
-// TỐI ƯU: Biến RAM Cache để không phải gọi Database liên tục
+// TỐI ƯU: Biến RAM lưu bản ghi gần nhất để làm Fallback (Tránh đọc DB thừa)
+let cachedLastRecord = null;
 let latestData = null;
 let clients = []; 
 let lastUpdateTime = 0; 
 let isUpdating = false; 
 
-/* ===== FETCH HELPERS (Native Fetch Node 18+) ===== */
+/* ===== FETCH HELPERS ===== */
 async function fetchWithRetry(url, isJson = false) {
   try {
     const res = await fetch(url, {
@@ -46,25 +47,23 @@ async function fetchWithRetry(url, isJson = false) {
   } catch (e) { return null; }
 }
 
-/* ===== UPDATE LOGIC ===== */
 async function updateData(triggerSource = "Tự động") {
   if (isUpdating) return;
   isUpdating = true;
   try {
-    console.log(`\n▶ [${triggerSource}] Bắt đầu cào dữ liệu lúc ${new Date().toLocaleTimeString('vi-VN')}`);
+    console.log(`\n▶ [${triggerSource}] Cập nhật dữ liệu...`);
     
+    // TỐI ƯU: Nếu RAM chưa có dữ liệu cũ, chỉ đọc DB duy nhất một lần khi khởi động
+    if (!cachedLastRecord) {
+      cachedLastRecord = await History.findOne().sort({ createdAt: -1 }).lean();
+    }
+
     const [htmlVCB, dataXAU, htmlSJC] = await Promise.all([
       fetchWithRetry("https://webgia.com/ty-gia/vietcombank/"),
       fetchWithRetry("https://api.gold-api.com/price/XAU", true),
       fetchWithRetry("https://webgia.com/gia-vang/sjc/")
     ]);
 
-    // TỐI ƯU: Lấy dữ liệu cũ từ RAM thay vì chọc vào Database
-    let lastRecord = latestData; 
-    if (!lastRecord) {
-      lastRecord = await History.findOne().sort({ createdAt: -1 }).lean();
-    }
-    
     let usd = 1000, xau = 2350, sjc = 0;
     if (htmlVCB) {
       const $ = cheerio.load(htmlVCB);
@@ -78,16 +77,15 @@ async function updateData(triggerSource = "Tự động") {
       sjc = (parseInt(priceText.replace(/\./g, ""), 10) * 10) || 0;
     }
 
-    // Fallback nếu webgia lỗi
-    if (sjc <= 0 && lastRecord) sjc = lastRecord.sjc;
-    if (usd === 1000 && lastRecord) usd = lastRecord.usd;
+    // TỐI ƯU: Sử dụng cachedLastRecord từ RAM để fallback thay vì findOne()
+    if (sjc <= 0 && cachedLastRecord) sjc = cachedLastRecord.sjc;
+    if (usd === 1000 && cachedLastRecord) usd = cachedLastRecord.usd;
 
-    if (sjc <= 0 || xau <= 0) return; // Lỗi hoàn toàn thì hủy
+    if (sjc <= 0 || xau <= 0) return;
 
     const worldVND = xau * usd * (37.5 / 31.1035);
     const diff = sjc - worldVND;
 
-    // Lưu vào RAM Cache
     latestData = {
       updatedAt: new Date(), usd, xau, sjc,
       worldVND: Math.round(worldVND), diff: Math.round(diff),
@@ -95,24 +93,16 @@ async function updateData(triggerSource = "Tự động") {
       status: sjc > 0 ? "Live" : "Delayed"
     };
 
-    // Chỉ ghi vào DB nếu giá SJC thay đổi
-    if (sjc > 0 && (!lastRecord || lastRecord.sjc !== sjc)) {
-      const dbEntry = { ...latestData };
-      delete dbEntry.updatedAt; // Xóa key thừa trước khi lưu DB
-      await History.create(dbEntry);
-      console.log(`   💾 DB: Đã lưu bản ghi SJC mới là ${sjc}`);
-      
+    if (sjc > 0 && (!cachedLastRecord || cachedLastRecord.sjc !== sjc)) {
+      await History.create(latestData);
+      console.log(`💾 Đã lưu lịch sử giá mới: ${sjc}`);
+      // Cập nhật RAM cache ngay lập tức
+      cachedLastRecord = latestData;
       const count = await History.countDocuments();
       if (count > 200) await History.findOneAndDelete({}, { sort: { createdAt: 1 } });
-    } else {
-      console.log(`   ⏩ DB: Giá SJC không đổi (${sjc}), không lưu rác.`);
     }
 
-    // Bơm dữ liệu Realtime
     clients.forEach(c => c.write(`data: ${JSON.stringify(latestData)}\n\n`));
-    console.log(`   ✅ Đã đẩy Realtime xuống ${clients.length} client(s).`);
-  } catch (e) {
-    console.log("❌ Lỗi cập nhật:", e);
   } finally {
     isUpdating = false;
     lastUpdateTime = Date.now();
@@ -128,15 +118,9 @@ app.get("/api/stream", (req, res) => {
   req.on("close", () => clients = clients.filter(c => c !== res));
 });
 
-// Ép Force Update với 60s cooldown
 app.get("/api/gold", async (req, res) => {
-  const force = req.query.force;
-  const now = Date.now();
-  if (force === "true" && !isUpdating && (now - lastUpdateTime > 60000)) {
-    console.log("\n⚡ Nhận yêu cầu Force Update từ Web (F5 hoặc Pull)...");
+  if (req.query.force === "true" && (Date.now() - lastUpdateTime > 60000)) {
     await updateData("Pull-to-Refresh");
-  } else if (force === "true" && (now - lastUpdateTime <= 60000)) {
-    console.log(`⏳ Bỏ qua Force Update: Cooldown còn ${Math.round((60000 - (now - lastUpdateTime))/1000)}s.`);
   }
   res.json(latestData || {});
 });
@@ -151,14 +135,12 @@ app.post("/api/history/bulk-delete", async (req, res) => {
     const { ids } = req.body;
     await History.deleteMany({ _id: { $in: ids } });
     res.json({ ok: true });
-  } catch (error) { res.status(500).json({ error: "Lỗi xóa" }); }
+  } catch (error) { res.status(500).json({ error: "Lỗi" }); }
 });
 
-/* ===== CRONJOB ===== */
-cron.schedule("*/ * * * *", () => updateData("Cronjob"));
+cron.schedule("*/15 * * * *", () => updateData("Cronjob"));
 
-/* ===== START ===== */
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  updateData("Khởi động Server");
+  console.log(`🚀 Server chạy trên port ${PORT}`);
+  updateData("Khởi động");
 });
