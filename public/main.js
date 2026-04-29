@@ -18,7 +18,17 @@ let lastSJCValue = null;
 let myChart = null;
 let isExpanded = false; 
 let currentPage = 1;
+// Thêm đoạn này vào để chống spam API
+let historyTimeout;
 
+function safeFetchHistory() {
+  clearTimeout(historyTimeout);
+  historyTimeout = setTimeout(() => {
+    fetchHistory();
+  }, 300); // 300ms là đủ
+}
+
+const dateCache = new Map();
 /* ===== NHẬN REALTIME DỮ LIỆU TỪ SERVER MÀ KHÔNG CẦN RELOAD ===== */
 const evtSource = new EventSource("/api/stream");
 evtSource.onmessage = (event) => {
@@ -32,7 +42,7 @@ evtSource.onmessage = (event) => {
   renderMain(d);
   if (lastSJCValue === null || d.sjc !== lastSJCValue) {
     lastSJCValue = d.sjc;
-    fetchHistory();
+    safeFetchHistory();
   }
 };
 
@@ -46,7 +56,7 @@ async function load(isForce = false) {
     renderMain(d);
     if (lastSJCValue === null || d.sjc !== lastSJCValue) {
       lastSJCValue = d.sjc;
-      await fetchHistory();
+      safeFetchHistory();
     }
   } catch(e) { console.error(e); }
 }
@@ -84,9 +94,27 @@ async function fetchHistory() {
 }
 
 function formatVNDateTime(isoString) {
+  // 1. Kiểm tra xem ngày này đã có trong kho chứa (Cache) chưa
+  if (dateCache.has(isoString)) {
+    return dateCache.get(isoString); // Nếu có rồi thì lấy ra dùng luôn, không cần tính lại
+  }
+
+  // 2. Nếu chưa có, tiến hành tính toán định dạng như cũ
   const d = new Date(isoString);
   if (isNaN(d)) return "--";
-  return d.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
+  
+  const formatted = d.toLocaleString('vi-VN', { 
+    timeZone: 'Asia/Ho_Chi_Minh', 
+    day: '2-digit', 
+    month: '2-digit', 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
+
+  // 3. Lưu kết quả vừa tính vào kho để lần sau không phải tính lại
+  dateCache.set(isoString, formatted);
+
+  return formatted;
 }
 
 function renderTable() {
@@ -265,7 +293,7 @@ function updateChart(data) {
     // Cập nhật lại trục Y linh hoạt khi có dữ liệu mới
     myChart.options.scales.y.suggestedMin = yMin;
     myChart.options.scales.y.suggestedMax = yMax;
-    myChart.update();
+    myChart.update('none');
   } else {
     myChart = new Chart(ctx, {
       type: 'line',
