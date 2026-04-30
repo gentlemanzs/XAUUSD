@@ -5,7 +5,13 @@ const mongoose = require("mongoose");
 const cheerio = require("cheerio");
 const compression = require("compression");
 const app = express();
-app.use(compression());
+
+// TỐI ƯU: Cấu hình nén dữ liệu chuẩn mực
+app.use(compression({
+  level: 6,
+  threshold: 1024
+}));
+
 app.use(cors());
 app.use(express.json());
 const path = require("path");
@@ -83,6 +89,8 @@ async function fetchWithRetry(url, isJson = false, retries = 3) {
         console.warn(`⚠️ Cảnh báo: Lỗi khi lấy dữ liệu từ ${url} - ${e.message}`);
         return null; 
       }
+      // TỐI ƯU: Thêm Exponential Backoff nhẹ để tránh spam API
+      await new Promise(r => setTimeout(r, 500 * (i + 1)));
     }
   }
 }
@@ -293,14 +301,18 @@ async function updateData(triggerSource = "Tự động") {
     if (sjc > 0 && (!lastRecord || lastRecord.sjc !== sjc)) {
       const dbEntry = { ...latestData };
       delete dbEntry.updatedAt; 
-      await History.create(dbEntry);
+      // TỐI ƯU: Gán _id cho dbEntry vừa tạo để tương thích hoàn toàn khi đẩy vào mảng cache
+      const savedDoc = await History.create(dbEntry);
       console.log(`   💾 DB: Đã lưu bản ghi SJC mới là ${sjc.toLocaleString('vi-VN')}`);
       
       // CẬP NHẬT LẠI BIẾN RAM CACHE XAU VÌ DB VỪA CÓ BẢN GHI MỚI!
       cachedLastSavedXau = xau;
    
-      // Xóa Cache API History để người dùng lấy được lịch sử mới nhất
-      cachedHistory = [];
+      // TỐI ƯU: Nuôi Cache thay vì xóa đi để tránh gọi lại DB 
+      if (cachedHistory.length > 0) {
+        cachedHistory.unshift(savedDoc);
+        if (cachedHistory.length > 100) cachedHistory.pop(); // Chỉ giữ 100 dòng
+      }
     } else {
       console.log(`   ⏩ DB: Giá SJC không đổi (${sjc.toLocaleString('vi-VN')}), không lưu rác.`);
     }
@@ -365,7 +377,7 @@ app.post("/api/history/bulk-delete", async (req, res) => {
     if (!ids || !Array.isArray(ids)) return res.status(400).json({ error: "Thiếu danh sách ID" });
     await History.deleteMany({ _id: { $in: ids } });
     
-    // Xóa bộ nhớ đệm để API bắt buộc phải tải lại danh sách mới
+    // Reset cache khi xóa để tải lại danh sách mới
     cachedHistory = [];
     res.json({ ok: true });
   } catch (error) { res.status(500).json({ error: "Lỗi xóa" }); }

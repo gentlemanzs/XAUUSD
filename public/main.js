@@ -376,6 +376,7 @@ function updateChart(data) {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: false, // TỐI ƯU: Tắt hiệu ứng tải để biểu đồ render mượt mà hơn trên Mobile
         plugins: { legend: { display: false } },
         scales: {
           y: {
@@ -400,7 +401,10 @@ function updateChart(data) {
   }
   
   const container = document.querySelector('.chart-scroll-container');
-  setTimeout(() => { container.scrollLeft = container.scrollWidth; }, 200);
+  // TỐI ƯU: Sử dụng requestAnimationFrame thay cho setTimeout hack delay
+  requestAnimationFrame(() => {
+    container.scrollLeft = container.scrollWidth;
+  });
 }
 
 /* KHỞI CHẠY LẦN ĐẦU (F5) SẼ YÊU CẦU SERVER ÉP CÀO LẠI (FORCE = TRUE) */
@@ -429,10 +433,12 @@ const bars = [
 ];
 const targetHeights = [12, 24, 16, 20]; 
 
+// TỐI ƯU: Chỉnh passive: true để không làm lag thao tác vuộn trang
 window.addEventListener("touchstart", (e) => { 
   if (window.scrollY <= 0 && !isRefreshing) { startY = e.touches[0].clientY; isPulling = true; } 
-}, { passive: false });
+}, { passive: true });
 
+// Touchmove bắt buộc phải có passive: false vì sử dụng preventDefault()
 window.addEventListener("touchmove", (e) => {
   if (!isPulling || isRefreshing) return;
   const diff = e.touches[0].clientY - startY;
@@ -486,7 +492,7 @@ window.addEventListener("touchend", (e) => {
   } else {
     pullContainer.style.top = "-80px";
   }
-});
+}, { passive: true });
 
 /* ===== HỦY BỎ PWA (SERVICE WORKER) ĐỂ SỬA LỖI MẤT KẾT NỐI ===== */
 if ('serviceWorker' in navigator) {
