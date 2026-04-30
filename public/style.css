@@ -106,9 +106,20 @@ header {
 
 #filterBox { display: none; background: white; padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 1.5rem; gap: 10px; align-items: center; flex-wrap: wrap; }
 input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
-.btn-filter, .btn-delete-multi { border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; color: white; transition: 0.2s; }
-.btn-filter { background: #475569; } 
-.btn-delete-multi { background: #475569; } .btn-delete-multi:hover { background: #5a5958; }
+
+.btn-filter, .btn-delete-multi, .btn-reset { 
+  border: 1px solid transparent; 
+  padding: 6px 12px; 
+  border-radius: 8px; 
+  font-weight: 600; 
+  cursor: pointer; 
+  color: var(--secondary-text); 
+  background: transparent; 
+  transition: 0.2s; 
+}
+.btn-filter:hover, .btn-delete-multi:hover, .btn-reset:hover { 
+  background: rgba(0, 0, 0, 0.05); 
+}
 
 .table-wrapper { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto; margin-bottom: 2rem; }
 table { width: 100%; border-collapse: collapse; font-size: 0.95rem; min-width: 600px; }
@@ -168,9 +179,6 @@ th:first-child, td:first-child { text-align: left; }
 .chart-scroll-container::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
 .chart-scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 .chart-scroll-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-/* Màu cho nút Bỏ lọc */
-.btn-reset { border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; color: white; background: #64748b; transition: 0.2s; }
-.btn-reset:hover { background: #475569; }
 
 /* ===== CSS CHUYỂN TỪ FILE JS SANG (PULL TO REFRESH) ===== */
 .cyber-pull-container {

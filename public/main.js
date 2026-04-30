@@ -195,7 +195,6 @@ function formatVNDateTime(isoString) {
 }
 
 function renderTable() {
-  // Mặc định hiện 10 dòng. Nếu mở rộng thì phân trang 50 dòng/trang
   const pageSize = isExpanded ? 50 : 10;
   const startIdx = isExpanded ? (currentPage - 1) * pageSize : 0;
   const endIdx = startIdx + pageSize;
@@ -209,14 +208,14 @@ function renderTable() {
   displayData.forEach(r => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${formatVNDateTime(r.createdAt)}</td>
+      <td class="col-action" style="display: ${displayStyle}; text-align: center;">
+        <input type="checkbox" class="log-checkbox" value="${r._id}">
+      </td>
+      <td style="text-align: left;">${formatVNDateTime(r.createdAt)}</td>
       <td>${fmtXAU.format(r.xau)}</td>
       <td>${fmtVND.format(r.sjc)}</td>
       <td>${fmtVND.format(r.diff)}</td>
       <td><span class="badge ${r.percent.includes('-') ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>
-      <td class="col-action" style="display: ${displayStyle}; text-align: center;">
-        <input type="checkbox" class="log-checkbox" value="${r._id}">
-      </td>
     `;
     fragment.appendChild(tr);
   });
@@ -230,7 +229,6 @@ function renderTable() {
 
 function renderPagination() {
   const pag = elements.pagination;
-  // Ẩn phân trang nếu đang thu gọn HOẶC số lượng dữ liệu chưa vượt quá 1 trang (50 dòng)
   if (!isExpanded || currentData.length <= 50) { pag.style.display = "none"; return; }
   
   pag.style.display = "flex"; pag.innerHTML = "";
@@ -305,7 +303,6 @@ async function deleteSelected() {
   const checkedBoxes = document.querySelectorAll('.log-checkbox:checked');
   if (checkedBoxes.length === 0) { alert("Vui lòng tích chọn ít nhất 1 dòng để xóa."); return; }
   if (!confirm(`Bạn có chắc chắn muốn xóa ${checkedBoxes.length} bản ghi đã chọn?`)) return;
-
   const ids = Array.from(checkedBoxes).map(cb => cb.value);
   try {
     const res = await fetch('/api/history/bulk-delete', {
@@ -465,17 +462,10 @@ function updateChart(data) {
   });
 }
 
-/* KHỞI CHẠY LẦN ĐẦU (F5) VÀ SSE */
-// TỐI ƯU MẠNG: Chỉ kích hoạt luồng SSE. Server sẽ tự giác ném data xuống ngay khi kết nối được mở.
+// Khởi tạo luồng SSE lắng nghe dữ liệu Realtime
 initSSE();
-
-// TỐI ƯU LỐP DỰ PHÒNG: Nếu sau 3 giây mà SSE bị tịt ngòi (bất thường), ta mới kích hoạt fetch REST API.
-setTimeout(() => {
-  if (lastSJCValue === null) {
-    console.warn("SSE chậm phản hồi hoặc bị chặn, gọi API REST dự phòng...");
-    load();
-  }
-}, 3000);
+// Fallback: nếu sau 3s SSE chưa push gì thì mới gọi REST
+setTimeout(() => { if (!lastSJCValue) load(); }, 3000);
 
 /* ===== HIỆU ỨNG PULL TO REFRESH ===== */
 const pullContainer = document.createElement("div");
@@ -579,4 +569,3 @@ document.addEventListener("visibilitychange", () => {
     initSSE();
   }
 });
-
