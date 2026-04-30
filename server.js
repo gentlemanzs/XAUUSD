@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 const cheerio = require("cheerio");
 const compression = require("compression");
 // TỐI ƯU BẢO MẬT: Nạp thư viện chống DDoS / Dội bom API
+app.set('trust proxy', 1);
 const rateLimit = require('express-rate-limit');
 const app = express();
 

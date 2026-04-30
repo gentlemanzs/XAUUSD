@@ -102,33 +102,43 @@ input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid var(--
 /* --- CĂN CHỈNH NÚT FILTER, CLEAR, DELETE --- */
 .btn-filter, .btn-delete-multi, .btn-reset { 
   border: 1px solid transparent; 
-  padding: 6px 12px; /* Thu hẹp 2 bên */
+  padding: 6px 12px;
   border-radius: 8px; 
   font-weight: 600; 
   cursor: pointer; 
-  color: var(--secondary-text); /* Đồng bộ màu header SJC (VND) */
-  background: transparent; /* Nền trong suốt */
+  color: var(--secondary-text); 
+  background: transparent; 
   transition: 0.2s; 
 }
 .btn-filter:hover, .btn-delete-multi:hover, .btn-reset:hover { 
-  background: rgba(0, 0, 0, 0.05); /* Rất mờ khi rê chuột */
+  background: rgba(0, 0, 0, 0.05); 
 }
 
 .table-wrapper { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto; margin-bottom: 2rem; }
-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; min-width: 600px; }
-th { background: #f1f5f9; padding: 14px 16px; text-align: right; color: var(--secondary-text); }
-td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; }
 
-/* === ÉP KHUNG CHECKBOX VÀ TIME === */
+/* Ép table chia đều chiều ngang các cột */
+table { 
+  width: 100%; 
+  border-collapse: collapse; 
+  font-size: 0.95rem; 
+  min-width: 600px; 
+  table-layout: fixed; /* Bắt trình duyệt chia đều bề ngang các cột */
+}
+
+/* Đưa tất cả về lề trái */
+th { background: #f1f5f9; padding: 14px 16px; text-align: left; color: var(--secondary-text); }
+td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: left; }
+
+/* === ÉP KHUNG CHECKBOX === */
 .col-action { 
   display: none; 
-  width: 40px; /* Ép chết độ rộng cực nhỏ */
+  width: 40px; /* Cột checkbox bé đúng 40px, phần còn lại trình duyệt sẽ chia đều cho 5 cột kia */
   text-align: center !important; 
   padding-left: 8px !important; 
   padding-right: 8px !important; 
 }
 .col-time { 
-  text-align: left !important; /* Ghim cứng sang lề trái tiếp giáp Checkbox */
+  padding-left: 4px !important; 
 }
 
 .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }

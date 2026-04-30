@@ -34,8 +34,8 @@
   <div id="lastTime" style="margin-bottom:1rem; font-size:0.875rem; color:#64748b; font-weight: 500;">Đang kết nối...</div>
 
   <div class="grid">
-    <div class="card usd-card"><div class="card-title">💵 USD Exchange</div><div id="usd" class="card-value">--</div></div>
-    <div class="card highlight"><div class="card-title">🌍 Global XAU (oz)</div><div id="xau" class="card-value">--</div></div>
+    <div class="card usd-card"><div class="card-title">💵 USD VND</div><div id="usd" class="card-value">--</div></div>
+    <div class="card highlight"><div class="card-title">🌍 XAU USD</div><div id="xau" class="card-value">--</div></div>
     <div class="card highlight"><div class="card-title">🧈 SJC Gold </div><div id="sjc" class="card-value">--</div></div>
     <div class="card"><div class="card-title">⚖️ Market Gap</div><div id="diff" class="card-value">--</div></div>
     <div class="card"><div class="card-title">📊 DIFF</div><div id="percent" class="card-value">--</div></div>
@@ -60,7 +60,7 @@
     <table>
       <thead>
         <tr>
-          <!-- Đẩy Checkbox sang cột độc lập và xóa inline css -->
+          <!-- Đẩy Checkbox sang cột độc lập -->
           <th id="actionHeader" class="col-action">
             <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)" title="Chọn tất cả">
           </th>
@@ -68,7 +68,7 @@
           <th>XAU ($)</th>
           <th>SJC (VND)</th>
           <th>Gap (VND)</th>
-          <th>%</th>
+          <th>Diff</th>
         </tr>
       </thead>
       <tbody id="history"></tbody>
