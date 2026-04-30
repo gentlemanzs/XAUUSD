@@ -48,6 +48,12 @@ let cachedOldGap = null;
 let cachedSjcForOldGap = null;
 let cachedLastSavedXau = null; // <-- THÊM MỚI: Biến lưu giá XAU của lần ghi DB gần nhất
 
+// --- CÁC BIẾN CACHE MỚI CHO VIỆC TỐI ƯU ---
+let cachedYesterdaySjc = null;
+let cachedYesterdayDate = null;
+let cachedHistory = [];
+let lastHistoryFetch = 0;
+
 // 🔥 HEARTBEAT giữ kết nối SSE không bị chết
 setInterval(() => {
   clients.forEach(c => {
@@ -57,7 +63,8 @@ setInterval(() => {
 }, 20000); // mỗi 20 giây
 
 // Biến RAM Cache riêng cho USD (1 tiếng)
-let cachedUsdRate = 1000;
+// Dùng null thay cho 1000 để bắt bug và ép cào ngay khi khởi động
+let cachedUsdRate = null; 
 let lastUsdFetchTime = 0;
 const USD_CACHE_DURATION = 60 * 60 * 1000; // 1 tiếng tính bằng mili-giây
 
@@ -84,7 +91,7 @@ async function fetchWithRetry(url, isJson = false, retries = 3) {
 async function getUsdRate() {
   const now = Date.now();
   // Nếu chưa qua 1 tiếng và đã có dữ liệu trước đó -> Trả về dữ liệu cũ luôn, không cần cào mạng
-  if (now - lastUsdFetchTime < USD_CACHE_DURATION && cachedUsdRate !== 1000) {
+  if (now - lastUsdFetchTime < USD_CACHE_DURATION && cachedUsdRate !== null) {
     return cachedUsdRate;
   }
 
@@ -178,12 +185,13 @@ async function updateData(triggerSource = "Tự động") {
     // --- Kiểm tra tính sẵn sàng của dữ liệu (MỚI) ---
     const isSjcLive = sjcPrice > 0;
     const isXauLive = !!(dataXAU && dataXAU.price);
-    const isUsdLive = usdRate !== 1000; // Kiểm tra USD: Nếu khác 1000 nghĩa là cào thành công
+    const isUsdLive = usdRate !== null; // Cập nhật kiểm tra null
 
     // --- Xử lý FALLBACK (Nếu hỏng thì dùng lastRecord) ---
     let sjc = isSjcLive ? sjcPrice : (lastRecord ? lastRecord.sjc : 0);
     let xau = isXauLive ? dataXAU.price : (lastRecord ? lastRecord.xau : 2350);
-    let usd = isUsdLive ? usdRate : (lastRecord ? lastRecord.usd : 1000);
+    // Nếu cả USD và Database đều null, đặt fallback cứng là 25400 để tránh sập toàn hệ thống
+    let usd = isUsdLive ? usdRate : (lastRecord ? lastRecord.usd : 25400); 
 
     if (sjc <= 0 || xau <= 0) {
         console.log("❌ LỖI NGHIÊM TRỌNG: Không thể cào dữ liệu từ cả 3 nguồn và cũng không có bản lưu dự phòng!");
@@ -196,16 +204,22 @@ async function updateData(triggerSource = "Tự động") {
     const diff = sjc - worldVND;
 
     // --- 1. Tính SJC Change (So với hôm qua) ---
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(23, 59, 59, 999);
+    // TỐI ƯU: Chỉ Query DB 1 lần/ngày bằng cách Cache lại
+    const todayStr = new Date().toDateString();
+    if (cachedYesterdayDate !== todayStr || cachedYesterdaySjc === null) {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(23, 59, 59, 999);
 
-    const lastDayRecord = await History.findOne({
-      createdAt: { $lte: yesterday }
-    }).sort({ createdAt: -1 }).lean().catch(() => null);
+      // Thêm select('sjc') để lấy nhẹ dữ liệu
+      const lastDayRecord = await History.findOne({
+        createdAt: { $lte: yesterday }
+      }).select('sjc').sort({ createdAt: -1 }).lean().catch(() => null);
 
-    const referenceSJC = lastDayRecord ? lastDayRecord.sjc : sjc;
-    const sjcChange = sjc - referenceSJC;
+      cachedYesterdaySjc = lastDayRecord ? lastDayRecord.sjc : sjc;
+      cachedYesterdayDate = todayStr;
+    }
+    const sjcChange = sjc - cachedYesterdaySjc;
 
     // --- 2. TÌM GAP CŨ (TỐI ƯU BẰNG RAM CACHE) ---
     let oldGap = 0;
@@ -215,7 +229,9 @@ async function updateData(triggerSource = "Tự động") {
       oldGap = cachedOldGap;
     } else {
       // CHỈ KHI SJC đổi giá (hoặc server vừa bật) mới gọi Database
+      // Thêm select('diff') để lấy nhẹ dữ liệu
       const lastChangedSjcRecord = await History.findOne({ sjc: { $ne: sjc } })
+        .select('diff')
         .sort({ createdAt: -1 })
         .lean()
         .catch(() => null);
@@ -234,7 +250,8 @@ async function updateData(triggerSource = "Tự động") {
     // --- 3. TÍNH XAU CHANGE (MỚI: So với lần Database được lưu gần nhất) ---
     // Nếu Server vừa bật, nạp giá XAU từ DB vào RAM 1 lần duy nhất
     if (cachedLastSavedXau === null) {
-      const latestDbRecord = await History.findOne().sort({ createdAt: -1 }).lean().catch(() => null);
+      // Thêm select('xau') để lấy nhẹ dữ liệu
+      const latestDbRecord = await History.findOne().select('xau').sort({ createdAt: -1 }).lean().catch(() => null);
       cachedLastSavedXau = latestDbRecord ? latestDbRecord.xau : xau;
     }
     const xauChange = xau - cachedLastSavedXau;
@@ -282,6 +299,8 @@ async function updateData(triggerSource = "Tự động") {
       // CẬP NHẬT LẠI BIẾN RAM CACHE XAU VÌ DB VỪA CÓ BẢN GHI MỚI!
       cachedLastSavedXau = xau;
    
+      // Xóa Cache API History để người dùng lấy được lịch sử mới nhất
+      cachedHistory = [];
     } else {
       console.log(`   ⏩ DB: Giá SJC không đổi (${sjc.toLocaleString('vi-VN')}), không lưu rác.`);
     }
@@ -303,7 +322,7 @@ async function updateData(triggerSource = "Tự động") {
 /* ===== API & SSE ===== */
 
 app.get("/api/stream", (req, res) => {
-  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Content-Type", "text-event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   
@@ -321,8 +340,22 @@ app.get("/api/gold", async (req, res) => {
     res.json(latestData || {});
 });
 
+// TỐI ƯU: Sử dụng bộ đệm (Cache) cho API History và chỉ lấy những trường cần thiết
 app.get("/api/history", async (req, res) => {
-  const data = await History.find().sort({ createdAt: -1 }).limit(100).lean();
+  const now = Date.now();
+  // Nếu chưa quá 5 giây và bộ nhớ đệm có dữ liệu, trả về luôn không cần gọi DB
+  if (now - lastHistoryFetch < 5000 && cachedHistory.length > 0) {
+    return res.json(cachedHistory);
+  }
+
+  const data = await History.find()
+    .select("createdAt xau sjc diff percent _id") // Tiết kiệm băng thông Server
+    .sort({ createdAt: -1 })
+    .limit(100)
+    .lean();
+    
+  cachedHistory = data;
+  lastHistoryFetch = now;
   res.json(data);
 });
 
@@ -331,6 +364,9 @@ app.post("/api/history/bulk-delete", async (req, res) => {
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids)) return res.status(400).json({ error: "Thiếu danh sách ID" });
     await History.deleteMany({ _id: { $in: ids } });
+    
+    // Xóa bộ nhớ đệm để API bắt buộc phải tải lại danh sách mới
+    cachedHistory = [];
     res.json({ ok: true });
   } catch (error) { res.status(500).json({ error: "Lỗi xóa" }); }
 });
