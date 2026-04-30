@@ -93,6 +93,11 @@ header {
   gap: 4px; 
   font-weight: 800; /* Làm chữ đậm lên cho dễ nhìn */
 }
+
+/* Class màu sắc riêng cho XAU */
+.xau-up { color: #008b8b; } /* Màu xanh cổ vịt (teal) */
+.xau-down { color: var(--down-color); }
+
 .change-up { color: var(--up-color); } .change-down { color: var(--down-color); }
 
 #filterBox { display: none; background: white; padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 1.5rem; gap: 10px; align-items: center; flex-wrap: wrap; }
@@ -131,12 +136,25 @@ th:first-child, td:first-child { text-align: left; }
     padding-top: 60px !important; /* Giảm bớt khoảng trống phía trên */
   }
   #lastTime {
-    margin-top: -5px;      /* Nhích nhẹ lên trên mép */
-    margin-bottom: 0.5rem; /* Thu nhỏ khoảng cách với các ô phía dưới */
+    margin-top: 0px;      /* Nhích nhẹ lên trên mép */
+    margin-bottom: 0.6rem; /* Thu nhỏ khoảng cách với các ô phía dưới */
   }
 
   .grid { grid-template-columns: 1fr; gap: 0.8rem; } 
   .card-value { font-size: 1.5rem; } 
+
+  /* 3. Ép ô XAU nằm ngang CHỈ TRÊN ĐIỆN THOẠI */
+  .xau-wrapper {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap; /* Tránh bị rớt chữ ra ngoài card */
+  }
+  
+  /* Bỏ margin top của chữ phụ trên điện thoại để thẳng hàng với chữ chính */
+  .xau-wrapper .sjc-sub {
+    margin-top: 0;
+  }
 }
 /* Mặc định cho máy tính */
 .chart-inner-wrapper { height: 320px; position: relative; }

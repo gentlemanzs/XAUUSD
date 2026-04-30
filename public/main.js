@@ -80,13 +80,20 @@ function renderMain(d) {
   elements.diff.innerText = fmtVND.format(d.diff);
   elements.percent.innerText = d.percent;
 
-  // --- PHẦN MỚI: Cập nhật ô XAU (Có sub màu đen tuyền) ---
+  // --- PHẦN MỚI: Cập nhật ô XAU (Có màu Teal/Red và Inline trên điện thoại) ---
   const xChange = d.xauChange || 0;
   const isXUp = xChange >= 0;
+  
+  // Xác định class màu: xanh cổ vịt (teal) hoặc đỏ (down)
+  const xColorClass = isXUp ? 'xau-up' : 'xau-down';
+
+  // Thêm thẻ div xau-wrapper bao bọc để CSS ép nó nằm ngang riêng trên Mobile
   elements.xau.innerHTML = `
-    <div>${fmtXAU.format(d.xau)}</div>
-    <div class="sjc-sub" style="color: #000;">
-      ${isXUp ? '▲' : '▼'} ${fmtXAU.format(Math.abs(xChange))}
+    <div class="xau-wrapper">
+      <div>${fmtXAU.format(d.xau)}</div>
+      <div class="sjc-sub ${xColorClass}">
+        ${isXUp ? '▲' : '▼'} ${fmtXAU.format(Math.abs(xChange))}
+      </div>
     </div>
   `;
 
