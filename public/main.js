@@ -331,14 +331,15 @@ function updateChart(data) {
   const minSpacing = 75;  
   const minPointsToFill = Math.ceil(containerWidth / maxSpacing);
 
-  // --- SỬA LỖI BIỂU ĐỒ BỊ LỆCH SANG PHẢI KHI DỮ LIỆU ÍT ---
+  // --- TRỊ DỨT ĐIỂM BỆNH KÉO GIÃN & LỆCH LỀ PHẢI KHI DỮ LIỆU ÍT ---
   if (totalPoints > 0 && totalPoints < minPointsToFill) {
     const padCount = minPointsToFill - totalPoints;
     for (let i = 0; i < padCount; i++) {
-      // ĐÃ SỬA THÀNH PUSH CHUẨN XÁC:
-      // Dùng push để đẩy các khoảng trống ảo về phía cuối mảng (sát lề phải biểu đồ),
-      // Giúp dữ liệu thật ở đầu mảng tự động bám sát trục Y (lề trái).
-      labels.push(''); 
+      // SỬA LỖI CHÍ MẠNG CHART.JS: 
+      // Chart.js tự động gộp các nhãn trùng lặp. Nếu push(''), nó sẽ gộp thành 1 cột.
+      // Cần tạo ra các chuỗi khoảng trắng có độ dài khác nhau (' ', '  ', '   ') 
+      // để ép Chart.js vẽ các cột tàng hình riêng biệt bên phải.
+      labels.push(' '.repeat(i + 1)); 
       gaps.push(null); 
     }
   }
@@ -423,11 +424,11 @@ function updateChart(data) {
   // TỐI ƯU: Check xem người dùng có đang ở sát mép phải (sai số 50px) không
   const isAtRightEdge = container.scrollWidth - container.clientWidth <= container.scrollLeft + 50;
   
-  // TỐI ƯU: Sử dụng requestAnimationFrame thay cho setTimeout hack delay 200ms để mượt mà hơn
   requestAnimationFrame(() => {
     // TỐI ƯU UX: Chỉ tự động cuộn đến biểu đồ mới nhất nếu họ đang ở mép phải
     if (isAtRightEdge || data.length <= 10) {
-      container.scrollLeft = container.scrollWidth;
+      // Ép chặt cuộn về 0 (lề trái) nếu dữ liệu ít đang bị ép sang trái, ngược lại cuộn phải
+      container.scrollLeft = (totalPoints < minPointsToFill) ? 0 : container.scrollWidth;
     }
   });
 }
