@@ -73,9 +73,15 @@ let lastHistoryFetch = 0;
 
 // 🔥 HEARTBEAT giữ kết nối SSE không bị chết
 setInterval(() => {
-  clients.forEach(c => {
-    c.write(":\n\n"); // ping nhẹ, client sẽ ignore
-    if (typeof c.flush === "function") c.flush();
+  // TỐI ƯU: Dùng filter kết hợp try-catch để dọn sạch "xác" client bị ngắt mạng âm thầm
+  clients = clients.filter(c => {
+    try {
+      c.write(":\n\n"); // ping nhẹ, client sẽ ignore
+      if (typeof c.flush === "function") c.flush();
+      return true;
+    } catch (e) {
+      return false; // Nếu gặp lỗi, lập tức sút client này ra khỏi RAM
+    }
   });
 }, 20000); // mỗi 20 giây
 
@@ -101,8 +107,8 @@ async function fetchWithRetry(url, isJson = false, retries = 3) {
         console.warn(`⚠️ Cảnh báo: Lỗi khi lấy dữ liệu từ ${url} - ${e.message}`);
         return null; 
       }
-      // TỐI ƯU: Thêm Exponential Backoff nhẹ để tránh spam API
-      await new Promise(r => setTimeout(r, 500 * (i + 1)));
+      // TỐI ƯU: Thêm Exponential Backoff nhẹ (giảm xuống 300ms) để fail nhanh hơn
+      await new Promise(r => setTimeout(r, 300 * (i + 1)));
     }
   }
 }
@@ -362,7 +368,7 @@ async function updateData(triggerSource = "Tự động") {
 
 app.get("/api/stream", (req, res) => {
   // TỐI ƯU: Sửa lỗi text-event-stream thành text/event-stream chuẩn xác
-  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Content-Type", "text-event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   

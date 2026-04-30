@@ -41,10 +41,10 @@ evtSource.onopen = () => {
 };
 
 evtSource.onmessage = (event) => {
-  // TỐI ƯU: Kiểm tra rỗng trước khi parse JSON để tiết kiệm CPU
   if (!event.data) return;
   const d = JSON.parse(event.data);
-  if (!d || Object.keys(d).length === 0) return;
+  // TỐI ƯU: Check d.updatedAt thay vì Object.keys để tiết kiệm CPU điện thoại
+  if (!d || !d.updatedAt) return;
   
   // Hiệu ứng nháy màu báo có data mới
   elements.lastTime.style.color = "#10b981";
@@ -350,8 +350,8 @@ function updateChart(data) {
     const maxVal = Math.max(...validGaps);
     const range = maxVal - minVal;
 
-    // Nới lề trên/dưới thêm 20%. Nếu dữ liệu đang đứng im (range = 0), tự nới biên độ 0.5M (500k)
-    const padding = range === 0 ? 0.5 : range * 0.2; 
+    // TỐI ƯU: Dùng Math.max để đảm bảo biểu đồ luôn có độ phồng (padding) tối thiểu là 0.5M
+    const padding = Math.max(range * 0.2, 0.5); 
     
     yMin = minVal - padding;
     yMax = maxVal + padding;
