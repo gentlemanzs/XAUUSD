@@ -178,14 +178,12 @@ async function updateData(triggerSource = "Tự động") {
     // --- Kiểm tra tính sẵn sàng của dữ liệu (MỚI) ---
     const isSjcLive = sjcPrice > 0;
     const isXauLive = !!(dataXAU && dataXAU.price);
+    const isUsdLive = usdRate !== 1000; // Kiểm tra USD: Nếu khác 1000 nghĩa là cào thành công
 
     // --- Xử lý FALLBACK (Nếu hỏng thì dùng lastRecord) ---
     let sjc = isSjcLive ? sjcPrice : (lastRecord ? lastRecord.sjc : 0);
     let xau = isXauLive ? dataXAU.price : (lastRecord ? lastRecord.xau : 2350);
-    let usd = usdRate;
-
-    // --- FALLBACK tỷ giá USD ---
-    if (usd === 1000 && lastRecord) usd = lastRecord.usd;
+    let usd = isUsdLive ? usdRate : (lastRecord ? lastRecord.usd : 1000);
 
     if (sjc <= 0 || xau <= 0) {
         console.log("❌ LỖI NGHIÊM TRỌNG: Không thể cào dữ liệu từ cả 3 nguồn và cũng không có bản lưu dự phòng!");
@@ -233,6 +231,14 @@ async function updateData(triggerSource = "Tự động") {
     // Tính khoảng chênh lệch: Cũ trừ Hiện tại (Theo đúng yêu cầu của bạn)
     const gapChange = oldGap - currentGap;
 
+    // --- XÁC ĐỊNH TRẠNG THÁI (LỖI Ở ĐÂU BÁO Ở ĐÓ) ---
+    let failedAPIs = [];
+    if (!isSjcLive) failedAPIs.push("SJC");
+    if (!isXauLive) failedAPIs.push("XAU");
+    if (!isUsdLive) failedAPIs.push("USD");
+
+    let currentStatus = failedAPIs.length === 0 ? "Live" : `Delayed (Lỗi: ${failedAPIs.join(", ")})`;
+
    // --- LƯU VÀO RAM CACHE ĐỂ GỬI XUỐNG CLIENT ---
     latestData = {
       updatedAt: new Date(), 
@@ -245,7 +251,7 @@ async function updateData(triggerSource = "Tự động") {
       worldVND: Math.round(worldVND), 
       diff: currentGap,
       percent: ((diff / worldVND) * 100).toFixed(2) + "%",
-      status: (isSjcLive && isXauLive) ? "Live" : "Delayed" 
+      status: currentStatus 
     };
 
     // --- IN BẢNG LOG KẾT QUẢ CÀO (DÀNH CHO DEPLOY) ---
@@ -320,5 +326,3 @@ app.post("/api/history/bulk-delete", async (req, res) => {
 
 /* ===== CRONJOB (QUẢN LÝ LỊCH TRÌNH) ===== */
 cron.schedule("*/5 * * * *", () => updateData("Cronjob 5 phút"));
-
-// Xóa lệnh listen ở cuối cùng vì đã đưa lên phía trên phần kết nối DB thành công
