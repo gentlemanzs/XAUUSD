@@ -5,21 +5,10 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const cheerio = require("cheerio");
 const compression = require("compression");
-const rateLimit = require('express-rate-limit');
 const app = express();
 
 app.set('trust proxy', 1);
-
 app.use(compression({ level: 6, threshold: 1024 }));
-
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, 
-  max: 100, 
-  message: { error: "Bạn đã gọi API quá nhiều lần. Vui lòng đợi 15 phút." },
-  standardHeaders: true, 
-  legacyHeaders: false, 
-  skip: (req) => req.headers.accept === 'text/event-stream' 
-});
 
 app.use(cors());
 app.use(express.json({ limit: "10kb" })); 
@@ -28,9 +17,6 @@ app.use(express.static(path.join(__dirname, "public"), {
   maxAge: "1d",
   etag: true
 }));
-
-app.use('/api/history', apiLimiter);
-app.use('/api/gold', apiLimiter);
 
 const PORT = process.env.PORT || 3000;
 
@@ -44,7 +30,6 @@ let cachedYesterdaySjc = null;
 let cachedYesterdayDate = null;
 let cachedHistory = [];
 
-// [TỐI ƯU 3.3] Hàm format ngày giờ ngay trên Server để giải phóng CPU cho điện thoại
 function formatTimeVN(dateObj) {
   if (!dateObj) return "--";
   return new Date(dateObj).toLocaleString('vi-VN', { 
@@ -57,25 +42,24 @@ async function preloadCache() {
     const historyData = await History.find()
       .select("createdAt xau sjc diff percent _id") 
       .sort({ createdAt: -1 })
-      .limit(1000)
+      .limit(300)
       .lean();
       
-    // Format sẵn thời gian cho toàn bộ Cache RAM
+    // [TỐI ƯU 4] Gán trực tiếp thuộc tính vào Object gốc để không sinh rác bộ nhớ (GC)
     if (historyData.length > 0) {
-      cachedHistory = historyData.map(item => ({
-        ...item,
-        timeStr: formatTimeVN(item.createdAt) // Ép sẵn string cho Frontend
-      }));
+      for (const item of historyData) {
+        item.timeStr = formatTimeVN(item.createdAt);
+      }
+      cachedHistory = historyData;
     }
 
     const last = await History.findOne().select('sjc diff xau usd').sort({ createdAt: -1 }).lean();
     if (last) {
       cachedLastSavedXau = last.xau;
       latestData = { sjc: last.sjc, xau: last.xau, usd: last.usd };
-      
       const diffRecord = await History.findOne({ sjc: { $ne: last.sjc } }).select('sjc diff').sort({ createdAt: -1 }).lean();
       lastDifferentSjc = diffRecord ? { sjc: diffRecord.sjc, diff: diffRecord.diff } : { sjc: last.sjc, diff: last.diff };
-      console.log(`📦 Đã nạp (Preload) toàn bộ ${historyData.length} dòng History (tinh gọn) lên RAM!`);
+      console.log(`📦 Đã nạp (Preload) toàn bộ ${historyData.length} dòng History lên RAM.`);
     }
   } catch (e) {
     console.log("⚠️ Khởi động: Lỗi preload cache:", e.message);
@@ -87,7 +71,6 @@ mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000, maxPoo
     console.log("✅ MongoDB connected");
     await preloadCache(); 
     
-    // [TỐI ƯU 3.8] Cấu hình HTTP Keep-Alive chống lag mạng
     const server = app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       updateData("Khởi động Server");
@@ -98,7 +81,6 @@ mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000, maxPoo
   .catch(err => { console.error("❌ MongoDB error:", err); process.exit(1); });
 
 mongoose.connection.on('error', (err) => { console.error("🔥 Lỗi Mất Kết Nối MongoDB:", err); });
-mongoose.connection.on('disconnected', () => { console.warn("⚠️ MongoDB đã ngắt kết nối. Đang thử lại..."); });
 
 const HistorySchema = new mongoose.Schema({
   usd: Number, xau: Number, sjc: Number, worldVND: Number, diff: Number, percent: String, status: String
@@ -108,13 +90,12 @@ HistorySchema.index({ createdAt: -1, sjc: 1 });
 HistorySchema.index({ createdAt: -1 });
 const History = mongoose.model("History", HistorySchema);
 
-// Xử lý dọn rác Client chết (không dùng setTimeout 30s)
 setInterval(() => {
   for (const c of clients) {
     try { c.write(":\n\n"); if (typeof c.flush === "function") c.flush(); } 
     catch (e) { clients.delete(c); }
   }
-}, 20000); 
+}, 40000); 
 
 let cachedUsdRate = null; 
 let lastUsdFetchTime = 0;
@@ -135,7 +116,8 @@ function isVietnamTradingTime() {
   return false;
 }
 
-async function fetchWithRetry(url, isJson = false, retries = 3) {
+// [TỐI ƯU 5] Giảm retries xuống 2 để dứt khoát ngắt kết nối nếu API public gặp sự cố
+async function fetchWithRetry(url, isJson = false, retries = 2) {
   for (let i = 0; i < retries; i++) {
     try {
       const res = await fetch(url, {
@@ -258,19 +240,18 @@ async function updateData(triggerSource = "Tự động") {
     const xauChange = xau - cachedLastSavedXau;
 
     let failedAPIs = [];
-    if (!isTrading) failedAPIs.push("Ngoài giờ GD");
-    else {
-      if (!isSjcLive) failedAPIs.push("SJC Lỗi");
-      if (!isUsdLive) failedAPIs.push("USD Lỗi");
+    if (isTrading) {
+      if (!isSjcLive) failedAPIs.push("SJC");
+      if (!isUsdLive) failedAPIs.push("USD");
     }
-    if (!isXauLive) failedAPIs.push("XAU Lỗi");
+    if (!isXauLive) failedAPIs.push("XAU");
 
-    let currentStatus = failedAPIs.length === 0 ? "Live" : `Delayed (${failedAPIs.join(", ")})`;
+    let currentStatus = failedAPIs.length === 0 ? "Live" : `Delayed (Lỗi: ${failedAPIs.join(", ")})`;
+
     const updatedTimeObj = new Date();
 
     latestData = {
-      updatedAt: updatedTimeObj, 
-      timeStr: formatTimeVN(updatedTimeObj), // Định dạng sẵn giờ để Client không phải lo
+      updatedAt: updatedTimeObj, timeStr: formatTimeVN(updatedTimeObj), 
       usd, xau, xauChange, sjc, sjcChange, oldGap: lastDifferentSjc.diff,       
       gapChange, worldVND: Math.round(worldVND), diff: currentGap,
       percent: ((diff / worldVND) * 100).toFixed(2) + "%", status: currentStatus 
@@ -285,18 +266,21 @@ async function updateData(triggerSource = "Tự động") {
       lastDifferentSjc = { sjc: sjc, diff: currentGap };
    
       const slimDoc = {
-        createdAt: savedDoc.createdAt,
-        timeStr: formatTimeVN(savedDoc.createdAt), // Gắn sẵn text giờ vào RAM Cache
+        createdAt: savedDoc.createdAt, timeStr: formatTimeVN(savedDoc.createdAt),
         xau: savedDoc.xau, sjc: savedDoc.sjc, diff: savedDoc.diff,
         percent: savedDoc.percent, _id: savedDoc._id
       };
       cachedHistory.unshift(slimDoc);
-      if (cachedHistory.length > 1000) cachedHistory.pop(); 
+      if (cachedHistory.length > 300) cachedHistory.pop(); 
 
       try {
-        const overflowRecord = await History.findOne().sort({ createdAt: -1 }).skip(1000).select('createdAt').lean();
+        const overflowRecord = await History.findOne().sort({ createdAt: -1 }).skip(300).select('createdAt').lean();
         if (overflowRecord?.createdAt) await History.deleteMany({ createdAt: { $lt: overflowRecord.createdAt } });
       } catch (err) {}
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`✅ [${currentStatus}] XAU: ${xau} | SJC: ${sjc} | GAP: ${currentGap}`);
     }
 
     const ssePayload = `data: ${JSON.stringify(latestData)}\n\n`;
@@ -332,20 +316,22 @@ app.get("/api/stream", (req, res) => {
 });
 
 app.get("/api/gold", async (req, res) => {
-    // [TỐI ƯU 3.5] Thêm Micro-cache để giảm Burst Request
     res.setHeader('Cache-Control', 'public, max-age=1');
     res.json(latestData || {});
 });
 
 app.get("/api/history", async (req, res) => {
-  // [TỐI ƯU 3.1 & 2.2] Hỗ trợ Load 1 phần dữ liệu để giảm dung lượng mạng (Mặc định 50, nếu cần lấy max 1000)
   const limit = parseInt(req.query.limit) || 50;
-  if (cachedHistory.length > 0) {
-    return res.json(cachedHistory.slice(0, limit));
-  }
+  if (cachedHistory.length > 0) return res.json(cachedHistory.slice(0, limit));
   
-  const data = await History.find().select("createdAt xau sjc diff percent _id").sort({ createdAt: -1 }).limit(1000).lean();
-  cachedHistory = data.map(item => ({...item, timeStr: formatTimeVN(item.createdAt)}));
+  const data = await History.find().select("createdAt xau sjc diff percent _id").sort({ createdAt: -1 }).limit(300).lean();
+  
+  // [TỐI ƯU 4] Đổi từ map sang for loop để tránh GC spike
+  for (const item of data) {
+    item.timeStr = formatTimeVN(item.createdAt);
+  }
+  cachedHistory = data;
+  
   res.json(cachedHistory.slice(0, limit));
 });
 
@@ -354,22 +340,18 @@ app.post("/api/history/bulk-delete", async (req, res) => {
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids)) return res.status(400).json({ error: "Thiếu danh sách ID" });
     await History.deleteMany({ _id: { $in: ids } });
-    
-    // [TỐI ƯU 1.3] Xóa mảng thông minh, tránh xóa trắng rồi bắt Server Query lại 1000 dòng
     cachedHistory = cachedHistory.filter(item => !ids.includes(item._id.toString()));
-    
     res.json({ ok: true });
   } catch (error) { res.status(500).json({ error: "Lỗi xóa" }); }
 });
 
-// [TỐI ƯU 3.7] Lên lịch cào: Trong giờ GD cào mỗi 1 phút (Để an toàn IP). Ngoài giờ cào 5 phút.
 cron.schedule("* * * * *", () => {
   const isTrading = isVietnamTradingTime();
   const currentMinute = new Date().getMinutes();
   
   if (isTrading) {
-    updateData("Cronjob 1 phút (Giờ GD)");
+    updateData("Cronjob 1 phút");
   } else if (currentMinute % 5 === 0) {
-    updateData("Cronjob 5 phút (Ngoài giờ GD)");
+    updateData("Cronjob 5 phút");
   }
 });

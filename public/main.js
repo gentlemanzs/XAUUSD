@@ -1,12 +1,15 @@
 const API = "/api/gold";
 const HIST_API = "/api/history"; 
 const elements = {
-  usd: document.getElementById("usd"), xau: document.getElementById("xau"),
-  sjc: document.getElementById("sjc"), diff: document.getElementById("diff"),
-  percent: document.getElementById("percent"), gapChange: document.getElementById("gapChange"), lastTime: document.getElementById("lastTime"),
+  usd: document.getElementById("usd"), 
+  xauValue: document.getElementById("xauValue"), xauChange: document.getElementById("xauChange"),
+  sjcValue: document.getElementById("sjcValue"), sjcChange: document.getElementById("sjcChange"),
+  diff: document.getElementById("diff"), percent: document.getElementById("percent"), 
+  gapChange: document.getElementById("gapChange"), lastTime: document.getElementById("lastTime"),
   historyTable: document.getElementById("history"), filterBox: document.getElementById("filterBox"),
-  startDate: document.getElementById("startDate"), endDate: document.getElementById("endDate"), toggleBtn: document.getElementById("toggleBtn"),
-  actionHeader: document.getElementById("actionHeader"), pagination: document.getElementById("pagination")
+  startDate: document.getElementById("startDate"), endDate: document.getElementById("endDate"), 
+  toggleBtn: document.getElementById("toggleBtn"), actionHeader: document.getElementById("actionHeader"), 
+  pagination: document.getElementById("pagination")
 };
 
 const fmtVND = new Intl.NumberFormat('vi-VN');
@@ -21,11 +24,25 @@ let isExpanded = false;
 let currentPage = 1;
 
 let evtSource = null;
-
 let lastFetchTime = 0;
+
+// [TỐI ƯU MỚI] Đóng băng biểu đồ khi khuất tầm nhìn để tiết kiệm Pin điện thoại
+let isChartVisible = true;
+const chartObserver = new IntersectionObserver((entries) => {
+  isChartVisible = entries[0].isIntersecting;
+  // Nếu cuộn đến và biểu đồ đang chờ update thì vẽ luôn
+  if (isChartVisible && myChart) myChart.update('none'); 
+}, { threshold: 0.1 });
+
+// Gắn mắt thần vào sau khi DOM load
+document.addEventListener("DOMContentLoaded", () => {
+  const chartEl = document.getElementById('gapChart');
+  if (chartEl) chartObserver.observe(chartEl);
+});
+
 function safeFetchHistory(isInit = false) {
   const now = Date.now();
-  if (!isInit && now - lastFetchTime < 2000) return;
+  if (!isInit && now - lastFetchTime < 5000) return;
   lastFetchTime = now;
   fetchHistory();
 }
@@ -33,7 +50,7 @@ function safeFetchHistory(isInit = false) {
 function initSSE() {
   if (evtSource && evtSource.readyState !== EventSource.CLOSED) return;
   evtSource = new EventSource("/api/stream");
-  evtSource.onopen = () => { console.log("🟢 SSE đã kết nối thành công"); };
+  evtSource.onopen = () => { console.log("🟢 SSE kết nối."); };
   evtSource.onmessage = (event) => {
     if (!event.data) return;
     const d = JSON.parse(event.data);
@@ -50,8 +67,7 @@ function initSSE() {
     }
   };
   evtSource.onerror = () => {
-    console.warn("SSE mất kết nối, trình duyệt đang tự động thử reconnect...");
-    elements.lastTime.innerHTML = "🔴 Mất kết nối. Đang thử lại...";
+    elements.lastTime.textContent = "🔴 Mất kết nối. Đang thử lại...";
     elements.lastTime.style.color = "var(--down-color)";
   };
 }
@@ -70,74 +86,75 @@ async function load() {
   } catch(e) {}
 }
 
-// [TỐI ƯU DOM 3.4 & HTML REPAINT 2.3] Biến lưu trạng thái để tránh đè innerHTML không cần thiết
 let currentRenderedStates = { xauStr: "", sjcStr: "" };
 
 function renderMain(d) {
   try { localStorage.setItem('xau_main_cache', JSON.stringify(d)); } catch(e) {}
 
   const usdText = fmtVND.format(d.usd);
-  if (elements.usd.innerText !== usdText) elements.usd.innerText = usdText;
+  if (elements.usd.textContent !== usdText) elements.usd.textContent = usdText; 
   
   const diffText = fmtVND.format(d.diff);
-  if (elements.diff.innerText !== diffText) elements.diff.innerText = diffText;
+  if (elements.diff.textContent !== diffText) elements.diff.textContent = diffText;
   
-  if (elements.percent.innerText !== d.percent) elements.percent.innerText = d.percent;
+  if (elements.percent.textContent !== d.percent) elements.percent.textContent = d.percent;
 
   const xChange = d.xauChange || 0;
   const isXUp = xChange >= 0;
-  const newXauSig = `${d.xau}_${xChange}`; // Tạo chữ ký kiểm tra
-  
-  if (currentRenderedStates.xauStr !== newXauSig) {
-    elements.xau.innerHTML = `
-      <div class="xau-wrapper">
-        <div>${fmtXAU.format(d.xau)}</div>
-        <div class="sjc-sub ${isXUp ? 'xau-up' : 'xau-down'}">
-          ${isXUp ? '▲' : '▼'} ${fmtXAU.format(Math.abs(xChange))}
-        </div>
-      </div>
-    `;
-    currentRenderedStates.xauStr = newXauSig;
+  const xColorClass = isXUp ? 'sjc-sub xau-up' : 'sjc-sub xau-down';
+  const xauValueStr = fmtXAU.format(d.xau);
+  const xauChangeStr = `${isXUp ? '▲' : '▼'} ${fmtXAU.format(Math.abs(xChange))}`;
+
+  if (elements.xauValue.textContent !== xauValueStr) elements.xauValue.textContent = xauValueStr;
+  if (elements.xauChange.textContent !== xauChangeStr) {
+    elements.xauChange.textContent = xauChangeStr;
+    elements.xauChange.className = xColorClass;
   }
 
   if (elements.gapChange && d.gapChange !== undefined) {
     const gVal = d.gapChange;
     const newGapText = (gVal > 0 ? "+" : "") + fmtVND.format(gVal);
-    if (elements.gapChange.innerText !== newGapText) {
-      elements.gapChange.innerText = newGapText;
+    if (elements.gapChange.textContent !== newGapText) {
+      elements.gapChange.textContent = newGapText;
       elements.gapChange.style.color = gVal > 0 ? "var(--up-color)" : (gVal < 0 ? "var(--down-color)" : "var(--secondary-text)");
     }
   }
 
   const change = d.sjcChange || 0;
   const isUp = change >= 0;
-  const newSjcSig = `${d.sjc}_${change}`;
+  const sjcColorClass = isUp ? 'sjc-sub change-up' : 'sjc-sub change-down';
+  const sjcValueStr = fmtVND.format(d.sjc);
+  const sjcChangeStr = `${isUp ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}`;
 
-  if (currentRenderedStates.sjcStr !== newSjcSig) {
-    elements.sjc.innerHTML = `
-      <div>${fmtVND.format(d.sjc)}</div>
-      <div class="sjc-sub ${isUp ? 'change-up' : 'change-down'}">
-        ${isUp ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}
-      </div>
-    `;
-    currentRenderedStates.sjcStr = newSjcSig;
+  if (elements.sjcValue.textContent !== sjcValueStr) elements.sjcValue.textContent = sjcValueStr;
+  if (elements.sjcChange.textContent !== sjcChangeStr) {
+    elements.sjcChange.textContent = sjcChangeStr;
+    elements.sjcChange.className = sjcColorClass;
   }
 
   const timeStr = d.timeStr || new Date().toLocaleTimeString('vi-VN');
-  const newStatusHtml = `${d.status === "Live" ? "🟢 Live" : "🟡 " + d.status} - Cập nhật: ${timeStr}`;
-  if (elements.lastTime.innerHTML !== newStatusHtml) elements.lastTime.innerHTML = newStatusHtml;
+  const newStatusText = `${d.status === "Live" ? "🟢 Live" : "🟡 " + d.status} - Cập nhật: ${timeStr}`;
+  if (elements.lastTime.textContent !== newStatusText) elements.lastTime.textContent = newStatusText;
 }
 
 async function fetchHistory() {
   try {
-    // [TỐI ƯU 3.1 & 2.2] Chỉ gọi giới hạn bản ghi tùy theo trạng thái đang thu gọn hay bung rộng
-    const limit = isExpanded ? 1000 : 50; 
+    const limit = isExpanded ? 300 : 50; 
     const res = await fetch(`${HIST_API}?limit=${limit}`, { cache: "no-store" });
     historyData = await res.json(); 
     
+    for (const r of historyData) {
+      if (r.createdAt) {
+        const d = new Date(r.createdAt);
+        if (!isNaN(d)) {
+          r.filterDateStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+        }
+      }
+    }
+
     try { localStorage.setItem('xau_hist_cache', JSON.stringify(historyData)); } catch(e) {}
 
-    currentData = [...historyData]; 
+    currentData = historyData; 
     renderTable(); 
     updateChart(currentData);
   } catch(e) {}
@@ -155,7 +172,6 @@ function renderTable() {
 
   displayData.forEach(r => {
     const tr = document.createElement("tr");
-    // [TỐI ƯU 3.3] Dùng trực tiếp r.timeStr do Backend trả về, tiết kiệm cực nhiều CPU
     tr.innerHTML = `
       <td class="col-action" style="display: ${displayStyle};">
         <input type="checkbox" class="log-checkbox" value="${r._id}">
@@ -211,7 +227,6 @@ function toggleFilterBox() {
   elements.toggleBtn.innerText = isExpanded ? "−" : "+";
   elements.actionHeader.style.display = isExpanded ? "table-cell" : "none";
   currentPage = 1;
-  // Cập nhật lại data mẻ lớn (1000) khi bung bảng
   fetchHistory(); 
 }
 
@@ -219,27 +234,19 @@ function applyFilter() {
   const startStr = elements.startDate.value;
   const endStr = elements.endDate.value;
   
-  currentData = (!startStr && !endStr) ? [...historyData] : historyData.filter(r => {
-    const d = new Date(r.createdAt);
-    if(isNaN(d)) return false;
-    const formatted = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }); 
-    if(startStr && formatted < startStr) return false;
-    if(endStr && formatted > endStr) return false;
+  currentData = (!startStr && !endStr) ? historyData : historyData.filter(r => {
+    if (!r.filterDateStr) return false;
+    if (startStr && r.filterDateStr < startStr) return false;
+    if (endStr && r.filterDateStr > endStr) return false;
     return true;
   });
-  
-  currentPage = 1; 
-  renderTable(); 
-  updateChart(currentData);
+  currentPage = 1; renderTable(); updateChart(currentData);
 }
 
 function resetFilter() {
-  elements.startDate.value = "";
-  elements.endDate.value = "";
-  currentData = [...historyData]; 
-  currentPage = 1; 
-  renderTable(); 
-  updateChart(currentData);
+  elements.startDate.value = ""; elements.endDate.value = "";
+  currentData = historyData; 
+  currentPage = 1; renderTable(); updateChart(currentData);
 }
 
 function toggleSelectAll(source) {
@@ -259,14 +266,13 @@ async function deleteSelected() {
       body: JSON.stringify({ ids: ids })
     });
     if (res.ok) await fetchHistory(); else alert("Lỗi khi xóa dữ liệu!");
-  } catch(e) { console.error(e); alert("Lỗi mạng!"); }
+  } catch(e) { alert("Lỗi mạng!"); }
 }
 
 function updateChart(fullData) {
-  if (!fullData || fullData.length === 0) return;
+  if (!fullData || fullData.length < 2) return;
 
-  // [TỐI ƯU 3.2 & 2.1] Cắt giảm tối đa 150 điểm để vẽ biểu đồ, tránh treo trình duyệt điện thoại
-  const MAX_POINTS = 150;
+  const MAX_POINTS = 100;
   const data = fullData.slice(0, MAX_POINTS);
 
   const currentSignature = `${data.length}_${data[0].createdAt}`;
@@ -282,7 +288,6 @@ function updateChart(fullData) {
 
   for (let i = totalPoints - 1; i >= 0; i--) {
     const r = data[i];
-    // Tái sử dụng timeStr từ server, cắt lấy phần giờ:phút "HH:mm"
     labels.push(r.timeStr ? r.timeStr.substring(0, 5) : "--:--");
     gaps.push(r.diff / 1000000);
   }
@@ -291,63 +296,62 @@ function updateChart(fullData) {
   const scrollContainer = document.querySelector('.chart-scroll-container');
   const containerWidth = scrollContainer.clientWidth || window.innerWidth;
 
-  const maxSpacing = 110; 
-  let minSpacing = 75;  
-
+  const maxSpacing = 110; let minSpacing = 75;  
   if (totalPoints * minSpacing > 30000) minSpacing = Math.floor(30000 / totalPoints);
   
   const minPointsToFill = Math.ceil(containerWidth / maxSpacing);
-
   if (totalPoints > 0 && totalPoints < minPointsToFill) {
     const padCount = minPointsToFill - totalPoints;
     for (let i = 0; i < padCount; i++) {
-      labels.push(' '.repeat(i + 1)); 
-      gaps.push(null); 
+      labels.push(' '.repeat(i + 1)); gaps.push(null); 
     }
   }
 
-  const validGaps = gaps.filter(g => g !== null);
-  let yMin = 0;
-  let yMax = 0;
+  let yMin = Infinity;
+  let yMax = -Infinity;
+  let hasValidGap = false;
 
-  if (validGaps.length > 0) {
-    const minVal = Math.min(...validGaps);
-    const maxVal = Math.max(...validGaps);
-    const range = maxVal - minVal;
-    const padding = Math.max(range * 0.2, 0.5); 
-    yMin = minVal - padding;
-    yMax = maxVal + padding;
+  for (const g of gaps) {
+    if (g === null) continue;
+    hasValidGap = true;
+    if (g < yMin) yMin = g;
+    if (g > yMax) yMax = g;
+  }
+
+  if (hasValidGap) {
+    const padding = Math.max((yMax - yMin) * 0.2, 0.5); 
+    yMin -= padding; 
+    yMax += padding;
+  } else {
+    yMin = 0; yMax = 0;
   }
 
   const calculatedWidth = totalPoints * minSpacing;
-
-  if (calculatedWidth > containerWidth) {
-    wrapper.style.setProperty('width', calculatedWidth + 'px', 'important');
-    wrapper.style.setProperty('min-width', calculatedWidth + 'px', 'important');
-  } else {
-    wrapper.style.setProperty('width', '100%', 'important');
-    wrapper.style.setProperty('min-width', '100%', 'important');
+  
+  if (wrapper._lastWidth !== calculatedWidth) {
+    if (calculatedWidth > containerWidth) {
+      wrapper.style.setProperty('width', calculatedWidth + 'px', 'important');
+      wrapper.style.setProperty('min-width', calculatedWidth + 'px', 'important');
+    } else {
+      wrapper.style.setProperty('width', '100%', 'important');
+      wrapper.style.setProperty('min-width', '100%', 'important');
+    }
+    wrapper._lastWidth = calculatedWidth;
   }
 
   if (myChart) {
-    myChart.data.labels = labels;
-    myChart.data.datasets[0].data = gaps;
-    myChart.options.scales.y.suggestedMin = yMin;
-    myChart.options.scales.y.suggestedMax = yMax;
-    myChart.update('none');
+    myChart.data.labels = labels; myChart.data.datasets[0].data = gaps;
+    myChart.options.scales.y.suggestedMin = yMin; myChart.options.scales.y.suggestedMax = yMax;
+    // [TỐI ƯU MỚI] Chỉ cập nhật vẽ lại nếu biểu đồ đang hiện trên màn hình
+    if (isChartVisible) myChart.update('none');
   } else {
     myChart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: labels,
         datasets: [{
-          data: gaps,
-          borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          borderWidth: 2,
-          fill: true,
-          tension: 0.3,
-          pointRadius: 3
+          data: gaps, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderWidth: 2, fill: true, tension: 0.3, pointRadius: 3
         }]
       },
       options: {
@@ -359,10 +363,7 @@ function updateChart(fullData) {
             ticks: { maxTicksLimit: 6, callback: (val) => val.toFixed(1) + 'M', color: '#64748b', font: { size: 11 } },
             grid: { color: 'rgba(226, 232, 240, 0.6)' }
           },
-          x: {
-            ticks: { autoSkip: true, maxRotation: 0, color: '#64748b', font: { size: 10 } },
-            grid: { display: false }
-          }
+          x: { ticks: { autoSkip: true, maxRotation: 0, color: '#64748b', font: { size: 10 } }, grid: { display: false } }
         }
       }
     });
@@ -383,18 +384,14 @@ try {
     renderMain(parsedMain);
     lastSJCValue = parsedMain.sjc; 
   }
-
   const cachedHistory = localStorage.getItem('xau_hist_cache');
   if (cachedHistory) {
-    historyData = JSON.parse(cachedHistory);
-    currentData = [...historyData];
-    renderTable();
-    updateChart(currentData);
+    historyData = JSON.parse(cachedHistory); currentData = historyData;
+    renderTable(); updateChart(currentData);
   }
-} catch(e) { console.error("Lỗi đọc cache:", e); }
+} catch(e) { }
 
 initSSE();
-
 setTimeout(() => { if (lastSJCValue === null) load(); }, 3000);
 
 const pullContainer = document.createElement("div");
@@ -422,8 +419,7 @@ window.addEventListener("touchmove", (e) => {
   const diff = e.touches[0].clientY - startY;
   if (diff > 0 && window.scrollY <= 0) {
     if (e.cancelable) e.preventDefault();
-    const moveY = Math.min(diff * 0.4, 90); 
-    pullContainer.style.top = `${-80 + moveY}px`;
+    const moveY = Math.min(diff * 0.4, 90); pullContainer.style.top = `${-80 + moveY}px`;
     const pullRatio = Math.min(diff / pullThreshold, 1);
     bars.forEach((bar, index) => { bar.style.height = `${4 + (targetHeights[index] - 4) * pullRatio}px`; });
     if (diff > pullThreshold) { pullContainer.classList.add('ready'); textEl.innerText = "Thả tay để tải mới!"; } 
@@ -444,19 +440,15 @@ window.addEventListener("touchend", (e) => {
       textEl.innerText = "Success!";
       pullContainer.classList.remove('refreshing'); pullContainer.classList.add('ready');
       bars.forEach((bar, idx) => bar.style.height = `${targetHeights[idx]}px`);
-      setTimeout(() => { 
-        pullContainer.style.top = "-80px"; 
-        setTimeout(() => { isRefreshing = false; pullContainer.classList.remove('ready'); }, 300);
-      }, 1200);
+      setTimeout(() => { pullContainer.style.top = "-80px"; setTimeout(() => { isRefreshing = false; pullContainer.classList.remove('ready'); }, 300); }, 1200);
     });
   } else { pullContainer.style.top = "-80px"; }
 }, { passive: true });
 
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
-    if (evtSource) { evtSource.close(); evtSource = null; console.log("⏸ Tab ẩn. Đã tạm ngắt SSE để tiết kiệm pin."); }
+    if (evtSource) { evtSource.close(); evtSource = null; }
   } else {
-    console.log("▶ Tab hoạt động. Đang kết nối và tải lại dữ liệu mới nhất...");
     load(); initSSE();
   }
 });

@@ -9,18 +9,15 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0" defer></script>
 
-<link rel="stylesheet" href="style.css?v=1.9">
+<link rel="stylesheet" href="style.css?v=1.11">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
 <link rel="apple-touch-icon" href="/icon-180.png">
 <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png">
-<!-- KẾT NỐI FILE MANIFEST -->
 <link rel="manifest" href="/manifest.json">
-
-<!-- ĐỔI MÀU THANH TRẠNG THÁI (Đồng bộ với màu nền App) -->
 <meta name="theme-color" content="#0f172a">
 
-<!-- CÁC THẺ BẮT BUỘC ĐỂ ẨN THANH ĐỊA CHỈ TRÊN IPHONE/IPAD (SAFARI) -->
-<meta name="apple-mobile-web-app-capable" content="yes">
+<!-- CÁC THẺ PWA (Đã xóa thẻ apple cũ bị deprecated để Console sạch sẽ) -->
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="XAU Dashboard">
 </head>
@@ -28,15 +25,30 @@
 
 <header>
   <div class="brand"><span>📊</span> XAU DASHBOARD</div>
-  </header>
+</header>
 
 <div class="container">
   <div id="lastTime" style="margin-bottom:1rem; font-size:0.875rem; color:#64748b; font-weight: 500;">Đang kết nối...</div>
 
   <div class="grid">
     <div class="card usd-card"><div class="card-title">💵 USD VND</div><div id="usd" class="card-value">--</div></div>
-    <div class="card highlight"><div class="card-title">🌍 XAU USD</div><div id="xau" class="card-value">--</div></div>
-    <div class="card highlight"><div class="card-title">🧈 SJC Gold </div><div id="sjc" class="card-value">--</div></div>
+    
+    <div class="card highlight">
+      <div class="card-title">🌍 XAU USD</div>
+      <div class="card-value xau-wrapper">
+        <div id="xauValue">--</div>
+        <div id="xauChange" class="sjc-sub"></div>
+      </div>
+    </div>
+    
+    <div class="card highlight">
+      <div class="card-title">🧈 SJC Gold</div>
+      <div class="card-value">
+        <div id="sjcValue">--</div>
+        <div id="sjcChange" class="sjc-sub"></div>
+      </div>
+    </div>
+
     <div class="card"><div class="card-title">⚖️ Market Gap</div><div id="diff" class="card-value">--</div></div>
     <div class="card"><div class="card-title">📊 DIFF</div><div id="percent" class="card-value">--</div></div>
     <div class="card"><div class="card-title">📉 Gap Change</div><div id="gapChange" class="card-value">--</div></div>
@@ -60,7 +72,6 @@
     <table>
       <thead>
         <tr>
-          <!-- Đẩy Checkbox sang cột độc lập -->
           <th id="actionHeader" class="col-action">
             <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)" title="Chọn tất cả">
           </th>
