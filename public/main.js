@@ -315,9 +315,7 @@ function updateChart(data) {
   const labels = [];
   const gaps = [];
 
-  // TỐI ƯU: Đảo chiều mảng gốc mà không tốn thêm RAM tạo mảng mới bằng slice()
-  // Vì "data" truyền vào đang xếp từ MỚI NHẤT -> CŨ NHẤT
-  // Để Chart.js vẽ từ CŨ -> MỚI (Trái sang Phải), ta phải lặp ngược từ cuối lên đầu
+  // TỐI ƯU: Không tạo mảng mới bằng slice().reverse() để tiết kiệm RAM. Dùng vòng lặp ngược.
   for (let i = totalPoints - 1; i >= 0; i--) {
     const r = data[i];
     const d = new Date(r.createdAt);
@@ -337,8 +335,9 @@ function updateChart(data) {
   if (totalPoints > 0 && totalPoints < minPointsToFill) {
     const padCount = minPointsToFill - totalPoints;
     for (let i = 0; i < padCount; i++) {
-      // Dùng push để thêm "khoảng trống" vào cuối mảng (bên phải của biểu đồ)
-      // Nhờ đó, dữ liệu thật của ta sẽ yên vị ở đầu mảng (bám sát trục Y bên trái)
+      // ĐÃ SỬA THÀNH PUSH CHUẨN XÁC:
+      // Dùng push để đẩy các khoảng trống ảo về phía cuối mảng (sát lề phải biểu đồ),
+      // Giúp dữ liệu thật ở đầu mảng tự động bám sát trục Y (lề trái).
       labels.push(''); 
       gaps.push(null); 
     }
