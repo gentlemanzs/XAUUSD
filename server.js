@@ -43,11 +43,10 @@ const PORT = process.env.PORT || 3000;
 // TỐI ƯU CHUẨN XÁC: Nạp dữ liệu từ DB lên RAM trước khi khởi động
 async function preloadCache() {
   try {
-    // 1. TỐI ƯU TẬN CÙNG: Nạp sẵn 100 dòng lịch sử lên RAM. Sau bước này API /history KHÔNG BAO GIỜ chọc DB nữa!
+    // THÁO GIỚI HẠN: Nạp TOÀN BỘ lịch sử lên RAM
     const historyData = await History.find()
       .select("createdAt xau sjc diff percent _id")
       .sort({ createdAt: -1 })
-      .limit(100)
       .lean();
     if (historyData.length > 0) cachedHistory = historyData;
 
@@ -70,7 +69,7 @@ async function preloadCache() {
       
       lastDifferentSjc = diffRecord ? { sjc: diffRecord.sjc, diff: diffRecord.diff } : { sjc: last.sjc, diff: last.diff };
       
-      console.log("📦 Khởi động: Đã nạp (Preload) toàn bộ History và Cache tính toán từ DB lên RAM thành công!");
+      console.log(`📦 Khởi động: Đã nạp (Preload) toàn bộ ${historyData.length} dòng History và Cache tính toán từ DB lên RAM!`);
     }
   } catch (e) {
     console.log("⚠️ Khởi động: Lỗi preload cache:", e.message);
@@ -147,7 +146,7 @@ setInterval(() => {
 }, 20000); // mỗi 20 giây
 
 // Biến RAM Cache riêng cho USD (1 tiếng)
-// Dùng null thay cho 1000 để bắt bug và ép cào ngay khi khởi động
+// Dùng null thay cho 1000 để bắt làm ép cào ngay khi khởi động
 let cachedUsdRate = null; 
 let lastUsdFetchTime = 0;
 const USD_CACHE_DURATION = 60 * 60 * 1000; // 1 tiếng tính bằng mili-giây
@@ -398,9 +397,10 @@ async function updateData(triggerSource = "Tự động") {
       // TỐI ƯU HYBRID: Cập nhật luôn mốc SJC mới vào RAM để dùng cho tính toán Gap lần sau
       lastDifferentSjc = { sjc: sjc, diff: currentGap };
    
-      // TỐI ƯU: Nuôi Cache thay vì xóa đi để tránh gọi lại DB 
+      // THÁO GIỚI HẠN: Nuôi Cache vĩnh viễn không cắt gọt
       cachedHistory.unshift(savedDoc);
-      if (cachedHistory.length > 100) cachedHistory.pop(); // Luôn khóa chặt RAM ở 100 dòng
+      // BỎ XÓA DATABASE Ở ĐÂY.
+
     } else {
       console.log(`   ⏩ DB: Giá SJC không đổi (${sjc.toLocaleString('vi-VN')}), không lưu rác.`);
     }
@@ -474,10 +474,10 @@ app.get("/api/history", async (req, res) => {
   }
 
   // Khúc Fallback này chỉ để phòng ngừa rủi ro nếu có bug làm xóa rỗng mảng RAM
+  // THÁO GIỚI HẠN: Fetch toàn bộ không giới hạn
   const data = await History.find()
     .select("createdAt xau sjc diff percent _id") 
     .sort({ createdAt: -1 })
-    .limit(100)
     .lean();
     
   cachedHistory = data;
