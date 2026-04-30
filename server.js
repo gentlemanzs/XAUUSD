@@ -368,7 +368,7 @@ async function updateData(triggerSource = "Tự động") {
 
 app.get("/api/stream", (req, res) => {
   // TỐI ƯU: Sửa lỗi text-event-stream thành text/event-stream chuẩn xác
-  res.setHeader("Content-Type", "text-event-stream");
+  res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   

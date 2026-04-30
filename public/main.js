@@ -417,9 +417,15 @@ function updateChart(data) {
   }
   
   const container = document.querySelector('.chart-scroll-container');
+  // TỐI ƯU: Check xem người dùng có đang ở sát mép phải (sai số 50px) không
+  const isAtRightEdge = container.scrollWidth - container.clientWidth <= container.scrollLeft + 50;
+  
   // TỐI ƯU: Sử dụng requestAnimationFrame thay cho setTimeout hack delay 200ms để mượt mà hơn
   requestAnimationFrame(() => {
-    container.scrollLeft = container.scrollWidth;
+    // TỐI ƯU UX: Chỉ tự động cuộn đến biểu đồ mới nhất nếu họ đang ở mép phải
+    if (isAtRightEdge || data.length <= 10) {
+      container.scrollLeft = container.scrollWidth;
+    }
   });
 }
 
