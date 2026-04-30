@@ -83,7 +83,7 @@ header {
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
 
 /* TỐI ƯU: Thêm will-change: transform để GPU điện thoại render mượt hơn khi có hover effect */
-.card { background: var(--card-bg); border-radius: 16px; padding: 1.5rem; border: 1px solid var(--border-color); transition: 0.3s; will-change: transform; }
+.card { background: var(--card-bg); border-radius: 16px; padding: 1.5rem; border: 1px solid var(--border-color); transition: 0.3s; will-change: transform; transform: translateZ(0);}
 
 .card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
 .card.highlight { border-left: 4px solid var(--accent-color); }

@@ -21,6 +21,7 @@ const apiLimiter = rateLimit({
   message: { error: "Bạn đã gọi API quá nhiều lần. Vui lòng đợi 15 phút." },
   standardHeaders: true, 
   legacyHeaders: false, 
+  skip: (req) => req.headers.accept === 'text/event-stream' // TỐI ƯU: Đảm bảo không bao giờ block nhầm luồng SSE
 });
 
 app.use(cors());
@@ -39,6 +40,24 @@ app.use('/api/gold', apiLimiter);
 
 const PORT = process.env.PORT || 3000;
 
+// TỐI ƯU CHUẨN XÁC: Nạp dữ liệu từ DB lên RAM trước khi khởi động
+async function preloadCache() {
+  try {
+    const last = await History.findOne()
+      .select('sjc diff xau')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (last) {
+      lastDifferentSjc = { sjc: last.sjc, diff: last.diff };
+      cachedLastSavedXau = last.xau;
+      console.log("📦 Khởi động: Đã nạp (Preload) Cache thành công từ Database!");
+    }
+  } catch (e) {
+    console.log("⚠️ Khởi động: Lỗi preload cache:", e.message);
+  }
+}
+
 /* ===== CONNECT MONGO ===== */
 // Tối ưu: Đưa logic khởi chạy vào bên trong .then để đảm bảo DB luôn sẵn sàng
 mongoose.connect(process.env.MONGO_URI, { 
@@ -46,8 +65,9 @@ mongoose.connect(process.env.MONGO_URI, {
   maxPoolSize: 10, // TỐI ƯU: Nâng cấp Pool Tuning để ổn định khi nhiều request
   minPoolSize: 2
 })
-  .then(() => {
+  .then(async () => { // Thêm async vào đây để gọi preload
     console.log("✅ MongoDB connected");
+    await preloadCache(); // Nạp sẵn RAM trước khi mở cổng cho khách vào
     // Khởi động server và chạy cào dữ liệu ngay sau khi DB sẵn sàng
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
@@ -253,8 +273,13 @@ async function updateData(triggerSource = "Tự động") {
         if (latestData) {
           latestData.status = "Delayed (Lỗi API nguồn)";
           const fallbackPayload = `data: ${JSON.stringify(latestData)}\n\n`;
-          clients.forEach(c => {
-            try { c.write(fallbackPayload); if (typeof c.flush === "function") c.flush(); } catch (err) {}
+          // TỐI ƯU: Lọc sạch client chết ngay cả trong nhánh báo lỗi (Cleanup Fallback)
+          clients = clients.filter(c => {
+            try { 
+              c.write(fallbackPayload); 
+              if (typeof c.flush === "function") c.flush(); 
+              return true;
+            } catch (err) { return false; }
           });
         }
         return; 

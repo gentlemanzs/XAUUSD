@@ -51,7 +51,7 @@ function initSSE() {
     if (!event.data) return;
     const d = JSON.parse(event.data);
     // TỐI ƯU: Check d.updatedAt thay vì Object.keys để tiết kiệm CPU điện thoại
-    if (!d || !d.updatedAt) return;
+    if (!d?.updatedAt) return;
     
     // Hiệu ứng nháy màu báo có data mới
     elements.lastTime.style.color = "#10b981";
@@ -68,6 +68,9 @@ function initSSE() {
   // TỐI ƯU: Bắt lỗi SSE để báo hiệu cho người dùng khi rớt mạng
   evtSource.onerror = () => {
     console.warn("SSE mất kết nối, trình duyệt đang tự động thử reconnect...");
+    // TỐI ƯU UX: Báo cho người dùng biết trạng thái mất mạng
+    elements.lastTime.innerHTML = "🔴 Đang thử kết nối lại...";
+    elements.lastTime.style.color = "var(--down-color)";
   };
 }
 
@@ -78,7 +81,8 @@ async function load() {
     const res = await fetch(`${API}?t=${Date.now()}`);
     const d = await res.json();
     
-    if (!d || Object.keys(d).length === 0) return;
+    // TỐI ƯU: Giảm tải việc sinh rác bộ nhớ (Garbage Collection) trên Mobile
+    if (!d?.updatedAt) return;
     
     renderMain(d);
     
@@ -178,7 +182,11 @@ function formatVNDateTime(isoString) {
     minute: '2-digit' 
   });
 // --- TỐI ƯU MỚI: Tránh tràn RAM trình duyệt ---
-  if (dateCache.size > 300) dateCache.clear();
+  if (dateCache.size > 300) {
+    // TỐI ƯU: Xóa phần tử cũ nhất thay vì xóa trắng toàn bộ (Cơ chế Cuốn chiếu FIFO)
+    const firstKey = dateCache.keys().next().value;
+    dateCache.delete(firstKey);
+  }
   
   // 3. Lưu kết quả vừa tính vào kho để lần sau không phải tính lại
   dateCache.set(isoString, formatted);
@@ -332,6 +340,8 @@ function updateChart(data) {
   }
 
   const wrapper = chartCanvas.parentElement;
+  
+  // TỐI ƯU: Gộp biến và tái sử dụng tránh gọi DOM 2 lần
   const scrollContainer = document.querySelector('.chart-scroll-container');
   const containerWidth = scrollContainer.clientWidth || window.innerWidth;
 
@@ -428,15 +438,14 @@ function updateChart(data) {
     });
   }
   
-  const container = document.querySelector('.chart-scroll-container');
   // TỐI ƯU: Check xem người dùng có đang ở sát mép phải (sai số 50px) không
-  const isAtRightEdge = container.scrollWidth - container.clientWidth <= container.scrollLeft + 50;
+  const isAtRightEdge = scrollContainer.scrollWidth - scrollContainer.clientWidth <= scrollContainer.scrollLeft + 50;
   
   requestAnimationFrame(() => {
     // TỐI ƯU UX: Chỉ tự động cuộn đến biểu đồ mới nhất nếu họ đang ở mép phải
     if (isAtRightEdge || data.length <= 10) {
       // Ép chặt cuộn về 0 (lề trái) nếu dữ liệu ít đang bị ép sang trái, ngược lại cuộn phải
-      container.scrollLeft = (totalPoints < minPointsToFill) ? 0 : container.scrollWidth;
+      scrollContainer.scrollLeft = (totalPoints < minPointsToFill) ? 0 : scrollContainer.scrollWidth;
     }
   });
 }
