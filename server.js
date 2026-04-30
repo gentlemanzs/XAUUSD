@@ -43,14 +43,15 @@ const PORT = process.env.PORT || 3000;
 // TỐI ƯU CHUẨN XÁC: Nạp dữ liệu từ DB lên RAM trước khi khởi động
 async function preloadCache() {
   try {
-    // THÁO GIỚI HẠN: Nạp TOÀN BỘ lịch sử lên RAM
+    // TỐI ƯU TẬN CÙNG: Nạp sẵn 1000 dòng lịch sử lên RAM. Sau bước này API /history KHÔNG BAO GIỜ chọc DB nữa!
     const historyData = await History.find()
-      .select("createdAt xau sjc diff percent _id")
+      .select("createdAt xau sjc diff percent _id") // Loại bỏ usd, worldVND, status khỏi RAM lịch sử
       .sort({ createdAt: -1 })
+      .limit(1000)
       .lean();
     if (historyData.length > 0) cachedHistory = historyData;
 
-    // 2. Nạp các biến Cache tính toán
+    // 2. Nạp các biến Cache tính toán (Cần đủ các trường để tính toán logic lần cào tiếp theo)
     const last = await History.findOne()
       .select('sjc diff xau usd')
       .sort({ createdAt: -1 })
@@ -69,7 +70,7 @@ async function preloadCache() {
       
       lastDifferentSjc = diffRecord ? { sjc: diffRecord.sjc, diff: diffRecord.diff } : { sjc: last.sjc, diff: last.diff };
       
-      console.log(`📦 Khởi động: Đã nạp (Preload) toàn bộ ${historyData.length} dòng History và Cache tính toán từ DB lên RAM!`);
+      console.log(`📦 Khởi động: Đã nạp (Preload) toàn bộ ${historyData.length} dòng History (tinh gọn) lên RAM!`);
     }
   } catch (e) {
     console.log("⚠️ Khởi động: Lỗi preload cache:", e.message);
@@ -397,9 +398,34 @@ async function updateData(triggerSource = "Tự động") {
       // TỐI ƯU HYBRID: Cập nhật luôn mốc SJC mới vào RAM để dùng cho tính toán Gap lần sau
       lastDifferentSjc = { sjc: sjc, diff: currentGap };
    
-      // THÁO GIỚI HẠN: Nuôi Cache vĩnh viễn không cắt gọt
-      cachedHistory.unshift(savedDoc);
-      // BỎ XÓA DATABASE Ở ĐÂY.
+      // Nuôi Cache tinh gọn vào RAM
+      const slimDoc = {
+        createdAt: savedDoc.createdAt,
+        xau: savedDoc.xau,
+        sjc: savedDoc.sjc,
+        diff: savedDoc.diff,
+        percent: savedDoc.percent,
+        _id: savedDoc._id
+      };
+      cachedHistory.unshift(slimDoc);
+      if (cachedHistory.length > 1000) cachedHistory.pop(); // Khóa chặt RAM ở 1000 dòng
+
+      // TỐI ƯU TẬN CÙNG: Dọn rác Database tự động (Chỉ giữ lại 1000 bản ghi mới nhất)
+      try {
+        const count = await History.countDocuments();
+        if (count > 1000) {
+          // Lấy _id của bản ghi thứ 1000 (Sắp xếp từ mới đến cũ)
+          const recordsToKeep = await History.find().sort({ createdAt: -1 }).skip(1000).limit(1).select('_id').lean();
+          if (recordsToKeep && recordsToKeep.length > 0) {
+            const thresholdId = recordsToKeep[0]._id;
+            // Xóa tất cả các bản ghi CŨ HƠN bản ghi thứ 1000
+            await History.deleteMany({ _id: { $lt: thresholdId } });
+            console.log("   🧹 Dọn rác DB: Đã xóa các bản ghi cũ vượt quá giới hạn 1000 dòng.");
+          }
+        }
+      } catch (err) {
+        console.warn("   ⚠️ Dọn rác DB thất bại:", err.message);
+      }
 
     } else {
       console.log(`   ⏩ DB: Giá SJC không đổi (${sjc.toLocaleString('vi-VN')}), không lưu rác.`);
@@ -474,10 +500,10 @@ app.get("/api/history", async (req, res) => {
   }
 
   // Khúc Fallback này chỉ để phòng ngừa rủi ro nếu có bug làm xóa rỗng mảng RAM
-  // THÁO GIỚI HẠN: Fetch toàn bộ không giới hạn
   const data = await History.find()
     .select("createdAt xau sjc diff percent _id") 
     .sort({ createdAt: -1 })
+    .limit(1000) // Khóa giới hạn 1000 dòng
     .lean();
     
   cachedHistory = data;
