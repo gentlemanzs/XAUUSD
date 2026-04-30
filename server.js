@@ -265,12 +265,6 @@ async function updateData(triggerSource = "Tự động") {
       console.log(`   💾 DB: Đã lưu bản ghi SJC mới là ${sjc.toLocaleString('vi-VN')}`);
       
       const count = await History.countDocuments();
-      // Tối ưu xóa nhiều bản ghi một lúc nếu vượt quá 200 (Tránh tích tụ rác)
-      if (count > 200) {
-        const excess = count - 200;
-        const idsToDelete = await History.find().sort({ createdAt: 1 }).limit(excess).select("_id").lean();
-        await History.deleteMany({ _id: { $in: idsToDelete.map(d => d._id) } });
-      }
     } else {
       console.log(`   ⏩ DB: Giá SJC không đổi (${sjc.toLocaleString('vi-VN')}), không lưu rác.`);
     }
