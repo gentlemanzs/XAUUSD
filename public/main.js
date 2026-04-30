@@ -195,6 +195,7 @@ function formatVNDateTime(isoString) {
 }
 
 function renderTable() {
+  // Mặc định hiện 10 dòng. Nếu mở rộng thì phân trang 50 dòng/trang
   const pageSize = isExpanded ? 50 : 10;
   const startIdx = isExpanded ? (currentPage - 1) * pageSize : 0;
   const endIdx = startIdx + pageSize;
@@ -208,10 +209,10 @@ function renderTable() {
   displayData.forEach(r => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td class="col-action" style="display: ${displayStyle}; text-align: center;">
+      <td class="col-action" style="display: ${displayStyle};">
         <input type="checkbox" class="log-checkbox" value="${r._id}">
       </td>
-      <td style="text-align: left;">${formatVNDateTime(r.createdAt)}</td>
+      <td class="col-time">${formatVNDateTime(r.createdAt)}</td>
       <td>${fmtXAU.format(r.xau)}</td>
       <td>${fmtVND.format(r.sjc)}</td>
       <td>${fmtVND.format(r.diff)}</td>
@@ -229,6 +230,7 @@ function renderTable() {
 
 function renderPagination() {
   const pag = elements.pagination;
+  // Ẩn phân trang nếu đang thu gọn HOẶC số lượng dữ liệu chưa vượt quá 1 trang (50 dòng)
   if (!isExpanded || currentData.length <= 50) { pag.style.display = "none"; return; }
   
   pag.style.display = "flex"; pag.innerHTML = "";
@@ -303,6 +305,7 @@ async function deleteSelected() {
   const checkedBoxes = document.querySelectorAll('.log-checkbox:checked');
   if (checkedBoxes.length === 0) { alert("Vui lòng tích chọn ít nhất 1 dòng để xóa."); return; }
   if (!confirm(`Bạn có chắc chắn muốn xóa ${checkedBoxes.length} bản ghi đã chọn?`)) return;
+
   const ids = Array.from(checkedBoxes).map(cb => cb.value);
   try {
     const res = await fetch('/api/history/bulk-delete', {

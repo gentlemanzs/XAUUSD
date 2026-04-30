@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0" defer></script>
 
-<link rel="stylesheet" href="style.css?v=1.8">
+<link rel="stylesheet" href="style.css?v=2.0">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
 <link rel="apple-touch-icon" href="/icon-180.png">
 <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png">
@@ -61,10 +61,11 @@
     <table>
       <thead>
         <tr>
-          <th id="actionHeader" class="col-action" style="text-align: center;">
+          <!-- Đã bỏ text-align inline để nhường CSS ép độ hẹp -->
+          <th id="actionHeader" class="col-action">
             <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)" title="Chọn tất cả">
           </th>
-          <th style="text-align: left;">Time</th><th>XAU ($)</th><th>SJC (VND)</th><th>Gap (VND)</th><th>%</th>
+          <th class="col-time">Time</th><th>XAU ($)</th><th>SJC (VND)</th><th>Gap (VND)</th><th>%</th>
         </tr>
       </thead>
       <tbody id="history"></tbody>
