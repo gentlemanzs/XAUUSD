@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0" defer></script>
 
-<link rel="stylesheet" href="style.css?v=1.8">
+<link rel="stylesheet" href="style.css?v=1.9">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
 <link rel="apple-touch-icon" href="/icon-180.png">
 <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png">
@@ -21,7 +21,6 @@
 
 <!-- CÁC THẺ BẮT BUỘC ĐỂ ẨN THANH ĐỊA CHỈ TRÊN IPHONE/IPAD (SAFARI) -->
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="XAU Dashboard">
 </head>
@@ -61,10 +60,15 @@
     <table>
       <thead>
         <tr>
-          <th>Time</th><th>XAU ($)</th><th>SJC (VND)</th><th>Gap (VND)</th><th>%</th>
-          <th id="actionHeader" class="col-action" style="text-align: center;">
+          <!-- Đẩy Checkbox sang cột độc lập và xóa inline css -->
+          <th id="actionHeader" class="col-action">
             <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)" title="Chọn tất cả">
           </th>
+          <th class="col-time">Time</th>
+          <th>XAU ($)</th>
+          <th>SJC (VND)</th>
+          <th>Gap (VND)</th>
+          <th>%</th>
         </tr>
       </thead>
       <tbody id="history"></tbody>

@@ -98,9 +98,6 @@ async function load() {
 }
 
 function renderMain(d) {
-  // [NEW] Lưu bản nháp vào LocalStorage để chống chớp trắng khi ấn F5
-  try { localStorage.setItem('xau_main_cache', JSON.stringify(d)); } catch(e) {}
-
   // TỐI ƯU: Format 1 lần duy nhất rồi so sánh để tránh tốn CPU điện thoại
   const usdText = fmtVND.format(d.usd);
   if (elements.usd.innerText !== usdText) elements.usd.innerText = usdText;
@@ -161,10 +158,6 @@ async function fetchHistory() {
     // TỐI ƯU: Ép trình duyệt không được dùng file lưu tạm, bắt buộc phải lấy từ Server (cache RAM của ta)
     const res = await fetch(HIST_API, { cache: "no-store" });
     historyData = await res.json(); 
-    
-    // [NEW] Lưu lịch sử vào LocalStorage để chớp nhoáng hiện lại khi F5
-    try { localStorage.setItem('xau_hist_cache', JSON.stringify(historyData)); } catch(e) {}
-
     currentData = [...historyData]; 
     renderTable(); 
     updateChart(currentData);
@@ -202,7 +195,6 @@ function formatVNDateTime(isoString) {
 }
 
 function renderTable() {
-  // Mặc định hiện 10 dòng. Nếu mở rộng thì phân trang 50 dòng/trang
   const pageSize = isExpanded ? 50 : 10;
   const startIdx = isExpanded ? (currentPage - 1) * pageSize : 0;
   const endIdx = startIdx + pageSize;
@@ -215,6 +207,7 @@ function renderTable() {
 
   displayData.forEach(r => {
     const tr = document.createElement("tr");
+    // Xóa inline text-align để nhường CSS xử lý độ khít
     tr.innerHTML = `
       <td class="col-action" style="display: ${displayStyle};">
         <input type="checkbox" class="log-checkbox" value="${r._id}">
@@ -237,7 +230,6 @@ function renderTable() {
 
 function renderPagination() {
   const pag = elements.pagination;
-  // Ẩn phân trang nếu đang thu gọn HOẶC số lượng dữ liệu chưa vượt quá 1 trang (50 dòng)
   if (!isExpanded || currentData.length <= 50) { pag.style.display = "none"; return; }
   
   pag.style.display = "flex"; pag.innerHTML = "";
@@ -312,7 +304,6 @@ async function deleteSelected() {
   const checkedBoxes = document.querySelectorAll('.log-checkbox:checked');
   if (checkedBoxes.length === 0) { alert("Vui lòng tích chọn ít nhất 1 dòng để xóa."); return; }
   if (!confirm(`Bạn có chắc chắn muốn xóa ${checkedBoxes.length} bản ghi đã chọn?`)) return;
-
   const ids = Array.from(checkedBoxes).map(cb => cb.value);
   try {
     const res = await fetch('/api/history/bulk-delete', {
@@ -361,13 +352,7 @@ function updateChart(data) {
   const containerWidth = scrollContainer.clientWidth || window.innerWidth;
 
   const maxSpacing = 110; 
-  let minSpacing = 75;  
-
-  // TỐI ƯU CHỐNG SẬP: Giới hạn Canvas không vượt mốc 30,000px để chứa an toàn 1000 điểm
-  if (totalPoints * minSpacing > 30000) {
-    minSpacing = Math.floor(30000 / totalPoints);
-  }
-  
+  const minSpacing = 75;  
   const minPointsToFill = Math.ceil(containerWidth / maxSpacing);
 
   // --- TRỊ DỨT ĐIỂM BỆNH KÉO GIÃN & LỆCH LỀ PHẢI KHI DỮ LIỆU ÍT ---
@@ -451,8 +436,7 @@ function updateChart(data) {
             grid: { color: 'rgba(226, 232, 240, 0.6)' }
           },
           x: {
-            // Bật autoSkip để nhãn không đè lên nhau khi không gian bị ép nhỏ lại (do có quá nhiều điểm)
-            ticks: { autoSkip: true, maxRotation: 0, color: '#64748b', font: { size: 10 } },
+            ticks: { autoSkip: false, color: '#64748b', font: { size: 10 } },
             grid: { display: false }
           }
         }
@@ -472,6 +456,10 @@ function updateChart(data) {
   });
 }
 
+// Khởi tạo luồng SSE lắng nghe dữ liệu Realtime
+initSSE();
+// Fallback: nếu sau 3s SSE chưa push gì thì mới gọi REST
+setTimeout(() => { if (!lastSJCValue) load(); }, 3000);
 
 /* ===== HIỆU ỨNG PULL TO REFRESH ===== */
 const pullContainer = document.createElement("div");
@@ -538,7 +526,7 @@ window.addEventListener("touchend", (e) => {
     pullContainer.style.top = "20px"; 
     textEl.innerText = "Updating...";
     
-    // Kích hoạt cào cứng REST API khi người dùng vuốt tay
+    // API giờ chỉ lấy RAM cache, không kích hoạt cào
     load().then(() => {
       textEl.innerText = "Success!";
       pullContainer.classList.remove('refreshing');
@@ -568,34 +556,10 @@ document.addEventListener("visibilitychange", () => {
     }
   } else {
     // Khi người dùng bật tab lên lại
-    console.log("▶ Tab hoạt động. Đang kết nối lại...");
+    console.log("▶ Tab hoạt động. Đang kết nối và tải lại dữ liệu mới nhất...");
+    // 1. Gọi lại hàm load() để lấy mẻ data mới nhất khỏi bị trễ nhịp
+    load();
+    // 2. Mở lại luồng sự kiện SSE
     initSSE();
-    // Bật lại bộ đếm lốp dự phòng 3 giây
-    setTimeout(() => { if (lastSJCValue === null) load(); }, 3000);
   }
 });
-
-/* ===== KHỞI CHẠY LẦN ĐẦU (F5) VÀ SSE ===== */
-// [NEW] 1. Trình diễn dữ liệu Cache trong bộ nhớ cục bộ NGAY LẬP TỨC để chống chớp trắng
-try {
-  const cachedMain = localStorage.getItem('xau_main_cache');
-  if (cachedMain) {
-    const parsedMain = JSON.parse(cachedMain);
-    renderMain(parsedMain);
-    lastSJCValue = parsedMain.sjc; // Ngăn luồng SSE gọi lại History nếu giá không đổi
-  }
-
-  const cachedHistory = localStorage.getItem('xau_hist_cache');
-  if (cachedHistory) {
-    historyData = JSON.parse(cachedHistory);
-    currentData = [...historyData];
-    renderTable();
-    updateChart(currentData);
-  }
-} catch(e) { console.error("Lỗi đọc cache:", e); }
-
-// 2. Mở luồng kết nối SSE để chờ Server bắn dữ liệu Realtime mới nhất xuống
-initSSE();
-
-// 3. Fallback: Nếu mở tab lên mà mất kết nối SSE (3 giây không thấy phản hồi), thì dùng REST gọi cứng
-setTimeout(() => { if (lastSJCValue === null) load(); }, 3000);
