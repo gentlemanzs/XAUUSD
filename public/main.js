@@ -195,7 +195,8 @@ function formatVNDateTime(isoString) {
 }
 
 function renderTable() {
-  const pageSize = isExpanded ? 20 : 10;
+  // Mặc định hiện 10 dòng. Nếu mở rộng thì phân trang 50 dòng/trang
+  const pageSize = isExpanded ? 50 : 10;
   const startIdx = isExpanded ? (currentPage - 1) * pageSize : 0;
   const endIdx = startIdx + pageSize;
   const displayData = currentData.slice(startIdx, endIdx);
@@ -229,23 +230,29 @@ function renderTable() {
 
 function renderPagination() {
   const pag = elements.pagination;
-  if (!isExpanded || currentData.length <= 20) { pag.style.display = "none"; return; }
+  // Ẩn phân trang nếu đang thu gọn HOẶC số lượng dữ liệu chưa vượt quá 1 trang (50 dòng)
+  if (!isExpanded || currentData.length <= 50) { pag.style.display = "none"; return; }
+  
   pag.style.display = "flex"; pag.innerHTML = "";
-  const totalPages = Math.ceil(currentData.length / 20);
+  const totalPages = Math.ceil(currentData.length / 50);
+  
   const prevBtn = document.createElement("button");
   prevBtn.className = "page-btn"; prevBtn.innerText = "« Trước";
   prevBtn.disabled = currentPage === 1;
   prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; renderTable(); } };
   pag.appendChild(prevBtn);
+  
   let startPage = Math.max(1, currentPage - 2);
   let endPage = Math.min(totalPages, startPage + 4);
   if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+  
   for (let i = startPage; i <= endPage; i++) {
     const btn = document.createElement("button");
     btn.className = `page-btn ${i === currentPage ? "active" : ""}`; btn.innerText = i;
     btn.onclick = () => { currentPage = i; renderTable(); };
     pag.appendChild(btn);
   }
+  
   const nextBtn = document.createElement("button");
   nextBtn.className = "page-btn"; nextBtn.innerText = "Sau »";
   nextBtn.disabled = currentPage === totalPages;
@@ -298,6 +305,7 @@ async function deleteSelected() {
   const checkedBoxes = document.querySelectorAll('.log-checkbox:checked');
   if (checkedBoxes.length === 0) { alert("Vui lòng tích chọn ít nhất 1 dòng để xóa."); return; }
   if (!confirm(`Bạn có chắc chắn muốn xóa ${checkedBoxes.length} bản ghi đã chọn?`)) return;
+
   const ids = Array.from(checkedBoxes).map(cb => cb.value);
   try {
     const res = await fetch('/api/history/bulk-delete', {
@@ -346,7 +354,13 @@ function updateChart(data) {
   const containerWidth = scrollContainer.clientWidth || window.innerWidth;
 
   const maxSpacing = 110; 
-  const minSpacing = 75;  
+  let minSpacing = 75;  
+
+  // TỐI ƯU CHỐNG SẬP: Giới hạn Canvas không vượt mốc 30,000px để chứa an toàn 1000 điểm
+  if (totalPoints * minSpacing > 30000) {
+    minSpacing = Math.floor(30000 / totalPoints);
+  }
+  
   const minPointsToFill = Math.ceil(containerWidth / maxSpacing);
 
   // --- TRỊ DỨT ĐIỂM BỆNH KÉO GIÃN & LỆCH LỀ PHẢI KHI DỮ LIỆU ÍT ---
@@ -430,7 +444,8 @@ function updateChart(data) {
             grid: { color: 'rgba(226, 232, 240, 0.6)' }
           },
           x: {
-            ticks: { autoSkip: false, color: '#64748b', font: { size: 10 } },
+            // Bật autoSkip để nhãn không đè lên nhau khi không gian bị ép nhỏ lại (do có quá nhiều điểm)
+            ticks: { autoSkip: true, maxRotation: 0, color: '#64748b', font: { size: 10 } },
             grid: { display: false }
           }
         }
@@ -450,10 +465,17 @@ function updateChart(data) {
   });
 }
 
-// Khởi tạo luồng SSE lắng nghe dữ liệu Realtime
+/* KHỞI CHẠY LẦN ĐẦU (F5) VÀ SSE */
+// TỐI ƯU MẠNG: Chỉ kích hoạt luồng SSE. Server sẽ tự giác ném data xuống ngay khi kết nối được mở.
 initSSE();
-// Fallback: nếu sau 3s SSE chưa push gì thì mới gọi REST
-setTimeout(() => { if (!lastSJCValue) load(); }, 3000);
+
+// TỐI ƯU LỐP DỰ PHÒNG: Nếu sau 3 giây mà SSE bị tịt ngòi (bất thường), ta mới kích hoạt fetch REST API.
+setTimeout(() => {
+  if (lastSJCValue === null) {
+    console.warn("SSE chậm phản hồi hoặc bị chặn, gọi API REST dự phòng...");
+    load();
+  }
+}, 3000);
 
 /* ===== HIỆU ỨNG PULL TO REFRESH ===== */
 const pullContainer = document.createElement("div");
@@ -558,12 +580,3 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-/* ===== HỦY BỎ PWA (SERVICE WORKER) ĐỂ SỬA LỖI MẤT KẾT NỐI ===== */
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function(registrations) {
-    for(let registration of registrations) {
-      registration.unregister(); 
-      console.log('Đã gỡ bỏ Service Worker thành công!');
-    }
-  });
-}
