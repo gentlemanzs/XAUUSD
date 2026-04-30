@@ -85,7 +85,14 @@ header {
 .card.highlight { border-left: 4px solid var(--accent-color); }
 .card-title { font-size: 0.75rem; color: var(--secondary-text); text-transform: uppercase; font-weight: 700; }
 .card-value { font-size: 1.875rem; font-weight: 800; margin-top: 0.5rem; }
-.sjc-sub { font-size: 0.875rem; margin-top: 0.25rem; display: flex; align-items: center; gap: 4px; }
+.sjc-sub { 
+  font-size: 1.1rem; /* Tăng từ 0.875rem lên 1.1rem */
+  margin-top: 0.25rem; 
+  display: flex; 
+  align-items: center; 
+  gap: 4px; 
+  font-weight: 700; /* Làm chữ đậm lên cho dễ nhìn */
+}
 .change-up { color: var(--up-color); } .change-down { color: var(--down-color); }
 
 #filterBox { display: none; background: white; padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 1.5rem; gap: 10px; align-items: center; flex-wrap: wrap; }

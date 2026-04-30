@@ -85,7 +85,7 @@ function renderMain(d) {
   const isXUp = xChange >= 0;
   elements.xau.innerHTML = `
     <div>${fmtXAU.format(d.xau)}</div>
-    <div class="sjc-sub" style="color: #000; font-weight: 700;">
+    <div class="sjc-sub" style="color: #000;">
       ${isXUp ? '▲' : '▼'} ${fmtXAU.format(Math.abs(xChange))}
     </div>
   `;
