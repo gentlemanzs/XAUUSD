@@ -209,14 +209,14 @@ function renderTable() {
   displayData.forEach(r => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td class="col-action" style="display: ${displayStyle};">
-        <input type="checkbox" class="log-checkbox" value="${r._id}">
-      </td>
-      <td class="col-time">${formatVNDateTime(r.createdAt)}</td>
+      <td>${formatVNDateTime(r.createdAt)}</td>
       <td>${fmtXAU.format(r.xau)}</td>
       <td>${fmtVND.format(r.sjc)}</td>
       <td>${fmtVND.format(r.diff)}</td>
       <td><span class="badge ${r.percent.includes('-') ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>
+      <td class="col-action" style="display: ${displayStyle}; text-align: center;">
+        <input type="checkbox" class="log-checkbox" value="${r._id}">
+      </td>
     `;
     fragment.appendChild(tr);
   });
@@ -465,10 +465,17 @@ function updateChart(data) {
   });
 }
 
-// Khởi tạo luồng SSE lắng nghe dữ liệu Realtime
+/* KHỞI CHẠY LẦN ĐẦU (F5) VÀ SSE */
+// TỐI ƯU MẠNG: Chỉ kích hoạt luồng SSE. Server sẽ tự giác ném data xuống ngay khi kết nối được mở.
 initSSE();
-// Fallback: nếu sau 3s SSE chưa push gì thì mới gọi REST
-setTimeout(() => { if (!lastSJCValue) load(); }, 3000);
+
+// TỐI ƯU LỐP DỰ PHÒNG: Nếu sau 3 giây mà SSE bị tịt ngòi (bất thường), ta mới kích hoạt fetch REST API.
+setTimeout(() => {
+  if (lastSJCValue === null) {
+    console.warn("SSE chậm phản hồi hoặc bị chặn, gọi API REST dự phòng...");
+    load();
+  }
+}, 3000);
 
 /* ===== HIỆU ỨNG PULL TO REFRESH ===== */
 const pullContainer = document.createElement("div");
@@ -572,3 +579,4 @@ document.addEventListener("visibilitychange", () => {
     initSSE();
   }
 });
+
