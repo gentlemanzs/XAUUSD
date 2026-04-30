@@ -55,7 +55,14 @@ function initSSE() {
     
     elements.lastTime.style.color = "#10b981";
     setTimeout(() => elements.lastTime.style.color = "#64748b", 2000);
-    
+
+    // Log F12: báo API nào đang lỗi
+    if (d.failedAPIs && d.failedAPIs.length > 0) {
+      console.warn(`[XAU] ⚠️ API lỗi lúc ${d.timeStr}:`, d.failedAPIs.join(", "), "→ Đang dùng data cũ");
+    } else {
+      console.log(`[XAU] ✅ Live | XAU: ${d.xau} | SJC: ${d.sjc?.toLocaleString('vi-VN')} | GAP: ${d.diff?.toLocaleString('vi-VN')}`);
+    }
+
     renderMain(d);
     if (lastSJCValue === null || d.sjc !== lastSJCValue) {
       const isFirstLoad = lastSJCValue === null;
@@ -139,7 +146,9 @@ async function fetchHistory() {
     historyData = await res.json(); 
     
     for (const r of historyData) {
-      if (r.createdAt) {
+      // Fix 2.3: backend đã gửi filterDateStr cho record mới (qua SSE push)
+      // chỉ tính lại cho record cũ từ /api/history chưa có field này
+      if (!r.filterDateStr && r.createdAt) {
         const d = new Date(r.createdAt);
         if (!isNaN(d)) {
           r.filterDateStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
@@ -231,8 +240,9 @@ function toggleFilterBox() {
   else wrapper.classList.remove('is-expanded');
   
   currentPage = 1;
-  renderTable(); 
-  fetchHistory(); 
+  // Fix 2.1: bỏ renderTable() ở đây — fetchHistory() sẽ tự gọi renderTable() sau khi có data mới
+  // tránh UI nháy 2 lần (render data cũ → render data mới)
+  fetchHistory();
 }
 
 function applyFilter() {
@@ -320,6 +330,8 @@ function updateChart(fullData) {
   let yMin = 0; 
   let yMax = 0;
   
+  if (validGaps.length === 0) return; // Fix 1.1: toàn null → không vẽ, giữ chart cũ
+  
   if (validGaps.length > 0) {
     const minVal = Math.min(...validGaps); 
     const maxVal = Math.max(...validGaps);
@@ -330,12 +342,16 @@ function updateChart(fullData) {
 
   const calculatedWidth = totalPoints * minSpacing;
   
-  if (calculatedWidth > containerWidth) {
-    wrapper.style.setProperty('width', calculatedWidth + 'px', 'important');
-    wrapper.style.setProperty('min-width', calculatedWidth + 'px', 'important');
-  } else {
-    wrapper.style.setProperty('width', '100%', 'important');
-    wrapper.style.setProperty('min-width', '100%', 'important');
+  // Fix 2.2: chỉ set width khi thực sự thay đổi, tránh reflow thừa mỗi update
+  if (wrapper._lastWidth !== calculatedWidth) {
+    wrapper._lastWidth = calculatedWidth;
+    if (calculatedWidth > containerWidth) {
+      wrapper.style.setProperty('width', calculatedWidth + 'px', 'important');
+      wrapper.style.setProperty('min-width', calculatedWidth + 'px', 'important');
+    } else {
+      wrapper.style.setProperty('width', '100%', 'important');
+      wrapper.style.setProperty('min-width', '100%', 'important');
+    }
   }
 
   if (myChart) {

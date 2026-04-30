@@ -37,6 +37,12 @@ function formatTimeVN(dateObj) {
   });
 }
 
+// Helper log lỗi API thống nhất
+function logApiError(apiName, attempt, error) {
+  const ts = new Date().toISOString();
+  console.warn(`⚠️  [${ts}] API "${apiName}" thất bại (lần ${attempt}): ${error.message}`);
+}
+
 async function preloadCache() {
   try {
     const historyData = await History.find()
@@ -45,7 +51,6 @@ async function preloadCache() {
       .limit(300)
       .lean();
       
-    // [TỐI ƯU 4] Gán trực tiếp thuộc tính vào Object gốc để không sinh rác bộ nhớ (GC)
     if (historyData.length > 0) {
       for (const item of historyData) {
         item.timeStr = formatTimeVN(item.createdAt);
@@ -91,7 +96,7 @@ HistorySchema.index({ createdAt: -1 });
 const History = mongoose.model("History", HistorySchema);
 
 setInterval(() => {
-  for (const c of clients) {
+  for (const c of [...clients]) {
     try { c.write(":\n\n"); if (typeof c.flush === "function") c.flush(); } 
     catch (e) { clients.delete(c); }
   }
@@ -116,7 +121,6 @@ function isVietnamTradingTime() {
   return false;
 }
 
-// [TỐI ƯU 5] Giảm retries xuống 2 để dứt khoát ngắt kết nối nếu API public gặp sự cố
 async function fetchWithRetry(url, isJson = false, retries = 2) {
   for (let i = 0; i < retries; i++) {
     try {
@@ -124,9 +128,10 @@ async function fetchWithRetry(url, isJson = false, retries = 2) {
         headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
         signal: AbortSignal.timeout(5000), keepalive: true 
       });
-      if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
       return isJson ? await res.json() : await res.text();
     } catch (e) {
+      logApiError(url, i + 1, e);
       if (i === retries - 1) return null; 
       await new Promise(r => setTimeout(r, 300 * (i + 1)));
     }
@@ -147,6 +152,7 @@ async function getUsdRate() {
         return cachedUsdRate;
       }
     }
+    console.warn(`⚠️  [${new Date().toISOString()}] Vietcombank XML: không tìm thấy tỷ giá USD`);
   }
   return cachedUsdRate; 
 }
@@ -162,8 +168,11 @@ async function getSjcPrice() {
         if (price > 0 && price < 1000000) price *= 1000; 
         return price;
       }
+      console.warn(`⚠️  [${new Date().toISOString()}] DOJI XML: không tìm thấy node dojihanoile`);
     }
-  } catch (err) {}
+  } catch (err) {
+    console.warn(`⚠️  [${new Date().toISOString()}] DOJI parse lỗi: ${err.message}`);
+  }
 
   try {
     const btmcXml = await fetchWithRetry("http://api.btmc.vn/api/BTMCAPI/getpricebtmc?key=3kd8ub1llcg9t45hnoh8hmn7t5kc2v", false);
@@ -175,8 +184,13 @@ async function getSjcPrice() {
         if (price > 0 && price < 1000000) price *= 1000; 
         return price;
       }
+      console.warn(`⚠️  [${new Date().toISOString()}] BTMC XML: không tìm thấy node row=932`);
     }
-  } catch (err) {}
+  } catch (err) {
+    console.warn(`⚠️  [${new Date().toISOString()}] BTMC parse lỗi: ${err.message}`);
+  }
+
+  console.error(`❌ [${new Date().toISOString()}] getSjcPrice: Cả 2 nguồn DOJI và BTMC đều thất bại`);
   return 0; 
 }
 
@@ -206,8 +220,9 @@ async function updateData(triggerSource = "Tự động") {
     if (sjc <= 0 || xau <= 0) {
         if (latestData) {
           latestData.status = "Delayed (Lỗi hệ thống)";
+          latestData.failedAPIs = ["SYSTEM"]; // Fix 1.2: frontend log đúng nguyên nhân
           const fallbackPayload = `data: ${JSON.stringify(latestData)}\n\n`;
-          for (const c of clients) { try { c.write(fallbackPayload); if (typeof c.flush === "function") c.flush(); } catch (err) { clients.delete(c); } }
+          for (const c of [...clients]) { try { c.write(fallbackPayload); if (typeof c.flush === "function") c.flush(); } catch (err) { clients.delete(c); } }
         }
         return; 
     }
@@ -254,12 +269,14 @@ async function updateData(triggerSource = "Tự động") {
       updatedAt: updatedTimeObj, timeStr: formatTimeVN(updatedTimeObj), 
       usd, xau, xauChange, sjc, sjcChange, oldGap: lastDifferentSjc.diff,       
       gapChange, worldVND: Math.round(worldVND), diff: currentGap,
-      percent: ((diff / worldVND) * 100).toFixed(2) + "%", status: currentStatus 
+      percent: ((diff / worldVND) * 100).toFixed(2) + "%", status: currentStatus,
+      // Truyền danh sách API lỗi xuống frontend để log console F12
+      failedAPIs: failedAPIs
     };
 
     if (sjc > 0 && (!lastRecord || lastRecord.sjc !== sjc)) {
       const dbEntry = { ...latestData };
-      delete dbEntry.updatedAt; delete dbEntry.timeStr; 
+      delete dbEntry.updatedAt; delete dbEntry.timeStr; delete dbEntry.failedAPIs;
       const savedDoc = await History.create(dbEntry);
       
       cachedLastSavedXau = xau;
@@ -267,6 +284,8 @@ async function updateData(triggerSource = "Tự động") {
    
       const slimDoc = {
         createdAt: savedDoc.createdAt, timeStr: formatTimeVN(savedDoc.createdAt),
+        // Fix 2.3: thêm filterDateStr ở backend cho nhất quán với /api/history
+        filterDateStr: new Date(savedDoc.createdAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }),
         xau: savedDoc.xau, sjc: savedDoc.sjc, diff: savedDoc.diff,
         percent: savedDoc.percent, _id: savedDoc._id
       };
@@ -274,9 +293,23 @@ async function updateData(triggerSource = "Tự động") {
       if (cachedHistory.length > 300) cachedHistory.pop(); 
 
       try {
-        const overflowRecord = await History.findOne().sort({ createdAt: -1 }).skip(300).select('createdAt').lean();
-        if (overflowRecord?.createdAt) await History.deleteMany({ createdAt: { $lt: overflowRecord.createdAt } });
-      } catch (err) {}
+        const overflowRecord = await History.findOne()
+          .sort({ createdAt: -1 })
+          .skip(300)
+          .select('createdAt _id')
+          .lean();
+          
+        if (overflowRecord) {
+          await History.deleteMany({
+            $or: [
+              { createdAt: { $lt: overflowRecord.createdAt } },
+              { createdAt: overflowRecord.createdAt, _id: { $ne: overflowRecord._id } }
+            ]
+          });
+        }
+      } catch (err) {
+        console.warn(`⚠️  [${new Date().toISOString()}] Lỗi dọn dẹp overflow:`, err.message);
+      }
     }
 
     if (process.env.NODE_ENV !== 'production') {
@@ -284,11 +317,17 @@ async function updateData(triggerSource = "Tự động") {
     }
 
     const ssePayload = `data: ${JSON.stringify(latestData)}\n\n`;
-    for (const c of clients) {
+    for (const c of [...clients]) {
       try { c.write(ssePayload); if (typeof c.flush === "function") c.flush(); } 
       catch (err) { clients.delete(c); }
     }
   } catch (e) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error(`❌ updateData [${triggerSource}] lỗi lúc ${new Date().toISOString()}:`);
+      console.error(e);
+    } else {
+      console.error(`❌ updateData [${triggerSource}] lỗi lúc ${new Date().toISOString()}: ${e.message}`);
+    }
   } finally {
     isUpdating = false;
   }
@@ -298,21 +337,23 @@ app.get("/api/stream", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
   
   if (clients.size > 1000) {
-    let i = 0;
-    for (const c of clients) {
-      if (i >= clients.size - 500) break;
+    const toRemove = [...clients].slice(0, clients.size - 500);
+    for (const c of toRemove) {
       try { c.end(); } catch (e) {}
-      clients.delete(c); i++;
+      clients.delete(c);
     }
   }
+  
   clients.add(res);
   if (latestData) {
       res.write(`data: ${JSON.stringify(latestData)}\n\n`);
       if (typeof res.flush === "function") res.flush();
   }
-  req.on("close", () => { clients.delete(res); try { res.end(); } catch {} });
+  
+  req.on("close", () => { clients.delete(res); });
 });
 
 app.get("/api/gold", async (req, res) => {
@@ -321,12 +362,11 @@ app.get("/api/gold", async (req, res) => {
 });
 
 app.get("/api/history", async (req, res) => {
-  const limit = parseInt(req.query.limit) || 50;
+  const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 300);
   if (cachedHistory.length > 0) return res.json(cachedHistory.slice(0, limit));
   
   const data = await History.find().select("createdAt xau sjc diff percent _id").sort({ createdAt: -1 }).limit(300).lean();
   
-  // [TỐI ƯU 4] Đổi từ map sang for loop để tránh GC spike
   for (const item of data) {
     item.timeStr = formatTimeVN(item.createdAt);
   }
