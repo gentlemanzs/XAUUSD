@@ -15,7 +15,12 @@ app.use(compression({
 app.use(cors());
 app.use(express.json());
 const path = require("path");
-app.use(express.static(path.join(__dirname, "public")));
+
+// TỐI ƯU: Thêm Cache Header cho file tĩnh giúp giảm tải băng thông
+app.use(express.static(path.join(__dirname, "public"), {
+  maxAge: "1d",
+  etag: true
+}));
 
 const PORT = process.env.PORT || 3000;
 
@@ -41,8 +46,8 @@ const HistorySchema = new mongoose.Schema({
   diff: Number, percent: String, status: String
 }, { timestamps: true });
 
-// TỐI ƯU: Thêm Index phức hợp giúp Mongo tìm SJC cũ chớp nhoáng khi dùng $ne
-HistorySchema.index({ sjc: 1, createdAt: -1 });
+// TỐI ƯU: Đổi thứ tự Index (ESR Rule) giúp Mongo ưu tiên sort createdAt trước khi dùng $ne
+HistorySchema.index({ createdAt: -1, sjc: 1 });
 HistorySchema.index({ createdAt: -1 });
 const History = mongoose.model("History", HistorySchema);
 
@@ -317,8 +322,13 @@ async function updateData(triggerSource = "Tự động") {
     // TỐI ƯU: Tránh Stringify nhiều lần gây CPU Spike
     const ssePayload = `data: ${JSON.stringify(latestData)}\n\n`;
     clients.forEach(c => {
-      c.write(ssePayload);
-      if (typeof c.flush === "function") c.flush();
+      // TỐI ƯU: Thêm try-catch để tránh crash nếu client ngắt kết nối đột ngột
+      try {
+        c.write(ssePayload);
+        if (typeof c.flush === "function") c.flush();
+      } catch (err) {
+        // Bỏ qua client lỗi
+      }
     });
     console.log(`   ✅ Đã đẩy Realtime xuống ${clients.length} client(s) đang kết nối.`);
 

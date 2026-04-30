@@ -35,6 +35,8 @@ const dateCache = new Map();
 /* ===== NHẬN REALTIME DỮ LIỆU TỪ SERVER MÀ KHÔNG CẦN RELOAD ===== */
 const evtSource = new EventSource("/api/stream");
 evtSource.onmessage = (event) => {
+  // TỐI ƯU: Kiểm tra rỗng trước khi parse JSON để tiết kiệm CPU
+  if (!event.data) return;
   const d = JSON.parse(event.data);
   if (!d || Object.keys(d).length === 0) return;
   
@@ -303,9 +305,17 @@ function updateChart(data) {
   const chartCanvas = document.getElementById('gapChart');
   const ctx = chartCanvas.getContext('2d');
   
-  // TỐI ƯU: Sử dụng slice().reverse() tốn ít tài nguyên RAM hơn spread
-  const reversedData = data.slice().reverse();
-  const totalPoints = reversedData.length;
+  const totalPoints = data.length;
+  const labels = [];
+  const gaps = [];
+
+  // TỐI ƯU: Không tạo mảng mới bằng slice().reverse() để tiết kiệm RAM. Dùng vòng lặp ngược.
+  for (let i = totalPoints - 1; i >= 0; i--) {
+    const r = data[i];
+    const d = new Date(r.createdAt);
+    labels.push(d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
+    gaps.push(r.diff / 1000000);
+  }
 
   const wrapper = chartCanvas.parentElement;
   const scrollContainer = document.querySelector('.chart-scroll-container');
@@ -315,18 +325,12 @@ function updateChart(data) {
   const minSpacing = 75;  
   const minPointsToFill = Math.ceil(containerWidth / maxSpacing);
 
-  const labels = reversedData.map(r => {
-    const d = new Date(r.createdAt);
-    return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-  });
-  const gaps = reversedData.map(r => r.diff / 1000000);
-
   // --- TRỊ BỆNH KÉO GIÃN: CHÈN ĐIỂM ẢO ---
   if (totalPoints > 0 && totalPoints < minPointsToFill) {
     const padCount = minPointsToFill - totalPoints;
     for (let i = 0; i < padCount; i++) {
-      labels.push(''); 
-      gaps.push(null); 
+      labels.unshift(''); // Chèn vào đầu (bên trái biểu đồ)
+      gaps.unshift(null); 
     }
   }
 
