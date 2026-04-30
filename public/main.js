@@ -109,7 +109,9 @@ function renderMain(d) {
 
   const updateTime = new Date(d.updatedAt);
   const timeStr = isNaN(updateTime) ? new Date().toLocaleTimeString('vi-VN') : updateTime.toLocaleTimeString('vi-VN');
-  elements.lastTime.innerHTML = `${d.status === "Delayed" ? "🟡 Tạm thời (Fallback)" : "🟢 Live"} - Cập nhật: ${timeStr}`;
+  
+  // Thay đổi cách hiển thị status để in ra đúng chữ "Delayed (Lỗi: SJC)" từ Server gửi xuống
+  elements.lastTime.innerHTML = `${d.status === "Live" ? "🟢 Live" : "🟡 " + d.status} - Cập nhật: ${timeStr}`;
 }
 
 async function fetchHistory() {
@@ -522,4 +524,3 @@ if ('serviceWorker' in navigator) {
     }
   });
 }
-
