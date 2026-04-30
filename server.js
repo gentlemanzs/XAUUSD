@@ -44,6 +44,9 @@ const History = mongoose.model("History", HistorySchema);
 let latestData = null;
 let clients = []; 
 let isUpdating = false; 
+// THÊM 2 BIẾN NÀY ĐỂ LƯU GAP CŨ TRÊN RAM
+let cachedOldGap = null;
+let cachedSjcForOldGap = null;
 
 // 🔥 HEARTBEAT giữ kết nối SSE không bị chết
 setInterval(() => {
@@ -59,20 +62,21 @@ let lastUsdFetchTime = 0;
 const USD_CACHE_DURATION = 60 * 60 * 1000; // 1 tiếng tính bằng mili-giây
 
 /* ===== FETCH HELPERS ===== */
-async function fetchWithRetry(url, isJson = false) {
-  try {
-    const res = await fetch(url, {
-      // Lưu ý: Nếu dùng Node 18+ native fetch, agent này sẽ bị ignore.
-      // Nếu dùng node-fetch package thì nó sẽ hoạt động.
-      agent: agent, 
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
-      signal: AbortSignal.timeout(8000) 
-    });
-    if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-    return isJson ? await res.json() : await res.text();
-  } catch (e) {
-      console.warn(`⚠️ Cảnh báo: Lỗi khi lấy dữ liệu từ ${url} - ${e.message}`);
-      return null; 
+async function fetchWithRetry(url, isJson = false, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+        signal: AbortSignal.timeout(8000) 
+      });
+      if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+      return isJson ? await res.json() : await res.text();
+    } catch (e) {
+      if (i === retries - 1) {
+        console.warn(`⚠️ Cảnh báo: Lỗi khi lấy dữ liệu từ ${url} - ${e.message}`);
+        return null; 
+      }
+    }
   }
 }
 
@@ -193,34 +197,54 @@ async function updateData(triggerSource = "Tự động") {
     const worldVND = xau * usd * (37.5 / 31.1035);
     const diff = sjc - worldVND;
 
-    // --- MỚI: Tìm giá đóng cửa ngày hôm trước để tính Change ---
+    // --- 1. Tính SJC Change (So với hôm qua) ---
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     yesterday.setHours(23, 59, 59, 999);
 
-    // Tìm bản ghi cuối cùng của ngày hôm qua hoặc cũ hơn
     const lastDayRecord = await History.findOne({
       createdAt: { $lte: yesterday }
     }).sort({ createdAt: -1 }).lean().catch(() => null);
 
-    // Nếu không có giá hôm qua (mới chạy app), dùng chính giá hiện tại làm mốc
     const referenceSJC = lastDayRecord ? lastDayRecord.sjc : sjc;
     const sjcChange = sjc - referenceSJC;
-    // Lấy diff hiện tại trừ đi diff của bản ghi gần nhất trong lịch sử
-    const gapChange = (lastRecord ? lastRecord.diff : Math.round(diff)) - Math.round(diff);
 
-   // --- LƯU VÀO RAM CACHE ---
+    // --- 2. TÌM GAP CŨ (TỐI ƯU BẰNG RAM CACHE) ---
+    let oldGap = 0;
+
+    // Kiểm tra: Nếu SJC hiện tại giống SJC trong RAM, lấy luôn Gap cũ từ RAM (Không chọc DB)
+    if (cachedSjcForOldGap === sjc && cachedOldGap !== null) {
+      oldGap = cachedOldGap;
+    } else {
+      // CHỈ KHI SJC đổi giá (hoặc server vừa bật) mới gọi Database
+      const lastChangedSjcRecord = await History.findOne({ sjc: { $ne: sjc } })
+        .sort({ createdAt: -1 })
+        .lean()
+        .catch(() => null);
+
+      oldGap = lastChangedSjcRecord ? lastChangedSjcRecord.diff : Math.round(diff);
+
+      // Lưu lại vào RAM để lần sau dùng
+      cachedOldGap = oldGap;
+      cachedSjcForOldGap = sjc;
+    }
+
+    const currentGap = Math.round(diff);
+    // Tính khoảng chênh lệch: Cũ trừ Hiện tại (Theo đúng yêu cầu của bạn)
+    const gapChange = oldGap - currentGap;
+
+   // --- LƯU VÀO RAM CACHE ĐỂ GỬI XUỐNG CLIENT ---
     latestData = {
       updatedAt: new Date(), 
       usd, 
       xau, 
       sjc,
       sjcChange: sjcChange, 
-      gapChange: gapChange,
+      oldGap: oldGap,       
+      gapChange: gapChange, 
       worldVND: Math.round(worldVND), 
-      diff: Math.round(diff),
+      diff: currentGap,
       percent: ((diff / worldVND) * 100).toFixed(2) + "%",
-      // Chỉ báo Live nếu CẢ HAI nguồn SJC và Thế giới đều lấy được giá mới nhất
       status: (isSjcLive && isXauLive) ? "Live" : "Delayed" 
     };
 
