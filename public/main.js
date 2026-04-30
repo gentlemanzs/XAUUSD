@@ -450,10 +450,10 @@ function updateChart(data) {
   });
 }
 
-/* KHỞI CHẠY LẦN ĐẦU (F5) SẼ YÊU CẦU SERVER ÉP CÀO LẠI (FORCE = TRUE) */
-load();
 // Khởi tạo luồng SSE lắng nghe dữ liệu Realtime
 initSSE();
+// Fallback: nếu sau 3s SSE chưa push gì thì mới gọi REST
+setTimeout(() => { if (!lastSJCValue) load(); }, 3000);
 
 /* ===== HIỆU ỨNG PULL TO REFRESH ===== */
 const pullContainer = document.createElement("div");
