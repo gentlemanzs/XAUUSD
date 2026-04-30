@@ -91,7 +91,7 @@ header {
   display: flex; 
   align-items: center; 
   gap: 4px; 
-  font-weight: 700; /* Làm chữ đậm lên cho dễ nhìn */
+  font-weight: 800; /* Làm chữ đậm lên cho dễ nhìn */
 }
 .change-up { color: var(--up-color); } .change-down { color: var(--down-color); }
 
