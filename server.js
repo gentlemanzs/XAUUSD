@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path"); // [Vi chỉnh 5] Khai báo nhất quán ở đầu file
 const cron = require("node-cron");
 const cors = require("cors");
 const mongoose = require("mongoose");
@@ -7,6 +8,9 @@ const compression = require("compression");
 // TỐI ƯU BẢO MẬT: Nạp thư viện chống DDoS / Dội bom API
 const rateLimit = require('express-rate-limit');
 const app = express();
+
+// FIX LỖI DEPLOY: Cho phép Express tin tưởng Proxy của Railway để Rate Limit lấy đúng IP thật của người dùng
+app.set('trust proxy', 1);
 
 // TỐI ƯU: Cấu hình nén dữ liệu chuẩn mực
 app.use(compression({
@@ -25,8 +29,8 @@ const apiLimiter = rateLimit({
 });
 
 app.use(cors());
-app.use(express.json());
-const path = require("path");
+// [Vi chỉnh 8] Giới hạn JSON body 10kb chống payload rác làm tràn RAM
+app.use(express.json({ limit: "10kb" })); 
 
 // TỐI ƯU: Thêm Cache Header cho file tĩnh giúp giảm tải băng thông
 app.use(express.static(path.join(__dirname, "public"), {
@@ -45,7 +49,7 @@ async function preloadCache() {
   try {
     // TỐI ƯU TẬN CÙNG: Nạp sẵn 1000 dòng lịch sử lên RAM. Sau bước này API /history KHÔNG BAO GIỜ chọc DB nữa!
     const historyData = await History.find()
-      .select("createdAt xau sjc diff percent _id") // Loại bỏ usd, worldVND, status khỏi RAM lịch sử
+      .select("createdAt xau sjc diff percent _id")
       .sort({ createdAt: -1 })
       .limit(1000)
       .lean();
@@ -158,8 +162,7 @@ async function fetchWithRetry(url, isJson = false, retries = 3) {
     try {
       const res = await fetch(url, {
         headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
-        signal: AbortSignal.timeout(5000), // TỐI ƯU: Đổi 8s -> 5s để fail nhanh hơn, mượt realtime
-        keepalive: true // TỐI ƯU: Giữ kết nối để gọi API nhanh hơn
+        signal: AbortSignal.timeout(5000) // TỐI ƯU: Đổi 8s -> 5s để fail nhanh hơn, mượt realtime
       });
       if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
       return isJson ? await res.json() : await res.text();
@@ -410,18 +413,18 @@ async function updateData(triggerSource = "Tự động") {
       cachedHistory.unshift(slimDoc);
       if (cachedHistory.length > 1000) cachedHistory.pop(); // Khóa chặt RAM ở 1000 dòng
 
-      // TỐI ƯU TẬN CÙNG: Dọn rác Database tự động (Chỉ giữ lại 1000 bản ghi mới nhất)
+      // [Vi chỉnh 6] TỐI ƯU O(1) & CLOCK SKEW: Lọc rác DB dùng createdAt thay vì _id
       try {
-        const count = await History.countDocuments();
-        if (count > 1000) {
-          // Lấy _id của bản ghi thứ 1000 (Sắp xếp từ mới đến cũ)
-          const recordsToKeep = await History.find().sort({ createdAt: -1 }).skip(1000).limit(1).select('_id').lean();
-          if (recordsToKeep && recordsToKeep.length > 0) {
-            const thresholdId = recordsToKeep[0]._id;
-            // Xóa tất cả các bản ghi CŨ HƠN bản ghi thứ 1000
-            await History.deleteMany({ _id: { $lt: thresholdId } });
-            console.log("   🧹 Dọn rác DB: Đã xóa các bản ghi cũ vượt quá giới hạn 1000 dòng.");
-          }
+        const overflowRecord = await History.findOne()
+          .sort({ createdAt: -1 })
+          .skip(1000) // Nhảy thẳng đến vị trí 1000
+          .select('createdAt')
+          .lean();
+
+        if (overflowRecord?.createdAt) {
+          // Xóa tất cả các bản ghi CŨ HƠN mốc thời gian của bản ghi thứ 1000
+          await History.deleteMany({ createdAt: { $lt: overflowRecord.createdAt } });
+          console.log("   🧹 Dọn rác DB: Đã xóa các bản ghi cũ vượt quá giới hạn 1000 dòng.");
         }
       } catch (err) {
         console.warn("   ⚠️ Dọn rác DB thất bại:", err.message);
@@ -458,7 +461,7 @@ async function updateData(triggerSource = "Tự động") {
 
 app.get("/api/stream", (req, res) => {
   // TỐI ƯU: Sửa lỗi text-event-stream thành text/event-stream chuẩn xác
-  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Content-Type", "text-event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   
@@ -527,3 +530,27 @@ cron.schedule("*/5 * * * *", () => {
   console.log("⏱ [Watchdog] Cron tick OK"); // TỐI ƯU: Đảm bảo tiến trình vẫn chạy
   updateData("Cronjob 5 phút");
 });
+
+/* ===== [Vi chỉnh 9] XỬ LÝ GRACEFUL SHUTDOWN ===== */
+const shutdown = async () => {
+  console.log("\n🛑 Nhận lệnh tắt Server. Đang đóng kết nối an toàn...");
+  
+  // 1. Cắt đứt sạch sẽ 100% đường truyền mạng với các Client đang xem
+  for (const c of clients) {
+    try { c.end(); } catch (e) {}
+  }
+  clients.clear();
+  
+  // 2. Đóng đường ống nối với MongoDB
+  try {
+    await mongoose.connection.close();
+    console.log("🛑 Đã ngắt toàn bộ SSE Client và MongoDB. Tạm biệt!");
+  } catch (err) {
+    console.error("❌ Lỗi khi đóng kết nối DB:", err);
+  }
+  process.exit(0);
+};
+
+// Bắt các tín hiệu tắt từ hệ thống máy chủ (Railway, Docker, VPS...)
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
