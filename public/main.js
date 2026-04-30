@@ -69,7 +69,7 @@ function initSSE() {
   evtSource.onerror = () => {
     console.warn("SSE mất kết nối, trình duyệt đang tự động thử reconnect...");
     // TỐI ƯU UX: Báo cho người dùng biết trạng thái mất mạng
-    elements.lastTime.innerHTML = "🔴 Đang thử kết nối lại...";
+    elements.lastTime.innerHTML = "🔴 Mất kết nối. Đang thử lại...";
     elements.lastTime.style.color = "var(--down-color)";
   };
 }

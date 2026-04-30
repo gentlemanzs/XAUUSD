@@ -100,7 +100,8 @@ const History = mongoose.model("History", HistorySchema);
 
 // Biến RAM Cache tổng
 let latestData = null;
-let clients = []; 
+// TỐI ƯU O(1): Sử dụng Set thay vì Array để thao tác xóa Client đứt kết nối diễn ra ngay lập tức
+let clients = new Set(); 
 let isUpdating = false; 
 
 // THÊM CÁC BIẾN NÀY ĐỂ LƯU CACHE TRÊN RAM
@@ -117,15 +118,14 @@ let lastHistoryFetch = 0;
 // 🔥 HEARTBEAT giữ kết nối SSE không bị chết
 setInterval(() => {
   // TỐI ƯU: Dùng filter kết hợp try-catch để dọn sạch "xác" client bị ngắt mạng âm thầm
-  clients = clients.filter(c => {
+  for (const c of clients) {
     try {
       c.write(":\n\n"); // ping nhẹ, client sẽ ignore
       if (typeof c.flush === "function") c.flush();
-      return true;
     } catch (e) {
-      return false; // Nếu gặp lỗi, lập tức sút client này ra khỏi RAM
+      clients.delete(c); // Xóa ngay lập tức khỏi Set
     }
-  });
+  }
 }, 20000); // mỗi 20 giây
 
 // Biến RAM Cache riêng cho USD (1 tiếng)
@@ -274,13 +274,14 @@ async function updateData(triggerSource = "Tự động") {
           latestData.status = "Delayed (Lỗi API nguồn)";
           const fallbackPayload = `data: ${JSON.stringify(latestData)}\n\n`;
           // TỐI ƯU: Lọc sạch client chết ngay cả trong nhánh báo lỗi (Cleanup Fallback)
-          clients = clients.filter(c => {
+          for (const c of clients) {
             try { 
               c.write(fallbackPayload); 
               if (typeof c.flush === "function") c.flush(); 
-              return true;
-            } catch (err) { return false; }
-          });
+            } catch (err) { 
+              clients.delete(c); 
+            }
+          }
         }
         return; 
     }
@@ -393,17 +394,16 @@ async function updateData(triggerSource = "Tự động") {
     const ssePayload = `data: ${JSON.stringify(latestData)}\n\n`;
     
     // TỐI ƯU: Dọn rác triệt để (xóa client chết ngay lập tức bằng filter)
-    clients = clients.filter(c => {
+    for (const c of clients) {
       try {
         c.write(ssePayload);
         if (typeof c.flush === "function") c.flush();
-        return true; // Nếu gửi thành công, giữ lại client
       } catch (err) {
-        return false; // Nếu gặp lỗi (client đã ngắt kết nối), loại bỏ ngay khỏi mảng
+        clients.delete(c); // Xóa ngay khỏi Set
       }
-    });
+    }
     
-    console.log(`   ✅ Đã đẩy Realtime xuống ${clients.length} client(s) đang kết nối.`);
+    console.log(`   ✅ Đã đẩy Realtime xuống ${clients.size} client(s) đang kết nối.`);
 
   } catch (e) {
     console.log("❌ LỖI HỆ THỐNG (TRY-CATCH) TRONG UPDATE-DATA:", e.message);
@@ -421,19 +421,18 @@ app.get("/api/stream", (req, res) => {
   res.setHeader("Connection", "keep-alive");
   
   // TỐI ƯU: Phanh khẩn cấp chống Memory Leak khi có quá nhiều kết nối rác
-  if (clients.length > 1000) {
-    // 1. Lấy ra danh sách 500 người cũ nhất chuẩn bị bị đuổi
-    const droppedClients = clients.slice(0, clients.length - 500);
-    // 2. Giữ lại 500 người mới nhất
-    clients = clients.slice(-500);
-    // 3. Đóng kết nối mạng (Socket) của những người bị đuổi một cách sạch sẽ
-    droppedClients.forEach(c => {
+  if (clients.size > 1000) {
+    let i = 0;
+    for (const c of clients) {
+      if (i >= clients.size - 500) break;
       try { c.end(); } catch (e) {}
-    });
-    console.warn("⚠️ Đã dọn dẹp và ngắt kết nối mạng của 500 client cũ.");
+      clients.delete(c);
+      i++;
+    }
+    console.warn("⚠️ Đã dọn dẹp và ngắt kết nối mạng của các client cũ.");
   }
   
-  clients.push(res);
+  clients.add(res);
   
   if (latestData) {
       res.write(`data: ${JSON.stringify(latestData)}\n\n`);
@@ -441,7 +440,7 @@ app.get("/api/stream", (req, res) => {
   }
 
   req.on("close", () => {
-    clients = clients.filter(c => c !== res);
+    clients.delete(res);
     // TỐI ƯU: Bọc try-catch để đóng kết nối an toàn tuyệt đối, tránh Zombie socket
     try { res.end(); } catch {}
   });
