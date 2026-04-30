@@ -44,9 +44,11 @@ const History = mongoose.model("History", HistorySchema);
 let latestData = null;
 let clients = []; 
 let isUpdating = false; 
-// THÊM 2 BIẾN NÀY ĐỂ LƯU GAP CŨ TRÊN RAM
+
+// THÊM CÁC BIẾN NÀY ĐỂ LƯU CACHE TRÊN RAM
 let cachedOldGap = null;
 let cachedSjcForOldGap = null;
+let cachedLastSavedXau = null; // <-- THÊM MỚI: Biến lưu giá XAU của lần ghi DB gần nhất
 
 // 🔥 HEARTBEAT giữ kết nối SSE không bị chết
 setInterval(() => {
@@ -231,6 +233,14 @@ async function updateData(triggerSource = "Tự động") {
     // Tính khoảng chênh lệch: Cũ trừ Hiện tại (Theo đúng yêu cầu của bạn)
     const gapChange = oldGap - currentGap;
 
+    // --- 3. TÍNH XAU CHANGE (MỚI: So với lần Database được lưu gần nhất) ---
+    // Nếu Server vừa bật, nạp giá XAU từ DB vào RAM 1 lần duy nhất
+    if (cachedLastSavedXau === null) {
+      const latestDbRecord = await History.findOne().sort({ createdAt: -1 }).lean().catch(() => null);
+      cachedLastSavedXau = latestDbRecord ? latestDbRecord.xau : xau;
+    }
+    const xauChange = xau - cachedLastSavedXau;
+
     // --- XÁC ĐỊNH TRẠNG THÁI (LỖI Ở ĐÂU BÁO Ở ĐÓ) ---
     let failedAPIs = [];
     if (!isSjcLive) failedAPIs.push("SJC");
@@ -244,6 +254,7 @@ async function updateData(triggerSource = "Tự động") {
       updatedAt: new Date(), 
       usd, 
       xau, 
+      xauChange: xauChange, // <-- Thêm biến này để gửi cho ô Global XAU
       sjc,
       sjcChange: sjcChange, 
       oldGap: oldGap,       
@@ -270,6 +281,9 @@ async function updateData(triggerSource = "Tự động") {
       await History.create(dbEntry);
       console.log(`   💾 DB: Đã lưu bản ghi SJC mới là ${sjc.toLocaleString('vi-VN')}`);
       
+      // CẬP NHẬT LẠI BIẾN RAM CACHE XAU VÌ DB VỪA CÓ BẢN GHI MỚI!
+      cachedLastSavedXau = xau;
+
       const count = await History.countDocuments();
     } else {
       console.log(`   ⏩ DB: Giá SJC không đổi (${sjc.toLocaleString('vi-VN')}), không lưu rác.`);
@@ -326,3 +340,5 @@ app.post("/api/history/bulk-delete", async (req, res) => {
 
 /* ===== CRONJOB (QUẢN LÝ LỊCH TRÌNH) ===== */
 cron.schedule("*/5 * * * *", () => updateData("Cronjob 5 phút"));
+
+// Xóa lệnh listen ở cuối cùng vì đã đưa lên phía trên phần kết nối DB thành công

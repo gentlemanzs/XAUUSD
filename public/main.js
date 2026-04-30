@@ -77,10 +77,20 @@ async function load() {
 
 function renderMain(d) {
   elements.usd.innerText = fmtVND.format(d.usd);
-  elements.xau.innerText = fmtXAU.format(d.xau);
   elements.diff.innerText = fmtVND.format(d.diff);
   elements.percent.innerText = d.percent;
-// --- PHẦN THÊM MỚI: Cập nhật ô Gap Change ---
+
+  // --- PHẦN MỚI: Cập nhật ô XAU (Có sub màu đen tuyền) ---
+  const xChange = d.xauChange || 0;
+  const isXUp = xChange >= 0;
+  elements.xau.innerHTML = `
+    <div>${fmtXAU.format(d.xau)}</div>
+    <div class="sjc-sub" style="color: #000; font-weight: 700;">
+      ${isXUp ? '▲' : '▼'} ${fmtXAU.format(Math.abs(xChange))}
+    </div>
+  `;
+
+  // --- Cập nhật ô Gap Change ---
   if (elements.gapChange && d.gapChange !== undefined) {
     const gVal = d.gapChange;
     const gPrefix = gVal > 0 ? "+" : ""; // Hiện dấu + nếu số dương
@@ -95,11 +105,10 @@ function renderMain(d) {
       elements.gapChange.style.color = "var(--secondary-text)";
     }
   }
-  // --------------------------------------------
-  // Sử dụng trực tiếp con số sjcChange do Server tính toán
+
+  // --- Cập nhật ô SJC (Giữ nguyên màu xanh/đỏ) ---
   const change = d.sjcChange || 0;
   const isUp = change >= 0;
-  
   elements.sjc.innerHTML = `
     <div>${fmtVND.format(d.sjc)}</div>
     <div class="sjc-sub ${isUp ? 'change-up' : 'change-down'}">
