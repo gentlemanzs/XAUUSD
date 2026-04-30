@@ -20,6 +20,9 @@ let lastChartSignature = "";
 let isExpanded = false; 
 let currentPage = 1;
 
+// Biến lưu trữ đối tượng kết nối SSE để có thể bật/tắt toàn cục
+let evtSource = null;
+
 // TỐI ƯU: Đổi từ Debounce sang Throttle (2 giây) để chặn đứng spam API
 let lastFetchTime = 0;
 function safeFetchHistory(isInit = false) {
@@ -32,36 +35,41 @@ function safeFetchHistory(isInit = false) {
 
 const dateCache = new Map();
 
-/* ===== NHẬN REALTIME DỮ LIỆU TỪ SERVER MÀ KHÔNG CẦN RELOAD ===== */
-const evtSource = new EventSource("/api/stream");
-
-// TỐI ƯU: Thêm log để theo dõi trình trạng kết nối thực tế
-evtSource.onopen = () => {
-  console.log("🟢 SSE đã kết nối thành công");
-};
-
-evtSource.onmessage = (event) => {
-  if (!event.data) return;
-  const d = JSON.parse(event.data);
-  // TỐI ƯU: Check d.updatedAt thay vì Object.keys để tiết kiệm CPU điện thoại
-  if (!d || !d.updatedAt) return;
+/* ===== KHỞI TẠO HOẶC KẾT NỐI LẠI SSE ===== */
+function initSSE() {
+  // Tránh tạo nhiều kết nối chồng chéo
+  if (evtSource && evtSource.readyState !== EventSource.CLOSED) return;
   
-  // Hiệu ứng nháy màu báo có data mới
-  elements.lastTime.style.color = "#10b981";
-  setTimeout(() => elements.lastTime.style.color = "#64748b", 2000);
-  
-  renderMain(d);
-  if (lastSJCValue === null || d.sjc !== lastSJCValue) {
-    const isFirstLoad = lastSJCValue === null;
-    lastSJCValue = d.sjc;
-    safeFetchHistory(isFirstLoad); // Truyền cờ isFirstLoad vào
-  }
-};
+  evtSource = new EventSource("/api/stream");
 
-// TỐI ƯU: Bắt lỗi SSE để báo hiệu cho người dùng khi rớt mạng
-evtSource.onerror = () => {
-  console.warn("SSE mất kết nối, trình duyệt đang tự động thử reconnect...");
-};
+  // TỐI ƯU: Thêm log để theo dõi trình trạng kết nối thực tế
+  evtSource.onopen = () => {
+    console.log("🟢 SSE đã kết nối thành công");
+  };
+
+  evtSource.onmessage = (event) => {
+    if (!event.data) return;
+    const d = JSON.parse(event.data);
+    // TỐI ƯU: Check d.updatedAt thay vì Object.keys để tiết kiệm CPU điện thoại
+    if (!d || !d.updatedAt) return;
+    
+    // Hiệu ứng nháy màu báo có data mới
+    elements.lastTime.style.color = "#10b981";
+    setTimeout(() => elements.lastTime.style.color = "#64748b", 2000);
+    
+    renderMain(d);
+    if (lastSJCValue === null || d.sjc !== lastSJCValue) {
+      const isFirstLoad = lastSJCValue === null;
+      lastSJCValue = d.sjc;
+      safeFetchHistory(isFirstLoad); // Truyền cờ isFirstLoad vào
+    }
+  };
+
+  // TỐI ƯU: Bắt lỗi SSE để báo hiệu cho người dùng khi rớt mạng
+  evtSource.onerror = () => {
+    console.warn("SSE mất kết nối, trình duyệt đang tự động thử reconnect...");
+  };
+}
 
 /* ===== TẢI DỮ LIỆU (CÓ THỂ ÉP BUỘC SERVER CÀO LIỀN) ===== */
 async function load() {
@@ -435,6 +443,8 @@ function updateChart(data) {
 
 /* KHỞI CHẠY LẦN ĐẦU (F5) SẼ YÊU CẦU SERVER ÉP CÀO LẠI (FORCE = TRUE) */
 load();
+// Khởi tạo luồng SSE lắng nghe dữ liệu Realtime
+initSSE();
 
 /* ===== HIỆU ỨNG PULL TO REFRESH ===== */
 const pullContainer = document.createElement("div");
@@ -519,6 +529,25 @@ window.addEventListener("touchend", (e) => {
     pullContainer.style.top = "-80px";
   }
 }, { passive: true }); // TỐI ƯU: Passive true cho touchend
+
+/* ===== TỐI ƯU UX & PIN: TỰ NGẮT KẾT NỐI KHI CHUYỂN TAB ===== */
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    // Khi người dùng cất app đi, ngắt kết nối SSE để đỡ ngốn Pin
+    if (evtSource) {
+      evtSource.close();
+      evtSource = null;
+      console.log("⏸ Tab ẩn. Đã tạm ngắt SSE để tiết kiệm pin.");
+    }
+  } else {
+    // Khi người dùng bật tab lên lại
+    console.log("▶ Tab hoạt động. Đang kết nối và tải lại dữ liệu mới nhất...");
+    // 1. Gọi lại hàm load() để lấy mẻ data mới nhất khỏi bị trễ nhịp
+    load();
+    // 2. Mở lại luồng sự kiện SSE
+    initSSE();
+  }
+});
 
 /* ===== HỦY BỎ PWA (SERVICE WORKER) ĐỂ SỬA LỖI MẤT KẾT NỐI ===== */
 if ('serviceWorker' in navigator) {

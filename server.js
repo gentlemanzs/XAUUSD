@@ -4,6 +4,8 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const cheerio = require("cheerio");
 const compression = require("compression");
+// TỐI ƯU BẢO MẬT: Nạp thư viện chống DDoS / Dội bom API
+const rateLimit = require('express-rate-limit');
 const app = express();
 
 // TỐI ƯU: Cấu hình nén dữ liệu chuẩn mực
@@ -11,6 +13,15 @@ app.use(compression({
   level: 6,
   threshold: 1024
 }));
+
+// TỐI ƯU BẢO MẬT: Cài đặt khiên chặn rate limit (Tối đa 100 request / 15 phút / 1 IP)
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 100, 
+  message: { error: "Bạn đã gọi API quá nhiều lần. Vui lòng đợi 15 phút." },
+  standardHeaders: true, 
+  legacyHeaders: false, 
+});
 
 app.use(cors());
 app.use(express.json());
@@ -21,6 +32,10 @@ app.use(express.static(path.join(__dirname, "public"), {
   maxAge: "1d",
   etag: true
 }));
+
+// Áp dụng lớp khiên Rate Limit cho toàn bộ Endpoint bắt đầu bằng /api/ (Ngoại trừ SSE /stream)
+app.use('/api/history', apiLimiter);
+app.use('/api/gold', apiLimiter);
 
 const PORT = process.env.PORT || 3000;
 
@@ -43,6 +58,14 @@ mongoose.connect(process.env.MONGO_URI, {
     console.error("❌ MongoDB error:", err); 
     process.exit(1); 
   });
+
+// TỐI ƯU BỀN BỈ: Lắng nghe và báo cáo lỗi nếu Database bị rớt mạng giữa chừng (Tự chữa lành)
+mongoose.connection.on('error', (err) => {
+  console.error("🔥 Lỗi Mất Kết Nối MongoDB Đột Ngột:", err);
+});
+mongoose.connection.on('disconnected', () => {
+  console.warn("⚠️ MongoDB đã ngắt kết nối. Đang thử lại (Mongoose tự động Reconnect)...");
+});
 
 /* ===== SCHEMA ===== */
 const HistorySchema = new mongoose.Schema({
@@ -374,7 +397,15 @@ app.get("/api/stream", (req, res) => {
   
   // TỐI ƯU: Phanh khẩn cấp chống Memory Leak khi có quá nhiều kết nối rác
   if (clients.length > 1000) {
+    // 1. Lấy ra danh sách 500 người cũ nhất chuẩn bị bị đuổi
+    const droppedClients = clients.slice(0, clients.length - 500);
+    // 2. Giữ lại 500 người mới nhất
     clients = clients.slice(-500);
+    // 3. Đóng kết nối mạng (Socket) của những người bị đuổi một cách sạch sẽ
+    droppedClients.forEach(c => {
+      try { c.end(); } catch (e) {}
+    });
+    console.warn("⚠️ Đã dọn dẹp và ngắt kết nối mạng của 500 client cũ.");
   }
   
   clients.push(res);
