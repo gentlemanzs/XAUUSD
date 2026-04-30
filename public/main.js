@@ -56,7 +56,6 @@ function initSSE() {
     elements.lastTime.style.color = "#10b981";
     setTimeout(() => elements.lastTime.style.color = "#64748b", 2000);
 
-    // Log F12: báo API nào đang lỗi
     if (d.failedAPIs && d.failedAPIs.length > 0) {
       console.warn(`[XAU] ⚠️ API lỗi lúc ${d.timeStr}:`, d.failedAPIs.join(", "), "→ Đang dùng data cũ");
     } else {
@@ -146,8 +145,6 @@ async function fetchHistory() {
     historyData = await res.json(); 
     
     for (const r of historyData) {
-      // Fix 2.3: backend đã gửi filterDateStr cho record mới (qua SSE push)
-      // chỉ tính lại cho record cũ từ /api/history chưa có field này
       if (!r.filterDateStr && r.createdAt) {
         const d = new Date(r.createdAt);
         if (!isNaN(d)) {
@@ -193,8 +190,13 @@ function renderTable() {
     fragment.appendChild(tr);
   });
 
-  elements.historyTable.innerHTML = "";
-  elements.historyTable.appendChild(fragment);
+  if (elements.historyTable.replaceChildren) {
+    elements.historyTable.replaceChildren(fragment);
+  } else {
+    elements.historyTable.innerHTML = "";
+    elements.historyTable.appendChild(fragment);
+  }
+  
   renderPagination();
 }
 
@@ -239,10 +241,12 @@ function toggleFilterBox() {
   if (isExpanded) wrapper.classList.add('is-expanded');
   else wrapper.classList.remove('is-expanded');
   
-  currentPage = 1;
-  // Fix 2.1: bỏ renderTable() ở đây — fetchHistory() sẽ tự gọi renderTable() sau khi có data mới
-  // tránh UI nháy 2 lần (render data cũ → render data mới)
-  fetchHistory();
+  currentPage = 1; 
+  if (isExpanded) {
+    fetchHistory(); 
+  } else {
+    renderTable();
+  }
 }
 
 function applyFilter() {
@@ -289,7 +293,15 @@ async function deleteSelected() {
 }
 
 function updateChart(fullData) {
-  if (!fullData || fullData.length < 2) return;
+  if (!fullData || fullData.length < 2) {
+    lastChartSignature = "";
+    if (myChart) {
+      myChart.data.labels = [];
+      myChart.data.datasets[0].data = [];
+      myChart.update('none');
+    }
+    return;
+  }
 
   const MAX_POINTS = 100;
   const data = fullData.slice(0, MAX_POINTS);
@@ -327,22 +339,19 @@ function updateChart(fullData) {
   }
 
   const validGaps = gaps.filter(g => g !== null);
-  let yMin = 0; 
+  let yMin = 0;
   let yMax = 0;
-  
-  if (validGaps.length === 0) return; // Fix 1.1: toàn null → không vẽ, giữ chart cũ
-  
-  if (validGaps.length > 0) {
-    const minVal = Math.min(...validGaps); 
-    const maxVal = Math.max(...validGaps);
-    const padding = Math.max((maxVal - minVal) * 0.2, 0.5); 
-    yMin = minVal - padding; 
-    yMax = maxVal + padding;
-  }
+
+  if (validGaps.length === 0) return;
+
+  const minVal = Math.min(...validGaps);
+  const maxVal = Math.max(...validGaps);
+  const padding = Math.max((maxVal - minVal) * 0.2, 0.5);
+  yMin = minVal - padding;
+  yMax = maxVal + padding;
 
   const calculatedWidth = totalPoints * minSpacing;
   
-  // Fix 2.2: chỉ set width khi thực sự thay đổi, tránh reflow thừa mỗi update
   if (wrapper._lastWidth !== calculatedWidth) {
     wrapper._lastWidth = calculatedWidth;
     if (calculatedWidth > containerWidth) {

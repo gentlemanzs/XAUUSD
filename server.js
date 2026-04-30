@@ -37,7 +37,6 @@ function formatTimeVN(dateObj) {
   });
 }
 
-// Helper log lỗi API thống nhất
 function logApiError(apiName, attempt, error) {
   const ts = new Date().toISOString();
   console.warn(`⚠️  [${ts}] API "${apiName}" thất bại (lần ${attempt}): ${error.message}`);
@@ -54,6 +53,8 @@ async function preloadCache() {
     if (historyData.length > 0) {
       for (const item of historyData) {
         item.timeStr = formatTimeVN(item.createdAt);
+        // Fix điểm 2: Thêm filterDateStr ngay từ lúc preload cache
+        item.filterDateStr = new Date(item.createdAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
       }
       cachedHistory = historyData;
     }
@@ -220,7 +221,7 @@ async function updateData(triggerSource = "Tự động") {
     if (sjc <= 0 || xau <= 0) {
         if (latestData) {
           latestData.status = "Delayed (Lỗi hệ thống)";
-          latestData.failedAPIs = ["SYSTEM"]; // Fix 1.2: frontend log đúng nguyên nhân
+          latestData.failedAPIs = ["SYSTEM"]; 
           const fallbackPayload = `data: ${JSON.stringify(latestData)}\n\n`;
           for (const c of [...clients]) { try { c.write(fallbackPayload); if (typeof c.flush === "function") c.flush(); } catch (err) { clients.delete(c); } }
         }
@@ -270,7 +271,6 @@ async function updateData(triggerSource = "Tự động") {
       usd, xau, xauChange, sjc, sjcChange, oldGap: lastDifferentSjc.diff,       
       gapChange, worldVND: Math.round(worldVND), diff: currentGap,
       percent: ((diff / worldVND) * 100).toFixed(2) + "%", status: currentStatus,
-      // Truyền danh sách API lỗi xuống frontend để log console F12
       failedAPIs: failedAPIs
     };
 
@@ -284,7 +284,6 @@ async function updateData(triggerSource = "Tự động") {
    
       const slimDoc = {
         createdAt: savedDoc.createdAt, timeStr: formatTimeVN(savedDoc.createdAt),
-        // Fix 2.3: thêm filterDateStr ở backend cho nhất quán với /api/history
         filterDateStr: new Date(savedDoc.createdAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }),
         xau: savedDoc.xau, sjc: savedDoc.sjc, diff: savedDoc.diff,
         percent: savedDoc.percent, _id: savedDoc._id
@@ -369,6 +368,8 @@ app.get("/api/history", async (req, res) => {
   
   for (const item of data) {
     item.timeStr = formatTimeVN(item.createdAt);
+    // Fix điểm 1: Bổ sung filterDateStr khi bốc từ Database để trả về API
+    item.filterDateStr = new Date(item.createdAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
   }
   cachedHistory = data;
   
