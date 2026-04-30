@@ -185,8 +185,8 @@ async function updateData(triggerSource = "Tự động") {
 
     let lastRecord = latestData; 
     if (!lastRecord) {
-      // Tối ưu: Thêm catch lỗi DB ở đây để tránh crash cả hàm cào
-      lastRecord = await History.findOne().sort({ createdAt: -1 }).lean().catch(() => null);
+      // TỐI ƯU: Thêm .select('usd xau sjc') để giảm tải payload Mongo khi query lần đầu
+      lastRecord = await History.findOne().select('usd xau sjc').sort({ createdAt: -1 }).lean().catch(() => null);
     }
     
         
@@ -334,7 +334,8 @@ async function updateData(triggerSource = "Tự động") {
 /* ===== API & SSE ===== */
 
 app.get("/api/stream", (req, res) => {
-  res.setHeader("Content-Type", "text-event-stream");
+  // TỐI ƯU: Sửa lỗi text-event-stream thành text/event-stream chuẩn xác
+  res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   
@@ -345,7 +346,11 @@ app.get("/api/stream", (req, res) => {
       if (typeof res.flush === "function") res.flush();
   }
 
-  req.on("close", () => clients = clients.filter(c => c !== res));
+  req.on("close", () => {
+    clients = clients.filter(c => c !== res);
+    // TỐI ƯU: Bọc try-catch để đóng kết nối an toàn tuyệt đối, tránh Zombie socket
+    try { res.end(); } catch {}
+  });
 });
 
 app.get("/api/gold", async (req, res) => {

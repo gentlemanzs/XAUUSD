@@ -19,22 +19,19 @@ let myChart = null;
 let lastChartSignature = "";
 let isExpanded = false; 
 let currentPage = 1;
-// Thêm đoạn này vào để chống spam API
-let historyTimeout;
 
+// TỐI ƯU: Đổi từ Debounce sang Throttle (2 giây) để chặn đứng spam API
+let lastFetchTime = 0;
 function safeFetchHistory(isInit = false) {
-  clearTimeout(historyTimeout);
-  // Nếu là lần tải trang đầu tiên, bỏ qua bộ đếm thời gian
-  if (isInit) {
-    fetchHistory();
-    return;
-  }
-  historyTimeout = setTimeout(() => {
-    fetchHistory();
-  }, 100);
+  const now = Date.now();
+  if (!isInit && now - lastFetchTime < 2000) return;
+
+  lastFetchTime = now;
+  fetchHistory();
 }
 
 const dateCache = new Map();
+
 /* ===== NHẬN REALTIME DỮ LIỆU TỪ SERVER MÀ KHÔNG CẦN RELOAD ===== */
 const evtSource = new EventSource("/api/stream");
 evtSource.onmessage = (event) => {
@@ -47,10 +44,10 @@ evtSource.onmessage = (event) => {
   
   renderMain(d);
   if (lastSJCValue === null || d.sjc !== lastSJCValue) {
-  const isFirstLoad = lastSJCValue === null;
-  lastSJCValue = d.sjc;
-  safeFetchHistory(isFirstLoad); // Truyền cờ isFirstLoad vào
-}
+    const isFirstLoad = lastSJCValue === null;
+    lastSJCValue = d.sjc;
+    safeFetchHistory(isFirstLoad); // Truyền cờ isFirstLoad vào
+  }
 };
 
 /* ===== TẢI DỮ LIỆU (CÓ THỂ ÉP BUỘC SERVER CÀO LIỀN) ===== */
@@ -76,19 +73,16 @@ async function load() {
 }
 
 function renderMain(d) {
-  elements.usd.innerText = fmtVND.format(d.usd);
-  elements.diff.innerText = fmtVND.format(d.diff);
-  elements.percent.innerText = d.percent;
+  // TỐI ƯU: Cập nhật biến text thông thường
+  if (elements.usd.innerText !== fmtVND.format(d.usd)) elements.usd.innerText = fmtVND.format(d.usd);
+  if (elements.diff.innerText !== fmtVND.format(d.diff)) elements.diff.innerText = fmtVND.format(d.diff);
+  if (elements.percent.innerText !== d.percent) elements.percent.innerText = d.percent;
 
-  // --- PHẦN MỚI: Cập nhật ô XAU (Có màu Teal/Red và Inline trên điện thoại) ---
+  // --- Cập nhật ô XAU (Chống Repaint) ---
   const xChange = d.xauChange || 0;
   const isXUp = xChange >= 0;
-  
-  // Xác định class màu: xanh cổ vịt (teal) hoặc đỏ (down)
   const xColorClass = isXUp ? 'xau-up' : 'xau-down';
-
-  // Thêm thẻ div xau-wrapper bao bọc để CSS ép nó nằm ngang riêng trên Mobile
-  elements.xau.innerHTML = `
+  const newXauHtml = `
     <div class="xau-wrapper">
       <div>${fmtXAU.format(d.xau)}</div>
       <div class="sjc-sub ${xColorClass}">
@@ -96,43 +90,44 @@ function renderMain(d) {
       </div>
     </div>
   `;
+  if (elements.xau.innerHTML !== newXauHtml) elements.xau.innerHTML = newXauHtml;
 
   // --- Cập nhật ô Gap Change ---
   if (elements.gapChange && d.gapChange !== undefined) {
     const gVal = d.gapChange;
-    const gPrefix = gVal > 0 ? "+" : ""; // Hiện dấu + nếu số dương
-    elements.gapChange.innerText = gPrefix + fmtVND.format(gVal);
-
-    // Đổi màu dựa trên giá trị âm/dương
-    if (gVal > 0) {
-      elements.gapChange.style.color = "var(--up-color)";
-    } else if (gVal < 0) {
-      elements.gapChange.style.color = "var(--down-color)";
-    } else {
-      elements.gapChange.style.color = "var(--secondary-text)";
+    const gPrefix = gVal > 0 ? "+" : ""; 
+    const newGapText = gPrefix + fmtVND.format(gVal);
+    
+    if (elements.gapChange.innerText !== newGapText) {
+      elements.gapChange.innerText = newGapText;
+      if (gVal > 0) elements.gapChange.style.color = "var(--up-color)";
+      else if (gVal < 0) elements.gapChange.style.color = "var(--down-color)";
+      else elements.gapChange.style.color = "var(--secondary-text)";
     }
   }
 
-  // --- Cập nhật ô SJC (Giữ nguyên màu xanh/đỏ) ---
+  // --- Cập nhật ô SJC (Chống Repaint) ---
   const change = d.sjcChange || 0;
   const isUp = change >= 0;
-  elements.sjc.innerHTML = `
+  const newSjcHtml = `
     <div>${fmtVND.format(d.sjc)}</div>
     <div class="sjc-sub ${isUp ? 'change-up' : 'change-down'}">
       ${isUp ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}
     </div>
   `;
+  if (elements.sjc.innerHTML !== newSjcHtml) elements.sjc.innerHTML = newSjcHtml;
 
+  // --- Cập nhật Status (Chống Repaint) ---
   const updateTime = new Date(d.updatedAt);
   const timeStr = isNaN(updateTime) ? new Date().toLocaleTimeString('vi-VN') : updateTime.toLocaleTimeString('vi-VN');
-  
-  // Thay đổi cách hiển thị status để in ra đúng chữ "Delayed (Lỗi: SJC)" từ Server gửi xuống
-  elements.lastTime.innerHTML = `${d.status === "Live" ? "🟢 Live" : "🟡 " + d.status} - Cập nhật: ${timeStr}`;
+  const newStatusHtml = `${d.status === "Live" ? "🟢 Live" : "🟡 " + d.status} - Cập nhật: ${timeStr}`;
+  if (elements.lastTime.innerHTML !== newStatusHtml) elements.lastTime.innerHTML = newStatusHtml;
 }
 
 async function fetchHistory() {
   try {
-    const res = await fetch(HIST_API);
+    // TỐI ƯU: Ép trình duyệt không được dùng file lưu tạm, bắt buộc phải lấy từ Server (cache RAM của ta)
+    const res = await fetch(HIST_API, { cache: "no-store" });
     historyData = await res.json(); 
     currentData = [...historyData]; 
     renderTable(); 
@@ -376,7 +371,7 @@ function updateChart(data) {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        animation: false, // TỐI ƯU: Tắt hiệu ứng tải để biểu đồ render mượt mà hơn trên Mobile
+        animation: false, // TỐI ƯU: Tắt hiệu ứng để đồ thị hiện ra ngay lập tức, tránh giật lag trên Mobile
         plugins: { legend: { display: false } },
         scales: {
           y: {
@@ -401,7 +396,7 @@ function updateChart(data) {
   }
   
   const container = document.querySelector('.chart-scroll-container');
-  // TỐI ƯU: Sử dụng requestAnimationFrame thay cho setTimeout hack delay
+  // TỐI ƯU: Sử dụng requestAnimationFrame thay cho setTimeout hack delay 200ms để mượt mà hơn
   requestAnimationFrame(() => {
     container.scrollLeft = container.scrollWidth;
   });
@@ -433,12 +428,12 @@ const bars = [
 ];
 const targetHeights = [12, 24, 16, 20]; 
 
-// TỐI ƯU: Chỉnh passive: true để không làm lag thao tác vuộn trang
+// TỐI ƯU: Chỉnh passive: true để trình duyệt bớt gánh nặng khi bắt đầu chạm màn hình
 window.addEventListener("touchstart", (e) => { 
   if (window.scrollY <= 0 && !isRefreshing) { startY = e.touches[0].clientY; isPulling = true; } 
 }, { passive: true });
 
-// Touchmove bắt buộc phải có passive: false vì sử dụng preventDefault()
+// Touchmove bắt buộc phải có passive: false vì sử dụng preventDefault() để chặn cuộn mặc định
 window.addEventListener("touchmove", (e) => {
   if (!isPulling || isRefreshing) return;
   const diff = e.touches[0].clientY - startY;
@@ -492,7 +487,7 @@ window.addEventListener("touchend", (e) => {
   } else {
     pullContainer.style.top = "-80px";
   }
-}, { passive: true });
+}, { passive: true }); // TỐI ƯU: Passive true cho touchend
 
 /* ===== HỦY BỎ PWA (SERVICE WORKER) ĐỂ SỬA LỖI MẤT KẾT NỐI ===== */
 if ('serviceWorker' in navigator) {
