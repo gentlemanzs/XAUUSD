@@ -83,8 +83,6 @@ async function load() {
   } catch(e) {}
 }
 
-let currentRenderedStates = { xauStr: "", sjcStr: "" };
-
 function renderMain(d) {
   try { localStorage.setItem('xau_main_cache', JSON.stringify(d)); } catch(e) {}
 
@@ -228,12 +226,12 @@ function toggleFilterBox() {
   elements.toggleBtn.innerText = isExpanded ? "−" : "+";
   elements.actionHeader.style.display = isExpanded ? "table-cell" : "none";
   
-  // ĐÃ THÊM: Gắn cờ .is-expanded cho Wrapper để CSS nhận biết bảng đang đóng hay mở
   const wrapper = document.querySelector('.table-wrapper');
   if (isExpanded) wrapper.classList.add('is-expanded');
   else wrapper.classList.remove('is-expanded');
   
   currentPage = 1;
+  renderTable(); 
   fetchHistory(); 
 }
 
@@ -247,13 +245,17 @@ function applyFilter() {
     if (endStr && r.filterDateStr > endStr) return false;
     return true;
   });
-  currentPage = 1; renderTable(); updateChart(currentData);
+  currentPage = 1; 
+  renderTable(); 
+  updateChart(currentData);
 }
 
 function resetFilter() {
   elements.startDate.value = ""; elements.endDate.value = "";
   currentData = historyData; 
-  currentPage = 1; renderTable(); updateChart(currentData);
+  currentPage = 1; 
+  renderTable(); 
+  updateChart(currentData);
 }
 
 function toggleSelectAll(source) {
@@ -389,57 +391,6 @@ try {
 
 initSSE();
 setTimeout(() => { if (lastSJCValue === null) load(); }, 3000);
-
-const pullContainer = document.createElement("div");
-pullContainer.className = "cyber-pull-container";
-pullContainer.innerHTML = `
-  <div class="pulse-bars">
-    <div class="pulse-bar" id="bar1"></div><div class="pulse-bar" id="bar2"></div>
-    <div class="pulse-bar" id="bar3"></div><div class="pulse-bar" id="bar4"></div>
-  </div>
-  <div class="cyber-text">Đồng bộ dữ liệu...</div>
-`;
-document.body.appendChild(pullContainer);
-
-let startY = 0; let isPulling = false; let isRefreshing = false; const pullThreshold = 120; 
-const textEl = pullContainer.querySelector('.cyber-text');
-const bars = [ document.getElementById('bar1'), document.getElementById('bar2'), document.getElementById('bar3'), document.getElementById('bar4') ];
-const targetHeights = [12, 24, 16, 20]; 
-
-window.addEventListener("touchstart", (e) => { 
-  if (window.scrollY <= 0 && !isRefreshing) { startY = e.touches[0].clientY; isPulling = true; } 
-}, { passive: true });
-
-window.addEventListener("touchmove", (e) => {
-  if (!isPulling || isRefreshing) return;
-  const diff = e.touches[0].clientY - startY;
-  if (diff > 0 && window.scrollY <= 0) {
-    if (e.cancelable) e.preventDefault();
-    const moveY = Math.min(diff * 0.4, 90); pullContainer.style.top = `${-80 + moveY}px`;
-    const pullRatio = Math.min(diff / pullThreshold, 1);
-    bars.forEach((bar, index) => { bar.style.height = `${4 + (targetHeights[index] - 4) * pullRatio}px`; });
-    if (diff > pullThreshold) { pullContainer.classList.add('ready'); textEl.innerText = "Thả tay để tải mới!"; } 
-    else { pullContainer.classList.remove('ready'); textEl.innerText = "Kéo thêm chút nữa..."; }
-  }
-}, { passive: false });
-
-window.addEventListener("touchend", (e) => {
-  if (!isPulling || isRefreshing) return;
-  isPulling = false;
-  const diff = e.changedTouches[0].clientY - startY;
-  bars.forEach(bar => bar.style.height = '');
-  if (diff > pullThreshold) {
-    isRefreshing = true;
-    pullContainer.classList.remove('ready'); pullContainer.classList.add('refreshing'); pullContainer.style.top = "20px"; 
-    textEl.innerText = "Updating...";
-    load().then(() => {
-      textEl.innerText = "Success!";
-      pullContainer.classList.remove('refreshing'); pullContainer.classList.add('ready');
-      bars.forEach((bar, idx) => bar.style.height = `${targetHeights[idx]}px`);
-      setTimeout(() => { pullContainer.style.top = "-80px"; setTimeout(() => { isRefreshing = false; pullContainer.classList.remove('ready'); }, 300); }, 1200);
-    });
-  } else { pullContainer.style.top = "-80px"; }
-}, { passive: true });
 
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
