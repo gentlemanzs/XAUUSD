@@ -335,8 +335,11 @@ function updateChart(data) {
   if (totalPoints > 0 && totalPoints < minPointsToFill) {
     const padCount = minPointsToFill - totalPoints;
     for (let i = 0; i < padCount; i++) {
-      labels.unshift(''); // Chèn vào đầu (bên trái biểu đồ)
-      gaps.unshift(null); 
+      // SỬA LỖI BIỂU ĐỒ BỊ LỆCH PHẢI:
+      // Dùng push để nhét các khoảng trống ảo ra phía cuối mảng (bên phải),
+      // nhờ đó dữ liệu thật sẽ tự động bám sát lề trái (cột Y).
+      labels.push(''); 
+      gaps.push(null); 
     }
   }
 
