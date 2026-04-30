@@ -20,40 +20,25 @@ let lastChartSignature = "";
 let isExpanded = false; 
 let currentPage = 1;
 
-// Biến lưu trữ đối tượng kết nối SSE để có thể bật/tắt toàn cục
 let evtSource = null;
 
-// TỐI ƯU: Đổi từ Debounce sang Throttle (2 giây) để chặn đứng spam API
 let lastFetchTime = 0;
 function safeFetchHistory(isInit = false) {
   const now = Date.now();
   if (!isInit && now - lastFetchTime < 2000) return;
-
   lastFetchTime = now;
   fetchHistory();
 }
 
-const dateCache = new Map();
-
-/* ===== KHỞI TẠO HOẶC KẾT NỐI LẠI SSE ===== */
 function initSSE() {
-  // Tránh tạo nhiều kết nối chồng chéo
   if (evtSource && evtSource.readyState !== EventSource.CLOSED) return;
-  
   evtSource = new EventSource("/api/stream");
-
-  // TỐI ƯU: Thêm log để theo dõi trình trạng kết nối thực tế
-  evtSource.onopen = () => {
-    console.log("🟢 SSE đã kết nối thành công");
-  };
-
+  evtSource.onopen = () => { console.log("🟢 SSE đã kết nối thành công"); };
   evtSource.onmessage = (event) => {
     if (!event.data) return;
     const d = JSON.parse(event.data);
-    // TỐI ƯU: Check d.updatedAt thay vì Object.keys để tiết kiệm CPU điện thoại
     if (!d?.updatedAt) return;
     
-    // Hiệu ứng nháy màu báo có data mới
     elements.lastTime.style.color = "#10b981";
     setTimeout(() => elements.lastTime.style.color = "#64748b", 2000);
     
@@ -61,44 +46,36 @@ function initSSE() {
     if (lastSJCValue === null || d.sjc !== lastSJCValue) {
       const isFirstLoad = lastSJCValue === null;
       lastSJCValue = d.sjc;
-      safeFetchHistory(isFirstLoad); // Truyền cờ isFirstLoad vào
+      safeFetchHistory(isFirstLoad); 
     }
   };
-
-  // TỐI ƯU: Bắt lỗi SSE để báo hiệu cho người dùng khi rớt mạng
   evtSource.onerror = () => {
     console.warn("SSE mất kết nối, trình duyệt đang tự động thử reconnect...");
-    // TỐI ƯU UX: Báo cho người dùng biết trạng thái mất mạng
     elements.lastTime.innerHTML = "🔴 Mất kết nối. Đang thử lại...";
     elements.lastTime.style.color = "var(--down-color)";
   };
 }
 
-/* ===== TẢI DỮ LIỆU (CÓ THỂ ÉP BUỘC SERVER CÀO LIỀN) ===== */
 async function load() {
   try {
-    // Chỉ gọi API với timestamp để chống trình duyệt lưu cache
     const res = await fetch(`${API}?t=${Date.now()}`);
     const d = await res.json();
-    
-    // TỐI ƯU: Giảm tải việc sinh rác bộ nhớ (Garbage Collection) trên Mobile
     if (!d?.updatedAt) return;
-    
     renderMain(d);
-    
-    // Logic cập nhật dữ liệu và gọi history
     if (lastSJCValue === null || d.sjc !== lastSJCValue) {
       const isFirstLoad = lastSJCValue === null;
       lastSJCValue = d.sjc;
       safeFetchHistory(isFirstLoad);
     }
-  } catch(e) { 
-    console.error(e); 
-  }
+  } catch(e) {}
 }
 
+// [TỐI ƯU DOM 3.4 & HTML REPAINT 2.3] Biến lưu trạng thái để tránh đè innerHTML không cần thiết
+let currentRenderedStates = { xauStr: "", sjcStr: "" };
+
 function renderMain(d) {
-  // TỐI ƯU: Format 1 lần duy nhất rồi so sánh để tránh tốn CPU điện thoại
+  try { localStorage.setItem('xau_main_cache', JSON.stringify(d)); } catch(e) {}
+
   const usdText = fmtVND.format(d.usd);
   if (elements.usd.innerText !== usdText) elements.usd.innerText = usdText;
   
@@ -107,91 +84,63 @@ function renderMain(d) {
   
   if (elements.percent.innerText !== d.percent) elements.percent.innerText = d.percent;
 
-  // --- Cập nhật ô XAU (Chống Repaint) ---
   const xChange = d.xauChange || 0;
   const isXUp = xChange >= 0;
-  const xColorClass = isXUp ? 'xau-up' : 'xau-down';
-  const newXauHtml = `
-    <div class="xau-wrapper">
-      <div>${fmtXAU.format(d.xau)}</div>
-      <div class="sjc-sub ${xColorClass}">
-        ${isXUp ? '▲' : '▼'} ${fmtXAU.format(Math.abs(xChange))}
+  const newXauSig = `${d.xau}_${xChange}`; // Tạo chữ ký kiểm tra
+  
+  if (currentRenderedStates.xauStr !== newXauSig) {
+    elements.xau.innerHTML = `
+      <div class="xau-wrapper">
+        <div>${fmtXAU.format(d.xau)}</div>
+        <div class="sjc-sub ${isXUp ? 'xau-up' : 'xau-down'}">
+          ${isXUp ? '▲' : '▼'} ${fmtXAU.format(Math.abs(xChange))}
+        </div>
       </div>
-    </div>
-  `;
-  if (elements.xau.innerHTML !== newXauHtml) elements.xau.innerHTML = newXauHtml;
+    `;
+    currentRenderedStates.xauStr = newXauSig;
+  }
 
-  // --- Cập nhật ô Gap Change ---
   if (elements.gapChange && d.gapChange !== undefined) {
     const gVal = d.gapChange;
-    const gPrefix = gVal > 0 ? "+" : ""; 
-    const newGapText = gPrefix + fmtVND.format(gVal);
-    
+    const newGapText = (gVal > 0 ? "+" : "") + fmtVND.format(gVal);
     if (elements.gapChange.innerText !== newGapText) {
       elements.gapChange.innerText = newGapText;
-      if (gVal > 0) elements.gapChange.style.color = "var(--up-color)";
-      else if (gVal < 0) elements.gapChange.style.color = "var(--down-color)";
-      else elements.gapChange.style.color = "var(--secondary-text)";
+      elements.gapChange.style.color = gVal > 0 ? "var(--up-color)" : (gVal < 0 ? "var(--down-color)" : "var(--secondary-text)");
     }
   }
 
-  // --- Cập nhật ô SJC (Chống Repaint) ---
   const change = d.sjcChange || 0;
   const isUp = change >= 0;
-  const newSjcHtml = `
-    <div>${fmtVND.format(d.sjc)}</div>
-    <div class="sjc-sub ${isUp ? 'change-up' : 'change-down'}">
-      ${isUp ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}
-    </div>
-  `;
-  if (elements.sjc.innerHTML !== newSjcHtml) elements.sjc.innerHTML = newSjcHtml;
+  const newSjcSig = `${d.sjc}_${change}`;
 
-  // --- Cập nhật Status (Chống Repaint) ---
-  const updateTime = new Date(d.updatedAt);
-  const timeStr = isNaN(updateTime) ? new Date().toLocaleTimeString('vi-VN') : updateTime.toLocaleTimeString('vi-VN');
+  if (currentRenderedStates.sjcStr !== newSjcSig) {
+    elements.sjc.innerHTML = `
+      <div>${fmtVND.format(d.sjc)}</div>
+      <div class="sjc-sub ${isUp ? 'change-up' : 'change-down'}">
+        ${isUp ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}
+      </div>
+    `;
+    currentRenderedStates.sjcStr = newSjcSig;
+  }
+
+  const timeStr = d.timeStr || new Date().toLocaleTimeString('vi-VN');
   const newStatusHtml = `${d.status === "Live" ? "🟢 Live" : "🟡 " + d.status} - Cập nhật: ${timeStr}`;
   if (elements.lastTime.innerHTML !== newStatusHtml) elements.lastTime.innerHTML = newStatusHtml;
 }
 
 async function fetchHistory() {
   try {
-    // TỐI ƯU: Ép trình duyệt không được dùng file lưu tạm, bắt buộc phải lấy từ Server (cache RAM của ta)
-    const res = await fetch(HIST_API, { cache: "no-store" });
+    // [TỐI ƯU 3.1 & 2.2] Chỉ gọi giới hạn bản ghi tùy theo trạng thái đang thu gọn hay bung rộng
+    const limit = isExpanded ? 1000 : 50; 
+    const res = await fetch(`${HIST_API}?limit=${limit}`, { cache: "no-store" });
     historyData = await res.json(); 
+    
+    try { localStorage.setItem('xau_hist_cache', JSON.stringify(historyData)); } catch(e) {}
+
     currentData = [...historyData]; 
     renderTable(); 
     updateChart(currentData);
-  } catch(e) { console.error(e); }
-}
-
-function formatVNDateTime(isoString) {
-  // 1. Kiểm tra xem ngày này đã có trong kho chứa (Cache) chưa
-  if (dateCache.has(isoString)) {
-    return dateCache.get(isoString); // Nếu có rồi thì lấy ra dùng luôn, không cần tính lại
-  }
-
-  // 2. Nếu chưa có, tiến hành tính toán định dạng như cũ
-  const d = new Date(isoString);
-  if (isNaN(d)) return "--";
-  
-  const formatted = d.toLocaleString('vi-VN', { 
-    timeZone: 'Asia/Ho_Chi_Minh', 
-    day: '2-digit', 
-    month: '2-digit', 
-    hour: '2-digit', 
-    minute: '2-digit' 
-  });
-// --- TỐI ƯU MỚI: Tránh tràn RAM trình duyệt ---
-  if (dateCache.size > 300) {
-    // TỐI ƯU: Xóa phần tử cũ nhất thay vì xóa trắng toàn bộ (Cơ chế Cuốn chiếu FIFO)
-    const firstKey = dateCache.keys().next().value;
-    dateCache.delete(firstKey);
-  }
-  
-  // 3. Lưu kết quả vừa tính vào kho để lần sau không phải tính lại
-  dateCache.set(isoString, formatted);
-
-  return formatted;
+  } catch(e) {}
 }
 
 function renderTable() {
@@ -202,17 +151,16 @@ function renderTable() {
   const displayStyle = isExpanded ? "table-cell" : "none";
   document.getElementById('selectAll').checked = false;
 
-  // TỐI ƯU HIỆU NĂNG: Sử dụng DOM ảo thay vì chuỗi Text HTML
   const fragment = document.createDocumentFragment();
 
   displayData.forEach(r => {
     const tr = document.createElement("tr");
-    // Xóa inline text-align để nhường CSS xử lý độ khít
+    // [TỐI ƯU 3.3] Dùng trực tiếp r.timeStr do Backend trả về, tiết kiệm cực nhiều CPU
     tr.innerHTML = `
       <td class="col-action" style="display: ${displayStyle};">
         <input type="checkbox" class="log-checkbox" value="${r._id}">
       </td>
-      <td class="col-time">${formatVNDateTime(r.createdAt)}</td>
+      <td class="col-time">${r.timeStr || '--'}</td> 
       <td>${fmtXAU.format(r.xau)}</td>
       <td>${fmtVND.format(r.sjc)}</td>
       <td>${fmtVND.format(r.diff)}</td>
@@ -221,10 +169,8 @@ function renderTable() {
     fragment.appendChild(tr);
   });
 
-  // Làm sạch bảng và chèn DOM ảo vào 1 lần duy nhất (Rất mượt)
   elements.historyTable.innerHTML = "";
   elements.historyTable.appendChild(fragment);
-  
   renderPagination();
 }
 
@@ -265,7 +211,8 @@ function toggleFilterBox() {
   elements.toggleBtn.innerText = isExpanded ? "−" : "+";
   elements.actionHeader.style.display = isExpanded ? "table-cell" : "none";
   currentPage = 1;
-  renderTable();
+  // Cập nhật lại data mẻ lớn (1000) khi bung bảng
+  fetchHistory(); 
 }
 
 function applyFilter() {
@@ -285,11 +232,11 @@ function applyFilter() {
   renderTable(); 
   updateChart(currentData);
 }
-// Hàm Bỏ lọc (Xóa trắng ngày tháng và hiển thị lại toàn bộ dữ liệu)
+
 function resetFilter() {
   elements.startDate.value = "";
   elements.endDate.value = "";
-  currentData = [...historyData]; // Trả lại dữ liệu gốc
+  currentData = [...historyData]; 
   currentPage = 1; 
   renderTable(); 
   updateChart(currentData);
@@ -304,6 +251,7 @@ async function deleteSelected() {
   const checkedBoxes = document.querySelectorAll('.log-checkbox:checked');
   if (checkedBoxes.length === 0) { alert("Vui lòng tích chọn ít nhất 1 dòng để xóa."); return; }
   if (!confirm(`Bạn có chắc chắn muốn xóa ${checkedBoxes.length} bản ghi đã chọn?`)) return;
+
   const ids = Array.from(checkedBoxes).map(cb => cb.value);
   try {
     const res = await fetch('/api/history/bulk-delete', {
@@ -314,21 +262,16 @@ async function deleteSelected() {
   } catch(e) { console.error(e); alert("Lỗi mạng!"); }
 }
 
-function updateChart(data) {
-    // 1. Kiểm tra an toàn nếu không có dữ liệu
-  if (!data || data.length === 0) return;
+function updateChart(fullData) {
+  if (!fullData || fullData.length === 0) return;
 
-  // 2. TẠO CHỮ KÝ DỮ LIỆU
-  // data[0] là bản ghi mới nhất (vì mảng sort từ mới đến cũ)
+  // [TỐI ƯU 3.2 & 2.1] Cắt giảm tối đa 150 điểm để vẽ biểu đồ, tránh treo trình duyệt điện thoại
+  const MAX_POINTS = 150;
+  const data = fullData.slice(0, MAX_POINTS);
+
   const currentSignature = `${data.length}_${data[0].createdAt}`;
+  if (currentSignature === lastChartSignature) return; 
 
-  // 3. KIỂM TRA CHỮ KÝ
-  if (currentSignature === lastChartSignature) {
-    // Nếu chữ ký y hệt lần vẽ trước -> Dữ liệu không đổi -> Hủy vẽ!
-    return; 
-  }
-
-  // 4. LƯU LẠI CHỮ KÝ MỚI ĐỂ DÀNH CHO LẦN SAU
   lastChartSignature = currentSignature;
   const chartCanvas = document.getElementById('gapChart');
   const ctx = chartCanvas.getContext('2d');
@@ -337,38 +280,32 @@ function updateChart(data) {
   const labels = [];
   const gaps = [];
 
-  // TỐI ƯU: Không tạo mảng mới bằng slice().reverse() để tiết kiệm RAM. Dùng vòng lặp ngược.
   for (let i = totalPoints - 1; i >= 0; i--) {
     const r = data[i];
-    const d = new Date(r.createdAt);
-    labels.push(d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
+    // Tái sử dụng timeStr từ server, cắt lấy phần giờ:phút "HH:mm"
+    labels.push(r.timeStr ? r.timeStr.substring(0, 5) : "--:--");
     gaps.push(r.diff / 1000000);
   }
 
   const wrapper = chartCanvas.parentElement;
-  
-  // TỐI ƯU: Gộp biến và tái sử dụng tránh gọi DOM 2 lần
   const scrollContainer = document.querySelector('.chart-scroll-container');
   const containerWidth = scrollContainer.clientWidth || window.innerWidth;
 
   const maxSpacing = 110; 
-  const minSpacing = 75;  
+  let minSpacing = 75;  
+
+  if (totalPoints * minSpacing > 30000) minSpacing = Math.floor(30000 / totalPoints);
+  
   const minPointsToFill = Math.ceil(containerWidth / maxSpacing);
 
-  // --- TRỊ DỨT ĐIỂM BỆNH KÉO GIÃN & LỆCH LỀ PHẢI KHI DỮ LIỆU ÍT ---
   if (totalPoints > 0 && totalPoints < minPointsToFill) {
     const padCount = minPointsToFill - totalPoints;
     for (let i = 0; i < padCount; i++) {
-      // SỬA LỖI CHÍ MẠNG CHART.JS: 
-      // Chart.js tự động gộp các nhãn trùng lặp. Nếu push(''), nó sẽ gộp thành 1 cột.
-      // Cần tạo ra các chuỗi khoảng trắng có độ dài khác nhau (' ', '  ', '   ') 
-      // để ép Chart.js vẽ các cột tàng hình riêng biệt bên phải.
       labels.push(' '.repeat(i + 1)); 
       gaps.push(null); 
     }
   }
 
-  // --- THÊM LOGIC TRỊ BỆNH CHẠM ĐÁY/CHẠM NÓC TRỤC Y ---
   const validGaps = gaps.filter(g => g !== null);
   let yMin = 0;
   let yMax = 0;
@@ -377,10 +314,7 @@ function updateChart(data) {
     const minVal = Math.min(...validGaps);
     const maxVal = Math.max(...validGaps);
     const range = maxVal - minVal;
-
-    // TỐI ƯU: Dùng Math.max để đảm bảo biểu đồ luôn có độ phồng (padding) tối thiểu là 0.5M
     const padding = Math.max(range * 0.2, 0.5); 
-    
     yMin = minVal - padding;
     yMax = maxVal + padding;
   }
@@ -398,7 +332,6 @@ function updateChart(data) {
   if (myChart) {
     myChart.data.labels = labels;
     myChart.data.datasets[0].data = gaps;
-    // Cập nhật lại trục Y linh hoạt khi có dữ liệu mới
     myChart.options.scales.y.suggestedMin = yMin;
     myChart.options.scales.y.suggestedMax = yMax;
     myChart.update('none');
@@ -418,25 +351,16 @@ function updateChart(data) {
         }]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false, // TỐI ƯU: Tắt hiệu ứng để đồ thị hiện ra ngay lập tức, tránh giật lag trên Mobile
+        responsive: true, maintainAspectRatio: false, animation: false, 
         plugins: { legend: { display: false } },
         scales: {
           y: {
-            suggestedMin: yMin, // Điểm bắt đầu của vạch dưới cùng
-            suggestedMax: yMax, // Điểm kết thúc của vạch trên cùng
-            beginAtZero: false,
-            ticks: {
-              maxTicksLimit: 6,
-              callback: (val) => val.toFixed(1) + 'M',
-              color: '#64748b',
-              font: { size: 11 }
-            },
+            suggestedMin: yMin, suggestedMax: yMax, beginAtZero: false,
+            ticks: { maxTicksLimit: 6, callback: (val) => val.toFixed(1) + 'M', color: '#64748b', font: { size: 11 } },
             grid: { color: 'rgba(226, 232, 240, 0.6)' }
           },
           x: {
-            ticks: { autoSkip: false, color: '#64748b', font: { size: 10 } },
+            ticks: { autoSkip: true, maxRotation: 0, color: '#64748b', font: { size: 10 } },
             grid: { display: false }
           }
         }
@@ -444,24 +368,35 @@ function updateChart(data) {
     });
   }
   
-  // TỐI ƯU: Check xem người dùng có đang ở sát mép phải (sai số 50px) không
   const isAtRightEdge = scrollContainer.scrollWidth - scrollContainer.clientWidth <= scrollContainer.scrollLeft + 50;
-  
   requestAnimationFrame(() => {
-    // TỐI ƯU UX: Chỉ tự động cuộn đến biểu đồ mới nhất nếu họ đang ở mép phải
     if (isAtRightEdge || data.length <= 10) {
-      // Ép chặt cuộn về 0 (lề trái) nếu dữ liệu ít đang bị ép sang trái, ngược lại cuộn phải
       scrollContainer.scrollLeft = (totalPoints < minPointsToFill) ? 0 : scrollContainer.scrollWidth;
     }
   });
 }
 
-// Khởi tạo luồng SSE lắng nghe dữ liệu Realtime
-initSSE();
-// Fallback: nếu sau 3s SSE chưa push gì thì mới gọi REST
-setTimeout(() => { if (!lastSJCValue) load(); }, 3000);
+try {
+  const cachedMain = localStorage.getItem('xau_main_cache');
+  if (cachedMain) {
+    const parsedMain = JSON.parse(cachedMain);
+    renderMain(parsedMain);
+    lastSJCValue = parsedMain.sjc; 
+  }
 
-/* ===== HIỆU ỨNG PULL TO REFRESH ===== */
+  const cachedHistory = localStorage.getItem('xau_hist_cache');
+  if (cachedHistory) {
+    historyData = JSON.parse(cachedHistory);
+    currentData = [...historyData];
+    renderTable();
+    updateChart(currentData);
+  }
+} catch(e) { console.error("Lỗi đọc cache:", e); }
+
+initSSE();
+
+setTimeout(() => { if (lastSJCValue === null) load(); }, 3000);
+
 const pullContainer = document.createElement("div");
 pullContainer.className = "cyber-pull-container";
 pullContainer.innerHTML = `
@@ -473,42 +408,26 @@ pullContainer.innerHTML = `
 `;
 document.body.appendChild(pullContainer);
 
-let startY = 0; 
-let isPulling = false;
-let isRefreshing = false;
-const pullThreshold = 120; 
+let startY = 0; let isPulling = false; let isRefreshing = false; const pullThreshold = 120; 
 const textEl = pullContainer.querySelector('.cyber-text');
-const bars = [
-  document.getElementById('bar1'), document.getElementById('bar2'),
-  document.getElementById('bar3'), document.getElementById('bar4')
-];
+const bars = [ document.getElementById('bar1'), document.getElementById('bar2'), document.getElementById('bar3'), document.getElementById('bar4') ];
 const targetHeights = [12, 24, 16, 20]; 
 
-// TỐI ƯU: Chỉnh passive: true để trình duyệt bớt gánh nặng khi bắt đầu chạm màn hình
 window.addEventListener("touchstart", (e) => { 
   if (window.scrollY <= 0 && !isRefreshing) { startY = e.touches[0].clientY; isPulling = true; } 
 }, { passive: true });
 
-// Touchmove bắt buộc phải có passive: false vì sử dụng preventDefault() để chặn cuộn mặc định
 window.addEventListener("touchmove", (e) => {
   if (!isPulling || isRefreshing) return;
   const diff = e.touches[0].clientY - startY;
-  
   if (diff > 0 && window.scrollY <= 0) {
     if (e.cancelable) e.preventDefault();
     const moveY = Math.min(diff * 0.4, 90); 
     pullContainer.style.top = `${-80 + moveY}px`;
     const pullRatio = Math.min(diff / pullThreshold, 1);
-    
-    bars.forEach((bar, index) => {
-      bar.style.height = `${4 + (targetHeights[index] - 4) * pullRatio}px`;
-    });
-    
-    if (diff > pullThreshold) {
-      pullContainer.classList.add('ready'); textEl.innerText = "Thả tay để tải mới!";
-    } else {
-      pullContainer.classList.remove('ready'); textEl.innerText = "Kéo thêm chút nữa...";
-    }
+    bars.forEach((bar, index) => { bar.style.height = `${4 + (targetHeights[index] - 4) * pullRatio}px`; });
+    if (diff > pullThreshold) { pullContainer.classList.add('ready'); textEl.innerText = "Thả tay để tải mới!"; } 
+    else { pullContainer.classList.remove('ready'); textEl.innerText = "Kéo thêm chút nữa..."; }
   }
 }, { passive: false });
 
@@ -516,50 +435,28 @@ window.addEventListener("touchend", (e) => {
   if (!isPulling || isRefreshing) return;
   isPulling = false;
   const diff = e.changedTouches[0].clientY - startY;
-  
   bars.forEach(bar => bar.style.height = '');
-  
   if (diff > pullThreshold) {
     isRefreshing = true;
-    pullContainer.classList.remove('ready');
-    pullContainer.classList.add('refreshing');
-    pullContainer.style.top = "20px"; 
+    pullContainer.classList.remove('ready'); pullContainer.classList.add('refreshing'); pullContainer.style.top = "20px"; 
     textEl.innerText = "Updating...";
-    
-    // API giờ chỉ lấy RAM cache, không kích hoạt cào
     load().then(() => {
       textEl.innerText = "Success!";
-      pullContainer.classList.remove('refreshing');
-      pullContainer.classList.add('ready');
+      pullContainer.classList.remove('refreshing'); pullContainer.classList.add('ready');
       bars.forEach((bar, idx) => bar.style.height = `${targetHeights[idx]}px`);
-      
       setTimeout(() => { 
         pullContainer.style.top = "-80px"; 
-        setTimeout(() => { 
-          isRefreshing = false; pullContainer.classList.remove('ready');
-        }, 300);
+        setTimeout(() => { isRefreshing = false; pullContainer.classList.remove('ready'); }, 300);
       }, 1200);
     });
-  } else {
-    pullContainer.style.top = "-80px";
-  }
-}, { passive: true }); // TỐI ƯU: Passive true cho touchend
+  } else { pullContainer.style.top = "-80px"; }
+}, { passive: true });
 
-/* ===== TỐI ƯU UX & PIN: TỰ NGẮT KẾT NỐI KHI CHUYỂN TAB ===== */
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
-    // Khi người dùng cất app đi, ngắt kết nối SSE để đỡ ngốn Pin
-    if (evtSource) {
-      evtSource.close();
-      evtSource = null;
-      console.log("⏸ Tab ẩn. Đã tạm ngắt SSE để tiết kiệm pin.");
-    }
+    if (evtSource) { evtSource.close(); evtSource = null; console.log("⏸ Tab ẩn. Đã tạm ngắt SSE để tiết kiệm pin."); }
   } else {
-    // Khi người dùng bật tab lên lại
     console.log("▶ Tab hoạt động. Đang kết nối và tải lại dữ liệu mới nhất...");
-    // 1. Gọi lại hàm load() để lấy mẻ data mới nhất khỏi bị trễ nhịp
-    load();
-    // 2. Mở lại luồng sự kiện SSE
-    initSSE();
+    load(); initSSE();
   }
 });
