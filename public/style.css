@@ -121,11 +121,22 @@ th:first-child, td:first-child { text-align: left; }
 .chart-card { padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); }
 .chart-scroll-container { width: 100%; overflow-x: auto; margin-top: 1rem; }
 
-/* Tối ưu riêng cho điện thoại */
+/* --- Chỉnh sửa riêng cho điện thoại --- */
 @media (max-width: 640px) {
-  .chart-inner-wrapper { 
-        height: 280px !important;    /* Giảm chiều cao một chút để cân đối trên mobile */
+  /* 1. ẨN Ô USD TRÊN ĐIỆN THOẠI */
+  .usd-card { display: none; }
+
+  /* 2. NHÍCH DÒNG TRẠNG THÁI LÊN TRÊN */
+  .container { 
+    padding-top: 60px !important; /* Giảm bớt khoảng trống phía trên */
   }
+  #lastTime {
+    margin-top: -5px;      /* Nhích nhẹ lên trên mép */
+    margin-bottom: 0.5rem; /* Thu nhỏ khoảng cách với các ô phía dưới */
+  }
+
+  .grid { grid-template-columns: 1fr; gap: 0.8rem; } 
+  .card-value { font-size: 1.5rem; } 
 }
 /* Mặc định cho máy tính */
 .chart-inner-wrapper { height: 320px; position: relative; }
