@@ -4,8 +4,6 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const cheerio = require("cheerio");
 const compression = require("compression");
-const https = require("https");
-const agent = new https.Agent({ keepAlive: true });
 const app = express();
 app.use(compression());
 app.use(cors());
@@ -283,8 +281,7 @@ async function updateData(triggerSource = "Tự động") {
       
       // CẬP NHẬT LẠI BIẾN RAM CACHE XAU VÌ DB VỪA CÓ BẢN GHI MỚI!
       cachedLastSavedXau = xau;
-
-      const count = await History.countDocuments();
+   
     } else {
       console.log(`   ⏩ DB: Giá SJC không đổi (${sjc.toLocaleString('vi-VN')}), không lưu rác.`);
     }
@@ -340,5 +337,3 @@ app.post("/api/history/bulk-delete", async (req, res) => {
 
 /* ===== CRONJOB (QUẢN LÝ LỊCH TRÌNH) ===== */
 cron.schedule("*/5 * * * *", () => updateData("Cronjob 5 phút"));
-
-// Xóa lệnh listen ở cuối cùng vì đã đưa lên phía trên phần kết nối DB thành công

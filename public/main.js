@@ -157,7 +157,9 @@ function formatVNDateTime(isoString) {
     hour: '2-digit', 
     minute: '2-digit' 
   });
-
+// --- TỐI ƯU MỚI: Tránh tràn RAM trình duyệt ---
+  if (dateCache.size > 300) dateCache.clear();
+  
   // 3. Lưu kết quả vừa tính vào kho để lần sau không phải tính lại
   dateCache.set(isoString, formatted);
 
@@ -404,52 +406,7 @@ function updateChart(data) {
 /* KHỞI CHẠY LẦN ĐẦU (F5) SẼ YÊU CẦU SERVER ÉP CÀO LẠI (FORCE = TRUE) */
 load();
 
-
-
 /* ===== HIỆU ỨNG PULL TO REFRESH ===== */
-const style = document.createElement('style');
-style.innerHTML = `
-  .cyber-pull-container {
-    position: fixed; top: -80px; left: 50%; transform: translateX(-50%);
-    display: flex; align-items: center; gap: 15px;
-    background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px);
-    padding: 12px 24px; border-radius: 40px;
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    z-index: 9999;
-    transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s, box-shadow 0.3s;
-    pointer-events: none;
-  }
-  .cyber-pull-container.ready {
-    border-color: rgba(16, 185, 129, 0.8); box-shadow: 0 0 25px rgba(16, 185, 129, 0.2);
-  }
-  .pulse-bars { display: flex; gap: 4px; align-items: flex-end; height: 24px; }
-  .pulse-bar {
-    width: 5px; height: 4px; border-radius: 2px;
-    background: #3b82f6; transition: background 0.3s;
-  }
-  .cyber-pull-container.ready .pulse-bar { background: #10b981; }
-  .cyber-pull-container.refreshing .pulse-bar {
-    background: #10b981; animation: pulseWave 0.5s ease-in-out infinite alternate;
-  }
-  .cyber-pull-container.refreshing .pulse-bar:nth-child(1) { animation-delay: 0.0s; }
-  .cyber-pull-container.refreshing .pulse-bar:nth-child(2) { animation-delay: 0.1s; }
-  .cyber-pull-container.refreshing .pulse-bar:nth-child(3) { animation-delay: 0.2s; }
-  .cyber-pull-container.refreshing .pulse-bar:nth-child(4) { animation-delay: 0.3s; }
-
-  @keyframes pulseWave {
-    0% { height: 4px; box-shadow: none; }
-    100% { height: 24px; box-shadow: 0 0 10px #10b981; }
-  }
-
-  .cyber-text {
-    color: #94a3b8; font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif;
-    transition: color 0.3s;
-  }
-  .cyber-pull-container.ready .cyber-text { color: #10b981; text-shadow: 0 0 8px rgba(16,185,129,0.4); }
-`;
-document.head.appendChild(style);
-
 const pullContainer = document.createElement("div");
 pullContainer.className = "cyber-pull-container";
 pullContainer.innerHTML = `
