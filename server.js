@@ -26,7 +26,11 @@ const PORT = process.env.PORT || 3000;
 
 /* ===== CONNECT MONGO ===== */
 // Tối ưu: Đưa logic khởi chạy vào bên trong .then để đảm bảo DB luôn sẵn sàng
-mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000 })
+mongoose.connect(process.env.MONGO_URI, { 
+  serverSelectionTimeoutMS: 5000,
+  maxPoolSize: 10, // TỐI ƯU: Nâng cấp Pool Tuning để ổn định khi nhiều request
+  minPoolSize: 2
+})
   .then(() => {
     console.log("✅ MongoDB connected");
     // Khởi động server và chạy cào dữ liệu ngay sau khi DB sẵn sàng
@@ -87,7 +91,7 @@ async function fetchWithRetry(url, isJson = false, retries = 3) {
     try {
       const res = await fetch(url, {
         headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(5000), // TỐI ƯU: Đổi 8s -> 5s để fail nhanh hơn, mượt realtime
         keepalive: true // TỐI ƯU: Giữ kết nối để gọi API nhanh hơn
       });
       if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
@@ -179,7 +183,10 @@ async function getSjcPrice() {
 
 /* ===== UPDATE LOGIC (CÀO DỮ LIỆU CHÍNH) ===== */
 async function updateData(triggerSource = "Tự động") {
-  if (isUpdating) return; 
+  if (isUpdating) {
+    console.log("⏳ Skip update (đang chạy)"); // TỐI ƯU: Log báo hiệu bỏ qua để dễ debug
+    return; 
+  }
   isUpdating = true;
   try {
     console.log(`\n▶ [${triggerSource}] Bắt đầu cào dữ liệu lúc ${new Date().toLocaleTimeString('vi-VN')}`);
@@ -212,6 +219,15 @@ async function updateData(triggerSource = "Tự động") {
     if (sjc <= 0 || xau <= 0) {
         console.log("❌ LỖI NGHIÊM TRỌNG: Không thể cào dữ liệu từ cả 3 nguồn và cũng không có bản lưu dự phòng!");
         console.log(`   👉 Chi tiết lỗi cào: SJC=${sjc}, XAU=${xau}, USD=${usd}`);
+        
+        // TỐI ƯU: Tránh để UI "chết lâm sàng". Nếu có data cũ, đổi status và đẩy xuống cho Client biết
+        if (latestData) {
+          latestData.status = "Delayed (Lỗi API nguồn)";
+          const fallbackPayload = `data: ${JSON.stringify(latestData)}\n\n`;
+          clients.forEach(c => {
+            try { c.write(fallbackPayload); if (typeof c.flush === "function") c.flush(); } catch (err) {}
+          });
+        }
         return; 
     }
 
@@ -321,15 +337,18 @@ async function updateData(triggerSource = "Tự động") {
     // --- ĐẨY DỮ LIỆU SSE CHO CLIENT ---
     // TỐI ƯU: Tránh Stringify nhiều lần gây CPU Spike
     const ssePayload = `data: ${JSON.stringify(latestData)}\n\n`;
-    clients.forEach(c => {
-      // TỐI ƯU: Thêm try-catch để tránh crash nếu client ngắt kết nối đột ngột
+    
+    // TỐI ƯU: Dọn rác triệt để (xóa client chết ngay lập tức bằng filter)
+    clients = clients.filter(c => {
       try {
         c.write(ssePayload);
         if (typeof c.flush === "function") c.flush();
+        return true; // Nếu gửi thành công, giữ lại client
       } catch (err) {
-        // Bỏ qua client lỗi
+        return false; // Nếu gặp lỗi (client đã ngắt kết nối), loại bỏ ngay khỏi mảng
       }
     });
+    
     console.log(`   ✅ Đã đẩy Realtime xuống ${clients.length} client(s) đang kết nối.`);
 
   } catch (e) {
@@ -402,4 +421,7 @@ app.post("/api/history/bulk-delete", async (req, res) => {
 });
 
 /* ===== CRONJOB (QUẢN LÝ LỊCH TRÌNH) ===== */
-cron.schedule("*/5 * * * *", () => updateData("Cronjob 5 phút"));
+cron.schedule("*/5 * * * *", () => {
+  console.log("⏱ [Watchdog] Cron tick OK"); // TỐI ƯU: Đảm bảo tiến trình vẫn chạy
+  updateData("Cronjob 5 phút");
+});

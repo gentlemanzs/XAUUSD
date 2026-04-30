@@ -34,6 +34,12 @@ const dateCache = new Map();
 
 /* ===== NHẬN REALTIME DỮ LIỆU TỪ SERVER MÀ KHÔNG CẦN RELOAD ===== */
 const evtSource = new EventSource("/api/stream");
+
+// TỐI ƯU: Thêm log để theo dõi trình trạng kết nối thực tế
+evtSource.onopen = () => {
+  console.log("🟢 SSE đã kết nối thành công");
+};
+
 evtSource.onmessage = (event) => {
   // TỐI ƯU: Kiểm tra rỗng trước khi parse JSON để tiết kiệm CPU
   if (!event.data) return;
