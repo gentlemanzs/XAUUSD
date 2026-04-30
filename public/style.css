@@ -14,7 +14,6 @@
 
 body { 
   margin: 0; 
-  /* [TỐI ƯU MỚI] Dùng font hệ thống để hiện diện lập tức, không cần fetch file font */
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
   background: var(--bg-color) !important; 
   color: var(--primary-text); 
@@ -117,7 +116,10 @@ input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid var(--
   background: rgba(0, 0, 0, 0.05); 
 }
 
-.table-wrapper { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto; margin-bottom: 2rem; }
+.table-wrapper { 
+  background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); 
+  overflow-x: auto; margin-bottom: 2rem; 
+}
 
 table { 
   width: 100%; 
@@ -137,9 +139,19 @@ td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-alig
   padding-left: 8px !important; 
   padding-right: 8px !important; 
 }
+
+/* ĐÃ SỬA: Cột Time khi ĐÓNG bảng sẽ dùng padding chuẩn 16px để không bị dính lề */
 .col-time { 
   text-align: left !important;
+}
+/* ĐÃ SỬA: Chỉ khi MỞ bảng (.is-expanded), cột Time mới co lề lại 4px để nhường chỗ cho Checkbox */
+.table-wrapper.is-expanded .col-time {
   padding-left: 4px !important; 
+}
+
+/* ĐÃ SỬA: Bù thêm đúng 8px lề phải cho chữ Diff để nó thẳng tắp với nội dung bên trong thẻ Badge */
+th.col-diff {
+  padding-right: 24px !important;
 }
 
 .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
@@ -153,7 +165,9 @@ td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-alig
 .page-btn:hover:not(:disabled):not(.active) { background: #f1f5f9; }
 .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.chart-card { padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); }
+.chart-card { 
+  padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); 
+}
 .chart-scroll-container { width: 100%; overflow-x: auto; margin-top: 1rem; }
 
 @media (max-width: 640px) {

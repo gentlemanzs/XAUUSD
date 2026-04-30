@@ -5,18 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>XAU Professional Dashboard</title>
 
-<!-- TỐI ƯU TỐC ĐỘ: Kết nối sẵn với máy chủ CDN -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0" defer></script>
 
-<link rel="stylesheet" href="style.css?v=1.11">
+<link rel="stylesheet" href="style.css?v=1.12">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
 <link rel="apple-touch-icon" href="/icon-180.png">
 <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#0f172a">
 
-<!-- CÁC THẺ PWA (Đã xóa thẻ apple cũ bị deprecated để Console sạch sẽ) -->
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="XAU Dashboard">
@@ -79,7 +77,8 @@
           <th>XAU ($)</th>
           <th>SJC (VND)</th>
           <th>Gap (VND)</th>
-          <th>Diff</th>
+          <!-- Thêm class col-diff để CSS ép lại lề -->
+          <th class="col-diff">Diff</th>
         </tr>
       </thead>
       <tbody id="history"></tbody>

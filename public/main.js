@@ -26,15 +26,12 @@ let currentPage = 1;
 let evtSource = null;
 let lastFetchTime = 0;
 
-// [TỐI ƯU MỚI] Đóng băng biểu đồ khi khuất tầm nhìn để tiết kiệm Pin điện thoại
 let isChartVisible = true;
 const chartObserver = new IntersectionObserver((entries) => {
   isChartVisible = entries[0].isIntersecting;
-  // Nếu cuộn đến và biểu đồ đang chờ update thì vẽ luôn
   if (isChartVisible && myChart) myChart.update('none'); 
 }, { threshold: 0.1 });
 
-// Gắn mắt thần vào sau khi DOM load
 document.addEventListener("DOMContentLoaded", () => {
   const chartEl = document.getElementById('gapChart');
   if (chartEl) chartObserver.observe(chartEl);
@@ -153,10 +150,14 @@ async function fetchHistory() {
     }
 
     try { localStorage.setItem('xau_hist_cache', JSON.stringify(historyData)); } catch(e) {}
-
     currentData = historyData; 
-    renderTable(); 
-    updateChart(currentData);
+
+    if (elements.startDate.value || elements.endDate.value) {
+      applyFilter();
+    } else {
+      renderTable(); 
+      updateChart(currentData);
+    }
   } catch(e) {}
 }
 
@@ -226,6 +227,12 @@ function toggleFilterBox() {
   elements.filterBox.style.display = isExpanded ? "flex" : "none";
   elements.toggleBtn.innerText = isExpanded ? "−" : "+";
   elements.actionHeader.style.display = isExpanded ? "table-cell" : "none";
+  
+  // ĐÃ THÊM: Gắn cờ .is-expanded cho Wrapper để CSS nhận biết bảng đang đóng hay mở
+  const wrapper = document.querySelector('.table-wrapper');
+  if (isExpanded) wrapper.classList.add('is-expanded');
+  else wrapper.classList.remove('is-expanded');
+  
   currentPage = 1;
   fetchHistory(); 
 }
@@ -307,42 +314,31 @@ function updateChart(fullData) {
     }
   }
 
-  let yMin = Infinity;
-  let yMax = -Infinity;
-  let hasValidGap = false;
-
-  for (const g of gaps) {
-    if (g === null) continue;
-    hasValidGap = true;
-    if (g < yMin) yMin = g;
-    if (g > yMax) yMax = g;
-  }
-
-  if (hasValidGap) {
-    const padding = Math.max((yMax - yMin) * 0.2, 0.5); 
-    yMin -= padding; 
-    yMax += padding;
-  } else {
-    yMin = 0; yMax = 0;
+  const validGaps = gaps.filter(g => g !== null);
+  let yMin = 0; 
+  let yMax = 0;
+  
+  if (validGaps.length > 0) {
+    const minVal = Math.min(...validGaps); 
+    const maxVal = Math.max(...validGaps);
+    const padding = Math.max((maxVal - minVal) * 0.2, 0.5); 
+    yMin = minVal - padding; 
+    yMax = maxVal + padding;
   }
 
   const calculatedWidth = totalPoints * minSpacing;
   
-  if (wrapper._lastWidth !== calculatedWidth) {
-    if (calculatedWidth > containerWidth) {
-      wrapper.style.setProperty('width', calculatedWidth + 'px', 'important');
-      wrapper.style.setProperty('min-width', calculatedWidth + 'px', 'important');
-    } else {
-      wrapper.style.setProperty('width', '100%', 'important');
-      wrapper.style.setProperty('min-width', '100%', 'important');
-    }
-    wrapper._lastWidth = calculatedWidth;
+  if (calculatedWidth > containerWidth) {
+    wrapper.style.setProperty('width', calculatedWidth + 'px', 'important');
+    wrapper.style.setProperty('min-width', calculatedWidth + 'px', 'important');
+  } else {
+    wrapper.style.setProperty('width', '100%', 'important');
+    wrapper.style.setProperty('min-width', '100%', 'important');
   }
 
   if (myChart) {
     myChart.data.labels = labels; myChart.data.datasets[0].data = gaps;
     myChart.options.scales.y.suggestedMin = yMin; myChart.options.scales.y.suggestedMax = yMax;
-    // [TỐI ƯU MỚI] Chỉ cập nhật vẽ lại nếu biểu đồ đang hiện trên màn hình
     if (isChartVisible) myChart.update('none');
   } else {
     myChart = new Chart(ctx, {
