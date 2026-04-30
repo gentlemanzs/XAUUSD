@@ -50,6 +50,11 @@ evtSource.onmessage = (event) => {
   }
 };
 
+// TỐI ƯU: Bắt lỗi SSE để báo hiệu cho người dùng khi rớt mạng
+evtSource.onerror = () => {
+  console.warn("SSE mất kết nối, trình duyệt đang tự động thử reconnect...");
+};
+
 /* ===== TẢI DỮ LIỆU (CÓ THỂ ÉP BUỘC SERVER CÀO LIỀN) ===== */
 async function load() {
   try {
@@ -73,9 +78,13 @@ async function load() {
 }
 
 function renderMain(d) {
-  // TỐI ƯU: Cập nhật biến text thông thường
-  if (elements.usd.innerText !== fmtVND.format(d.usd)) elements.usd.innerText = fmtVND.format(d.usd);
-  if (elements.diff.innerText !== fmtVND.format(d.diff)) elements.diff.innerText = fmtVND.format(d.diff);
+  // TỐI ƯU: Format 1 lần duy nhất rồi so sánh để tránh tốn CPU điện thoại
+  const usdText = fmtVND.format(d.usd);
+  if (elements.usd.innerText !== usdText) elements.usd.innerText = usdText;
+  
+  const diffText = fmtVND.format(d.diff);
+  if (elements.diff.innerText !== diffText) elements.diff.innerText = diffText;
+  
   if (elements.percent.innerText !== d.percent) elements.percent.innerText = d.percent;
 
   // --- Cập nhật ô XAU (Chống Repaint) ---
@@ -293,7 +302,9 @@ function updateChart(data) {
   lastChartSignature = currentSignature;
   const chartCanvas = document.getElementById('gapChart');
   const ctx = chartCanvas.getContext('2d');
-  const reversedData = [...data].reverse();
+  
+  // TỐI ƯU: Sử dụng slice().reverse() tốn ít tài nguyên RAM hơn spread
+  const reversedData = data.slice().reverse();
   const totalPoints = reversedData.length;
 
   const wrapper = chartCanvas.parentElement;

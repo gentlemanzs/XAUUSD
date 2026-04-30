@@ -41,6 +41,8 @@ const HistorySchema = new mongoose.Schema({
   diff: Number, percent: String, status: String
 }, { timestamps: true });
 
+// TỐI ƯU: Thêm Index phức hợp giúp Mongo tìm SJC cũ chớp nhoáng khi dùng $ne
+HistorySchema.index({ sjc: 1, createdAt: -1 });
 HistorySchema.index({ createdAt: -1 });
 const History = mongoose.model("History", HistorySchema);
 
@@ -50,8 +52,8 @@ let clients = [];
 let isUpdating = false; 
 
 // THÊM CÁC BIẾN NÀY ĐỂ LƯU CACHE TRÊN RAM
-let cachedOldGap = null;
-let cachedSjcForOldGap = null;
+// TỐI ƯU: Sử dụng biến lastDifferentSjc cho cơ chế Hybrid thay thế cachedOldGap
+let lastDifferentSjc = null; 
 let cachedLastSavedXau = null; // <-- THÊM MỚI: Biến lưu giá XAU của lần ghi DB gần nhất
 
 // --- CÁC BIẾN CACHE MỚI CHO VIỆC TỐI ƯU ---
@@ -80,7 +82,8 @@ async function fetchWithRetry(url, isJson = false, retries = 3) {
     try {
       const res = await fetch(url, {
         headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
-        signal: AbortSignal.timeout(8000) 
+        signal: AbortSignal.timeout(8000),
+        keepalive: true // TỐI ƯU: Giữ kết nối để gọi API nhanh hơn
       });
       if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
       return isJson ? await res.json() : await res.text();
@@ -210,6 +213,7 @@ async function updateData(triggerSource = "Tự động") {
     // --- TÍNH TOÁN ---
     const worldVND = xau * usd * (37.5 / 31.1035);
     const diff = sjc - worldVND;
+    const currentGap = Math.round(diff);
 
     // --- 1. Tính SJC Change (So với hôm qua) ---
     // TỐI ƯU: Chỉ Query DB 1 lần/ngày bằng cách Cache lại
@@ -229,29 +233,19 @@ async function updateData(triggerSource = "Tự động") {
     }
     const sjcChange = sjc - cachedYesterdaySjc;
 
-    // --- 2. TÌM GAP CŨ (TỐI ƯU BẰNG RAM CACHE) ---
-    let oldGap = 0;
-
-    // Kiểm tra: Nếu SJC hiện tại giống SJC trong RAM, lấy luôn Gap cũ từ RAM (Không chọc DB)
-    if (cachedSjcForOldGap === sjc && cachedOldGap !== null) {
-      oldGap = cachedOldGap;
-    } else {
-      // CHỈ KHI SJC đổi giá (hoặc server vừa bật) mới gọi Database
-      // Thêm select('diff') để lấy nhẹ dữ liệu
-      const lastChangedSjcRecord = await History.findOne({ sjc: { $ne: sjc } })
-        .select('diff')
+    // --- 2. TÌM GAP CŨ (TỐI ƯU HYBRID $NE BẰNG RAM CACHE) ---
+    // Chỉ hỏi DB 1 lần duy nhất khi Server start, sau đó dùng RAM hoàn toàn
+    if (!lastDifferentSjc) {
+      const record = await History.findOne({ sjc: { $ne: sjc } })
+        .select('sjc diff')
         .sort({ createdAt: -1 })
         .lean()
         .catch(() => null);
 
-      oldGap = lastChangedSjcRecord ? lastChangedSjcRecord.diff : Math.round(diff);
-
-      // Lưu lại vào RAM để lần sau dùng
-      cachedOldGap = oldGap;
-      cachedSjcForOldGap = sjc;
+      lastDifferentSjc = record ? { sjc: record.sjc, diff: record.diff } : { sjc: sjc, diff: currentGap };
     }
 
-    const currentGap = Math.round(diff);
+    const oldGap = lastDifferentSjc.diff;
     // Tính khoảng chênh lệch: Cũ trừ Hiện tại (Theo đúng yêu cầu của bạn)
     const gapChange = oldGap - currentGap;
 
@@ -307,6 +301,8 @@ async function updateData(triggerSource = "Tự động") {
       
       // CẬP NHẬT LẠI BIẾN RAM CACHE XAU VÌ DB VỪA CÓ BẢN GHI MỚI!
       cachedLastSavedXau = xau;
+      // TỐI ƯU HYBRID: Cập nhật luôn mốc SJC mới vào RAM để dùng cho tính toán Gap lần sau
+      lastDifferentSjc = { sjc: sjc, diff: currentGap };
    
       // TỐI ƯU: Nuôi Cache thay vì xóa đi để tránh gọi lại DB 
       if (cachedHistory.length > 0) {
@@ -318,8 +314,10 @@ async function updateData(triggerSource = "Tự động") {
     }
 
     // --- ĐẨY DỮ LIỆU SSE CHO CLIENT ---
+    // TỐI ƯU: Tránh Stringify nhiều lần gây CPU Spike
+    const ssePayload = `data: ${JSON.stringify(latestData)}\n\n`;
     clients.forEach(c => {
-      c.write(`data: ${JSON.stringify(latestData)}\n\n`);
+      c.write(ssePayload);
       if (typeof c.flush === "function") c.flush();
     });
     console.log(`   ✅ Đã đẩy Realtime xuống ${clients.length} client(s) đang kết nối.`);
@@ -338,6 +336,11 @@ app.get("/api/stream", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+  
+  // TỐI ƯU: Phanh khẩn cấp chống Memory Leak khi có quá nhiều kết nối rác
+  if (clients.length > 1000) {
+    clients = clients.slice(-500);
+  }
   
   clients.push(res);
   
