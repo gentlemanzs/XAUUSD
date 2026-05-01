@@ -74,7 +74,7 @@ header {
   .card-value { font-size: 1.5rem; } 
 }
 
-.container { width: 100%; max-width: 1200px; margin: 0 auto; background: var(--bg-color); min-height: auto; padding: 80px 15px 1rem 15px; box-sizing: border-box; }
+.container { width: 100%; max-width: 1200px; margin: 0 auto; background: var(--bg-color); min-height: auto; padding: 80px 15px 0.5rem 15px; box-sizing: border-box; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
 
 .card { background: var(--card-bg); border-radius: 16px; padding: 1.5rem; border: 1px solid var(--border-color); transition: 0.3s; will-change: transform; transform: translateZ(0);}
