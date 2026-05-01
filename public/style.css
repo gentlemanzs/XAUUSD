@@ -100,7 +100,7 @@ header {
 .change-up { color: var(--up-color); } 
 .change-down { color: var(--down-color); }
 
-/* Bảng 5 cột cố định */
+/* --- TABLE CẤU HÌNH MỚI --- */
 .table-wrapper { 
   background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); 
   overflow-x: auto; margin-bottom: 2rem; 
@@ -120,19 +120,24 @@ th:nth-child(3), td:nth-child(3) { width: 22%; } /* SJC */
 th:nth-child(4), td:nth-child(4) { width: 22%; } /* Gap */
 th:nth-child(5), td:nth-child(5) { width: 18%; } /* Diff */
 
-/* CĂN TRÁI và thụt lề 24px để header và data thẳng hàng nhau */
-th { background: #f1f5f9; padding: 14px 24px; text-align: left; color: var(--secondary-text); }
-td { padding: 14px 24px; border-bottom: 1px solid var(--border-color); text-align: left; }
+/* CĂN TRÁI TOÀN BỘ VÀ THỤT LỀ 24px */
+th { background: #f1f5f9; padding: 14px 24px; text-align: left !important; color: var(--secondary-text); }
+td { padding: 14px 24px; border-bottom: 1px solid var(--border-color); text-align: left !important; }
+
+/* RIÊNG TIÊU ĐỀ DIFF: Thụt thêm 8px (tổng 32px) để khớp với chữ bên trong Badge */
+th.col-diff {
+  padding-left: 32px !important;
+}
 
 .col-time {
   position: relative;
 }
 
-/* CHECKBOX: Kích thước nhỏ 12px, căn lề trái để sát chữ Time */
+/* CHECKBOX: 12px, cách chữ Time ~3 khoảng trắng */
 .check-action {
   position: absolute;
-  left: 80px; /* Định vị cố định từ lề trái, qua chữ Time khoảng 3 khoảng trắng */
-  top: 50%;
+  left: 110px; 
+  top: 55%;
   transform: translateY(-50%);
   opacity: 0;
   visibility: hidden;
@@ -194,9 +199,9 @@ input[type="date"] { padding: 8px; border-radius: 8px; border: 1px solid var(--b
   background: rgba(0, 0, 0, 0.05); 
 }
 
-.badge { padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
-.badge-up { background: rgba(251, 252, 251, 0.1); color: #000408 ; }
-.badge-down { background: rgba(255, 255, 255, 0.1); color: #000408; }
+.badge { padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; display: inline-block; }
+.badge-up { background: rgba(16, 185, 129, 0.1); color: var(--up-color); }
+.badge-down { background: rgba(239, 68, 68, 0.1); color: var(--down-color); }
 .log-checkbox, #selectAll { width: 12px; height: 12px; cursor: pointer; }
 
 .pagination { display: flex; justify-content: center; gap: 8px; padding: 15px; border-top: 1px solid var(--border-color); }
