@@ -110,34 +110,33 @@ table {
   width: 100%; 
   border-collapse: collapse; 
   font-size: 0.95rem; 
-  min-width: 600px; 
+  /* Tăng lên 720px để lề to không bị ép chữ rơi xuống dòng trên điện thoại */
+  min-width: 720px; 
   table-layout: fixed; 
 }
 
+/* Đẩy cột giữa to ra để ép cột Diff (12%) sát về mép phải */
 th:nth-child(1), td:nth-child(1) { width: 18%; } /* Time */
 th:nth-child(2), td:nth-child(2) { width: 20%; } /* XAU */
-th:nth-child(3), td:nth-child(3) { width: 22%; } /* SJC */
-th:nth-child(4), td:nth-child(4) { width: 22%; } /* Gap */
-th:nth-child(5), td:nth-child(5) { width: 18%; } /* Diff */
+th:nth-child(3), td:nth-child(3) { width: 25%; } /* SJC */
+th:nth-child(4), td:nth-child(4) { width: 25%; } /* Gap */
+th:nth-child(5), td:nth-child(5) { width: 12%; } /* Diff */
 
-/* CĂN TRÁI TOÀN BỘ VÀ THỤT LỀ 24px */
-th { background: #f1f5f9; padding: 14px 24px; text-align: left !important; color: var(--secondary-text); }
-td { padding: 14px 24px; border-bottom: 1px solid var(--border-color); text-align: left !important; }
+/* Mặc định căn trái toàn bộ */
+th { background: #f1f5f9; padding: 14px 16px; text-align: left !important; color: var(--secondary-text); }
+td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: left !important; }
 
-/* RIÊNG TIÊU ĐỀ DIFF: Thụt thêm 8px (tổng 32px) để khớp với chữ bên trong Badge */
-th.col-diff {
-  padding-left: 32px !important;
-}
-
+/* CỘT TIME: Thụt lề phải để nhường chỗ trống lề trái cho Checkbox */
 .col-time {
   position: relative;
+  padding-left: 36px !important;
 }
 
-/* CHECKBOX: 12px, cách chữ Time ~3 khoảng trắng */
+/* CHECKBOX: Đưa về sát mép lề trái ô Time */
 .check-action {
   position: absolute;
-  left: 120px; 
-  top: 52%;
+  left: 12px; 
+  top: 50%;
   transform: translateY(-50%);
   opacity: 0;
   visibility: hidden;
@@ -145,8 +144,8 @@ th.col-diff {
   transition: all 0.2s ease;
   margin: 0;
   cursor: pointer;
-  width: 12px; 
-  height: 12px;
+  width: 13px; 
+  height: 13px;
 }
 
 .table-wrapper.is-expanded .check-action {
@@ -154,6 +153,17 @@ th.col-diff {
   visibility: visible;
   pointer-events: auto;
 }
+
+/* TĂNG THỤT LỀ CÁC CỘT GIÁ TRỊ */
+th:nth-child(2), td:nth-child(2),
+th:nth-child(3), td:nth-child(3),
+th:nth-child(4), td:nth-child(4) {
+  padding-left: 36px !important;
+}
+
+/* RIÊNG CỘT DIFF: Thụt lề tiêu đề để cân bằng với đệm của Badge (8px) */
+td:nth-child(5) { padding-left: 16px !important; }
+th:nth-child(5) { padding-left: 24px !important; }
 
 /* Filter Box */
 .filter-box { 
@@ -202,7 +212,7 @@ input[type="date"] { padding: 8px; border-radius: 8px; border: 1px solid var(--b
 .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; display: inline-block; }
 .badge-up { background: rgba(251, 252, 251, 0.1); color: #000408; }
 .badge-down { background: rgba(255, 255, 255, 0.1); color: #000408; }
-.log-checkbox, #selectAll { width: 12px; height: 12px; cursor: pointer; }
+.log-checkbox, #selectAll { width: 13px; height: 13px; cursor: pointer; }
 
 .pagination { display: flex; justify-content: center; gap: 8px; padding: 15px; border-top: 1px solid var(--border-color); }
 .page-btn { padding: 6px 12px; border: 1px solid var(--border-color); background: var(--card-bg); border-radius: 6px; cursor: pointer; color: var(--primary-text); font-weight: 600; transition: 0.2s;}
