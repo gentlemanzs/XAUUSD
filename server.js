@@ -37,6 +37,31 @@ function formatTimeVN(dateObj) {
   });
 }
 
+// ─── TELEGRAM ALERT ──────────────────────────────────────────────────────
+const TG_TOKEN   = process.env.TG_TOKEN;
+const TG_CHAT_ID = process.env.TG_CHAT_ID;
+const ALERT_COOLDOWN_MS = 10 * 60 * 1000; // 10 phút — chống spam cùng 1 lỗi
+const alertCooldowns = new Map();
+
+async function sendTelegram(message, alertKey) {
+  if (!TG_TOKEN || !TG_CHAT_ID) return;
+  const lastSent = alertCooldowns.get(alertKey) || 0;
+  if (Date.now() - lastSent < ALERT_COOLDOWN_MS) return;
+  alertCooldowns.set(alertKey, Date.now());
+  const text = `🚨 *XAU Alert*\n${message}\n\n⏰ ${new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}`;
+  try {
+    await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: TG_CHAT_ID, text, parse_mode: 'Markdown' }),
+      signal: AbortSignal.timeout(5000)
+    });
+  } catch (e) {
+    console.error('❌ Gửi Telegram thất bại:', e.message);
+  }
+}
+// ──────────────────────────────────────────────────────────────────────────
+
 function logApiError(apiName, attempt, error) {
   const ts = new Date().toISOString();
   console.warn(`⚠️  [${ts}] API "${apiName}" thất bại (lần ${attempt}): ${error.message}`);
@@ -84,9 +109,16 @@ mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000, maxPoo
     server.keepAliveTimeout = 65000;
     server.headersTimeout = 66000;
   })
-  .catch(err => { console.error("❌ MongoDB error:", err); process.exit(1); });
+  .catch(err => {
+  console.error("❌ MongoDB error:", err);
+  sendTelegram(`❌ *MongoDB kết nối thất bại*\nLỗi: ${err.message}`, "mongo_connect");
+  process.exit(1);
+});
 
-mongoose.connection.on('error', (err) => { console.error("🔥 Lỗi Mất Kết Nối MongoDB:", err); });
+mongoose.connection.on('error', (err) => {
+  console.error("🔥 Lỗi Mất Kết Nối MongoDB:", err);
+  sendTelegram(`🔥 *MongoDB mất kết nối*\nLỗi: ${err.message}`, "mongo_runtime");
+});
 
 const HistorySchema = new mongoose.Schema({
   usd: Number, xau: Number, sjc: Number, worldVND: Number, diff: Number, percent: String, status: String
@@ -213,6 +245,11 @@ async function updateData(triggerSource = "Tự động") {
     const isSjcLive = sjcPrice > 0;
     const isXauLive = !!(dataXAU && dataXAU.price);
     const isUsdLive = usdRate !== null;
+
+    // Alert Telegram khi từng nguồn API bị fail
+    if (!isXauLive) sendTelegram(`⚠️ *API giá vàng thế giới (XAU) thất bại*\nKhông lấy được giá từ gold-api.com`, 'api_xau');
+    if (isTrading && !isUsdLive) sendTelegram(`⚠️ *API tỷ giá USD thất bại*\nKhông lấy được tỷ giá từ Vietcombank`, 'api_usd');
+    if (isTrading && !isSjcLive) sendTelegram(`⚠️ *API giá SJC thất bại*\nCả DOJI lẫn BTMC đều không trả được giá`, 'api_sjc');
 
     let sjc = isSjcLive ? sjcPrice : (lastRecord ? lastRecord.sjc : 0);
     let xau = isXauLive ? dataXAU.price : (lastRecord ? lastRecord.xau : 2350);
