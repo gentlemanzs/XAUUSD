@@ -57,7 +57,6 @@ header {
     font-size: 1.1rem; 
     font-weight: 800; 
     background: linear-gradient(to right, #ffffff, #94a3b8);
-    /* SỬA LỖI TẠI ĐÂY: Thêm thuộc tính tiêu chuẩn */
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -101,12 +100,84 @@ header {
 .change-up { color: var(--up-color); } 
 .change-down { color: var(--down-color); }
 
-/* Bỏ background, viền và padding cũ để filterBox nằm trên cùng dòng */
-#filterBox { 
-  display: none; 
+/* Bảng giờ chỉ còn 5 cột cố định, tổng đúng 100% */
+.table-wrapper { 
+  background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); 
+  overflow-x: auto; margin-bottom: 2rem; 
+}
+
+table { 
+  width: 100%; 
+  border-collapse: collapse; 
+  font-size: 0.95rem; 
+  min-width: 600px; 
+  table-layout: fixed; 
+}
+
+th:nth-child(1), td:nth-child(1) { width: 18%; } /* Time */
+th:nth-child(2), td:nth-child(2) { width: 20%; } /* XAU */
+th:nth-child(3), td:nth-child(3) { width: 22%; } /* SJC */
+th:nth-child(4), td:nth-child(4) { width: 22%; } /* Gap */
+th:nth-child(5), td:nth-child(5) { width: 18%; } /* Diff */
+
+th { background: #f1f5f9; padding: 14px 16px; text-align: right; color: var(--secondary-text); }
+td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; }
+
+.col-time {
+  text-align: left !important;
+  position: relative;
+  padding-right: 30px !important; /* Dành riêng 30px lề phải để chứa Checkbox */
+}
+
+/* Checkbox nằm tuyệt đối bên trong ô Time (Sát text hơn) */
+.check-action {
+  position: absolute;
+  right: 10px; /* Khóa cứng ở mép phải của ô Time */
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  margin: 0;
+  cursor: pointer;
+  width: 16px; 
+  height: 16px;
+}
+
+.table-wrapper.is-expanded .check-action {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Filter Box định vị tuyệt đối (nổi lên), không xê dịch trang */
+.filter-box { 
+  position: absolute;
+  left: 120px; /* Sát chữ History */
+  display: flex;
   gap: 10px; 
   align-items: center; 
-  flex-wrap: wrap; 
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  background: var(--bg-color); /* Nền tránh đè chữ ở màn nhỏ */
+  z-index: 10;
+}
+.filter-box.show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Thêm thanh cuộn ngang cho thanh filter nếu màn hình điện thoại quá nhỏ */
+@media (max-width: 768px) {
+  .filter-box {
+    max-width: calc(100vw - 180px);
+    overflow-x: auto;
+    padding-bottom: 5px;
+  }
 }
 
 input[type="date"] { padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); }
@@ -123,56 +194,6 @@ input[type="date"] { padding: 8px; border-radius: 8px; border: 1px solid var(--b
 }
 .btn-filter:hover, .btn-delete-multi:hover, .btn-reset:hover { 
   background: rgba(0, 0, 0, 0.05); 
-}
-
-.table-wrapper { 
-  background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); 
-  overflow-x: auto; margin-bottom: 2rem; 
-}
-
-table { 
-  width: 100%; 
-  border-collapse: collapse; 
-  font-size: 0.95rem; 
-  min-width: 600px; 
-  table-layout: fixed; 
-}
-
-/* Cột 1: Time (Luôn hiển thị với width 16%) */
-th:nth-child(1), td:nth-child(1) { width: 16%; }
-
-/* Cột 2: Action ẩn hoàn toàn (width=0) khi chưa expand, mở ra khi expand */
-th:nth-child(2), td:nth-child(2) {
-  width: 0;
-  padding: 0 !important;
-  overflow: hidden;
-  border: none;
-}
-.table-wrapper.is-expanded th:nth-child(2),
-.table-wrapper.is-expanded td:nth-child(2) {
-  width: 40px;
-  padding: 14px 8px !important;
-}
-
-/* Các cột data còn lại */
-th:nth-child(3), td:nth-child(3) { width: 19%; }
-th:nth-child(4), td:nth-child(4) { width: 23%; }
-th:nth-child(5), td:nth-child(5) { width: 23%; }
-th:nth-child(6), td:nth-child(6) { width: 19%; }
-
-th { background: #f1f5f9; padding: 14px 16px; text-align: right; color: var(--secondary-text); }
-td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; }
-
-.col-action {
-  text-align: center !important;
-  visibility: hidden;
-}
-.table-wrapper.is-expanded .col-action {
-  visibility: visible;
-}
-
-.col-time {
-  text-align: left !important;
 }
 
 th.col-diff {

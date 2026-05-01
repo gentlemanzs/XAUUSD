@@ -8,7 +8,7 @@ const elements = {
   gapChange: document.getElementById("gapChange"), lastTime: document.getElementById("lastTime"),
   historyTable: document.getElementById("history"), filterBox: document.getElementById("filterBox"),
   startDate: document.getElementById("startDate"), endDate: document.getElementById("endDate"), 
-  toggleBtn: document.getElementById("toggleBtn"), actionHeader: document.getElementById("actionHeader"), 
+  toggleBtn: document.getElementById("toggleBtn"),
   pagination: document.getElementById("pagination")
 };
 
@@ -128,7 +128,7 @@ function renderMain(d) {
     }
   }
 
-  if (!d.sjc) return; // Bảo vệ nếu data lỗi
+  if (!d.sjc) return; 
   const change = d.sjcChange || 0;
   const isUp = change >= 0;
   const sjcColorClass = isUp ? 'sjc-sub change-up' : 'sjc-sub change-down';
@@ -154,7 +154,7 @@ async function sendClientAlert(message, key = 'client_alert') {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, key })
     });
-  } catch (e) { /* silent — tránh loop nếu server down */ }
+  } catch (e) { }
 }
 
 async function fetchHistory() {
@@ -199,10 +199,10 @@ function renderTable() {
   displayData.forEach(r => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td class="col-time">${r.timeStr || '--'}</td> 
-      <td class="col-action">
-        <input type="checkbox" class="log-checkbox" value="${r._id}">
-      </td>
+      <td class="col-time">
+        <span>${r.timeStr || '--'}</span>
+        <input type="checkbox" class="log-checkbox check-action" value="${r._id}">
+      </td> 
       <td>${fmtXAU.format(r.xau)}</td>
       <td>${fmtVND.format(r.sjc)}</td>
       <td>${fmtVND.format(r.diff)}</td>
@@ -255,7 +255,13 @@ function renderPagination() {
 
 function toggleFilterBox() {
   isExpanded = !isExpanded;
-  elements.filterBox.style.display = isExpanded ? "flex" : "none";
+  
+  if (isExpanded) {
+    elements.filterBox.classList.add('show');
+  } else {
+    elements.filterBox.classList.remove('show');
+  }
+  
   elements.toggleBtn.innerText = isExpanded ? "−" : "+";
   
   const wrapper = document.querySelector('.table-wrapper');
