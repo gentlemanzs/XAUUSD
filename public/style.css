@@ -57,6 +57,8 @@ header {
     font-size: 1.1rem; 
     font-weight: 800; 
     background: linear-gradient(to right, #ffffff, #94a3b8);
+    /* SỬA LỖI TẠI ĐÂY: Thêm thuộc tính tiêu chuẩn */
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
@@ -99,8 +101,15 @@ header {
 .change-up { color: var(--up-color); } 
 .change-down { color: var(--down-color); }
 
-#filterBox { display: none; background: white; padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 1.5rem; gap: 10px; align-items: center; flex-wrap: wrap; }
-input[type="date"] { padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
+/* Bỏ background, viền và padding cũ để filterBox nằm trên cùng dòng */
+#filterBox { 
+  display: none; 
+  gap: 10px; 
+  align-items: center; 
+  flex-wrap: wrap; 
+}
+
+input[type="date"] { padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); }
 
 .btn-filter, .btn-delete-multi, .btn-reset { 
   border: 1px solid transparent; 
@@ -129,21 +138,23 @@ table {
   table-layout: fixed; 
 }
 
-/* Cột action ẩn hoàn toàn (width=0) khi chưa expand, mở ra khi expand */
-th:nth-child(1), td:nth-child(1) {
+/* Cột 1: Time (Luôn hiển thị với width 16%) */
+th:nth-child(1), td:nth-child(1) { width: 16%; }
+
+/* Cột 2: Action ẩn hoàn toàn (width=0) khi chưa expand, mở ra khi expand */
+th:nth-child(2), td:nth-child(2) {
   width: 0;
   padding: 0 !important;
   overflow: hidden;
   border: none;
 }
-.table-wrapper.is-expanded th:nth-child(1),
-.table-wrapper.is-expanded td:nth-child(1) {
+.table-wrapper.is-expanded th:nth-child(2),
+.table-wrapper.is-expanded td:nth-child(2) {
   width: 40px;
   padding: 14px 8px !important;
 }
 
-/* Các cột data: khi chưa expand chiếm 100%, khi expand nhường 40px cho col-action */
-th:nth-child(2), td:nth-child(2) { width: 16%; }
+/* Các cột data còn lại */
 th:nth-child(3), td:nth-child(3) { width: 19%; }
 th:nth-child(4), td:nth-child(4) { width: 23%; }
 th:nth-child(5), td:nth-child(5) { width: 23%; }

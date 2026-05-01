@@ -199,10 +199,10 @@ function renderTable() {
   displayData.forEach(r => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
+      <td class="col-time">${r.timeStr || '--'}</td> 
       <td class="col-action">
         <input type="checkbox" class="log-checkbox" value="${r._id}">
       </td>
-      <td class="col-time">${r.timeStr || '--'}</td> 
       <td>${fmtXAU.format(r.xau)}</td>
       <td>${fmtVND.format(r.sjc)}</td>
       <td>${fmtVND.format(r.diff)}</td>
@@ -257,7 +257,6 @@ function toggleFilterBox() {
   isExpanded = !isExpanded;
   elements.filterBox.style.display = isExpanded ? "flex" : "none";
   elements.toggleBtn.innerText = isExpanded ? "−" : "+";
-  // col-action visibility giờ được điều khiển hoàn toàn bằng CSS class is-expanded
   
   const wrapper = document.querySelector('.table-wrapper');
   if (isExpanded) wrapper.classList.add('is-expanded');
@@ -342,11 +341,10 @@ function updateChart(fullData) {
   let lastDateLabel = null;
   for (let i = totalPoints - 1; i >= 0; i--) {
     const r = data[i];
-    // Dùng filterDateStr (YYYY-MM-DD) để lấy ngày dd/mm, KHÔNG dùng timeStr (HH:MM)
     let dateLabel = null;
     if (r.filterDateStr) {
-      const parts = r.filterDateStr.split('-'); // ["YYYY","MM","DD"]
-      if (parts.length === 3) dateLabel = `${parts[2]}/${parts[1]}`; // "dd/mm"
+      const parts = r.filterDateStr.split('-');
+      if (parts.length === 3) dateLabel = `${parts[2]}/${parts[1]}`;
     }
     if (dateLabel && dateLabel !== lastDateLabel) {
       labels.push(dateLabel);
@@ -455,7 +453,6 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     if (evtSource) { evtSource.close(); evtSource = null; }
   } else {
-    // Debounce nhẹ khi quay lại tab để tránh spam connect
     setTimeout(() => {
       if (!document.hidden) { load(); initSSE(); }
     }, 500);

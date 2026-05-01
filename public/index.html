@@ -52,28 +52,32 @@
     <div class="card"><div class="card-title">📉 Gap Change</div><div id="gapChange" class="card-value">--</div></div>
   </div>
 
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-    <div style="font-size: 1.2rem; font-weight: 700;">📑 History</div>
-    <button onclick="toggleFilterBox()" id="toggleBtn" style="background:transparent; border:none; font-size:1.8rem; cursor:pointer; color:#64748b;">+</button>
-  </div>
-
-  <div id="filterBox">
-    <input type="date" id="startDate" title="Từ ngày">
-    <span style="color: var(--secondary-text); font-weight: bold;">-</span>
-    <input type="date" id="endDate" title="Đến ngày">
-    <button class="btn-filter" onclick="applyFilter()">Filter</button>
-    <button class="btn-reset" onclick="resetFilter()">Clear</button>
-    <button class="btn-delete-multi" onclick="deleteSelected()">Delete</button>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px;">
+    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+      <div style="font-size: 1.2rem; font-weight: 700; white-space: nowrap;">📑 History</div>
+      
+      <!-- FilterBox được đưa lên cùng dòng -->
+      <div id="filterBox">
+        <input type="date" id="startDate" title="Từ ngày">
+        <span style="color: var(--secondary-text); font-weight: bold;">-</span>
+        <input type="date" id="endDate" title="Đến ngày">
+        <button class="btn-filter" onclick="applyFilter()">Filter</button>
+        <button class="btn-reset" onclick="resetFilter()">Clear</button>
+        <button class="btn-delete-multi" onclick="deleteSelected()">Delete</button>
+      </div>
+    </div>
+    <button onclick="toggleFilterBox()" id="toggleBtn" style="background:transparent; border:none; font-size:1.8rem; cursor:pointer; color:#64748b; line-height: 1;">+</button>
   </div>
 
   <div class="table-wrapper">
     <table>
       <thead>
         <tr>
+          <!-- Cột Time lên đầu, Cột Action (Checkbox) xuống thứ 2 -->
+          <th class="col-time">Time</th>
           <th id="actionHeader" class="col-action">
             <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)" title="Chọn tất cả">
           </th>
-          <th class="col-time">Time</th>
           <th>XAU ($)</th>
           <th>SJC (VND)</th>
           <th>Gap (VND)</th>
