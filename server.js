@@ -72,7 +72,6 @@ const HistorySchema = new mongoose.Schema({
 }, { timestamps: true });
 
 HistorySchema.index({ createdAt: -1, sjc: 1 });
-HistorySchema.index({ createdAt: -1 });
 const History = mongoose.model("History", HistorySchema);
 
 async function preloadCache() {
@@ -365,15 +364,7 @@ app.get("/api/stream", (req, res) => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.setHeader("X-Accel-Buffering", "no");
-  
-  if (clients.size > 1000) {
-    const toRemove = [...clients].slice(0, clients.size - 500);
-    for (const c of toRemove) {
-      try { c.end(); } catch (e) {}
-      clients.delete(c);
-    }
-  }
-  
+    
   clients.add(res);
   if (latestData) {
       res.write(`data: ${JSON.stringify(latestData)}\n\n`);
