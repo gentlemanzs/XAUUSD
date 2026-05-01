@@ -125,6 +125,8 @@ function renderMain(d) {
   const isUp = change >= 0;
   const sjcColorClass = isUp ? 'sjc-sub change-up' : 'sjc-sub change-down';
   const sjcValueStr = fmtVND.format(d.sjc);
+  if (!d.sjc) return; // Bảo vệ nếu data lỗi
+
   const sjcChangeStr = `${isUp ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}`;
 
   if (elements.sjcValue.textContent !== sjcValueStr) elements.sjcValue.textContent = sjcValueStr;
@@ -420,6 +422,9 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     if (evtSource) { evtSource.close(); evtSource = null; }
   } else {
-    load(); initSSE();
+    // Debounce nhẹ khi quay lại tab để tránh spam connect
+    setTimeout(() => {
+      if (!document.hidden) { load(); initSSE(); }
+    }, 500);
   }
 });

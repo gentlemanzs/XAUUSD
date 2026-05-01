@@ -97,7 +97,12 @@ async function preloadCache() {
   }
 }
 
-mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000, maxPoolSize: 10, minPoolSize: 2 })
+mongoose.connect(process.env.MONGO_URI, { 
+  serverSelectionTimeoutMS: 5000, 
+  maxPoolSize: 10, 
+  minPoolSize: 2,
+  heartbeatFrequencyMS: 10000 
+})
   .then(async () => { 
     console.log("✅ MongoDB connected");
     await preloadCache(); 
@@ -191,38 +196,30 @@ async function getUsdRate() {
   return cachedUsdRate; 
 }
 
-async function getSjcPrice() {
+async function getPriceFromXml(url, selector, attrName, isBtmc = false) {
   try {
-    const dojiXml = await fetchWithRetry("https://giavang.doji.vn/api/giavang/?api_key=258fbd2a72ce8481089d88c678e9fe4f", false);
-    if (dojiXml) {
-      const $ = cheerio.load(dojiXml, { xmlMode: true });
-      const sellStr = $('Row[Key="dojihanoile"]').attr('Sell');
-      if (sellStr) {
-        let price = parseFloat(sellStr.replace(/,/g, ""));
-        if (price > 0 && price < 1000000) price *= 1000; 
-        return price;
-      }
-      console.warn(`⚠️  [${new Date().toISOString()}] DOJI XML: không tìm thấy node dojihanoile`);
+    const xml = await fetchWithRetry(url, false);
+    if (!xml) return 0;
+    const $ = cheerio.load(xml, { xmlMode: true });
+    const sellStr = $(selector).attr(attrName);
+    if (sellStr) {
+      let price = parseFloat(sellStr.replace(/,/g, ""));
+      if (price > 0 && price < 1000000) price *= 1000; 
+      return price;
     }
   } catch (err) {
-    console.warn(`⚠️  [${new Date().toISOString()}] DOJI parse lỗi: ${err.message}`);
+    console.warn(`⚠️ [${new Date().toISOString()}] Parse lỗi từ ${url}: ${err.message}`);
   }
+  return 0;
+}
 
-  try {
-    const btmcXml = await fetchWithRetry("http://api.btmc.vn/api/BTMCAPI/getpricebtmc?key=3kd8ub1llcg9t45hnoh8hmn7t5kc2v", false);
-    if (btmcXml) {
-      const $ = cheerio.load(btmcXml, { xmlMode: true });
-      const sellStr = $('Data[row="932"]').attr('ps_932');
-      if (sellStr) {
-        let price = parseFloat(sellStr.replace(/,/g, ""));
-        if (price > 0 && price < 1000000) price *= 1000; 
-        return price;
-      }
-      console.warn(`⚠️  [${new Date().toISOString()}] BTMC XML: không tìm thấy node row=932`);
-    }
-  } catch (err) {
-    console.warn(`⚠️  [${new Date().toISOString()}] BTMC parse lỗi: ${err.message}`);
-  }
+async function getSjcPrice() {
+  // Ưu tiên DOJI, fallback sang BTMC
+  let price = await getPriceFromXml("https://giavang.doji.vn/api/giavang/?api_key=258fbd2a72ce8481089d88c678e9fe4f", 'Row[Key="dojihanoile"]', 'Sell');
+  if (price > 0) return price;
+
+  price = await getPriceFromXml("http://api.btmc.vn/api/BTMCAPI/getpricebtmc?key=3kd8ub1llcg9t45hnoh8hmn7t5kc2v", 'Data[row="932"]', 'ps_932');
+  if (price > 0) return price;
 
   console.error(`❌ [${new Date().toISOString()}] getSjcPrice: Cả 2 nguồn DOJI và BTMC đều thất bại`);
   return 0; 
@@ -330,19 +327,10 @@ async function updateData(triggerSource = "Tự động") {
       if (cachedHistory.length > 1000) cachedHistory.pop(); 
 
       try {
-        const overflowRecord = await History.findOne()
-          .sort({ createdAt: -1 })
-          .skip(1000)
-          .select('createdAt _id')
-          .lean();
-          
-        if (overflowRecord) {
-          await History.deleteMany({
-            $or: [
-              { createdAt: { $lt: overflowRecord.createdAt } },
-              { createdAt: overflowRecord.createdAt, _id: { $ne: overflowRecord._id } }
-            ]
-          });
+        // Tối ưu: Chỉ dọn dẹp khi số lượng thực tế trong RAM vượt ngưỡng
+        if (cachedHistory.length >= 1000) {
+           const lastItem = cachedHistory[cachedHistory.length - 1];
+           await History.deleteMany({ createdAt: { $lt: lastItem.createdAt } });
         }
       } catch (err) {
         console.warn(`⚠️  [${new Date().toISOString()}] Lỗi dọn dẹp overflow:`, err.message);
