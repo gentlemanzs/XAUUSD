@@ -89,15 +89,23 @@ async function preloadCache() {
         item.filterDateStr = new Date(item.createdAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
       }
       cachedHistory = historyData;
-    }
 
-    const last = await History.findOne().select('sjc diff xau usd').sort({ createdAt: -1 }).lean();
-    if (last) {
+      // --- TỐI ƯU 1: Loại bỏ query DB thừa khi preloadCache ---
+      const last = historyData[0]; // Lấy trực tiếp từ RAM
       cachedLastSavedXau = last.xau;
-      latestData = { sjc: last.sjc, xau: last.xau, usd: last.usd };
-      const diffRecord = await History.findOne({ sjc: { $ne: last.sjc } }).select('sjc diff').sort({ createdAt: -1 }).lean();
+      latestData = { sjc: last.sjc, xau: last.xau, usd: last.usd }; // Vẫn lấy từ RAM, usd có thể bị thiếu từ history nhưng sẽ được updateData xử lý
+
+      // Tìm trong mảng RAM
+      let diffRecord = historyData.find(r => r.sjc !== last.sjc);
+      
+      // Chốt an toàn nếu tìm trong RAM không thấy
+      if (!diffRecord) {
+         diffRecord = await History.findOne({ sjc: { $ne: last.sjc } }).select('sjc diff').sort({ createdAt: -1 }).lean();
+      }
+
       lastDifferentSjc = diffRecord ? { sjc: diffRecord.sjc, diff: diffRecord.diff } : { sjc: last.sjc, diff: last.diff };
       console.log(`📦 Đã nạp (Preload) toàn bộ ${historyData.length} dòng History lên RAM.`);
+      // --------------------------------------------------------
     }
   } catch (e) {
     console.log("⚠️ Khởi động: Lỗi preload cache:", e.message);
@@ -286,9 +294,16 @@ async function updateData(triggerSource = "Tự động") {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       yesterday.setHours(23, 59, 59, 999);
-      const lastDayRecord = await History.findOne({ createdAt: { $lte: yesterday } }).select('sjc').sort({ createdAt: -1 }).lean().catch(() => null);
+      
+      // --- TỐI ƯU 2: Kết hợp RAM và DB cho ngày hôm qua ---
+      let lastDayRecord = cachedHistory.find(r => new Date(r.createdAt) <= yesterday);
+      if (!lastDayRecord) {
+         lastDayRecord = await History.findOne({ createdAt: { $lte: yesterday } }).select('sjc').sort({ createdAt: -1 }).lean().catch(() => null);
+      }
+      
       cachedYesterdaySjc = lastDayRecord ? lastDayRecord.sjc : sjc;
       cachedYesterdayDate = todayStr;
+      // ----------------------------------------------------
     }
     const sjcChange = sjc - cachedYesterdaySjc;
 

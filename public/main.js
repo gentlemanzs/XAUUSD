@@ -315,7 +315,12 @@ async function deleteSelected() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids: ids })
     });
-    if (res.ok) await fetchHistory(); else alert("Lỗi khi xóa dữ liệu!");
+    if (res.ok) {
+      currentPage = 1; // Reset về trang 1 sau khi xóa thành công
+      await fetchHistory(); 
+    } else {
+      alert("Lỗi khi xóa dữ liệu!");
+    }
   } catch(e) { alert("Lỗi mạng!"); }
 }
 
@@ -438,6 +443,7 @@ function updateChart(fullData) {
   });
 }
 
+// KHỞI CHẠY LÚC LOAD TRANG: Tối ưu UI (Render cache ngay lập tức)
 try {
   const cachedMain = localStorage.getItem('xau_main_cache');
   if (cachedMain) {
@@ -452,8 +458,11 @@ try {
   }
 } catch(e) { }
 
+// Gọi ngầm kiểm tra dữ liệu từ Server đè lên sau
+load(); 
+
+// Lắng nghe sự kiện mới
 initSSE();
-setTimeout(() => { if (lastSJCValue === null) load(); }, 3000);
 
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
