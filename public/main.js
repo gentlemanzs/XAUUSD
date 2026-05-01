@@ -121,11 +121,11 @@ function renderMain(d) {
     }
   }
 
+  if (!d.sjc) return; // Bảo vệ nếu data lỗi
   const change = d.sjcChange || 0;
   const isUp = change >= 0;
   const sjcColorClass = isUp ? 'sjc-sub change-up' : 'sjc-sub change-down';
   const sjcValueStr = fmtVND.format(d.sjc);
-  if (!d.sjc) return; // Bảo vệ nếu data lỗi
 
   const sjcChangeStr = `${isUp ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}`;
 
@@ -186,7 +186,7 @@ function renderTable() {
       <td>${fmtXAU.format(r.xau)}</td>
       <td>${fmtVND.format(r.sjc)}</td>
       <td>${fmtVND.format(r.diff)}</td>
-      <td><span class="badge ${r.percent.includes('-') ? 'badge-down' : 'badge-up'}">${r.percent}</span></td>
+      <td><span class="badge ${(r.percent || '').includes('-') ? 'badge-down' : 'badge-up'}">${r.percent || '--'}</span></td>
     `;
     fragment.appendChild(tr);
   });
@@ -307,7 +307,7 @@ function updateChart(fullData) {
   const MAX_POINTS = 100;
   const data = fullData.slice(0, MAX_POINTS);
 
-  const currentSignature = `${data.length}_${data[0].createdAt}`;
+  const currentSignature = `${data.length}_${data[0].createdAt}_${data[data.length - 1].createdAt}`;
   if (currentSignature === lastChartSignature) return; 
 
   lastChartSignature = currentSignature;

@@ -109,7 +109,7 @@ mongoose.connect(process.env.MONGO_URI, {
     
     const server = app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
-      sendTelegram("🚀 Bot Telegram đã kết nối!");
+      sendTelegram("🚀 Bot Telegram đã kết nối!", "server_start");
       updateData("Khởi động Server");
     });
     server.keepAliveTimeout = 65000;
@@ -158,6 +158,20 @@ function isVietnamTradingTime() {
   if (day >= 1 && day <= 5) return timeInMinutes >= 510 && timeInMinutes <= 1050;
   if (day === 6) return timeInMinutes >= 510 && timeInMinutes <= 630;
   return false;
+}
+
+// Forex (XAU, USD) đóng cửa từ 5:30 thứ 7 đến 5:00 thứ 2 (GMT+7)
+function isForexMarketOpen() {
+  const now = new Date();
+  const vnTimeStr = now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" });
+  const vnTime = new Date(vnTimeStr);
+  const day = vnTime.getDay();
+  const timeInMinutes = vnTime.getHours() * 60 + vnTime.getMinutes();
+
+  if (day === 0) return false;                              // Chủ nhật: đóng cả ngày
+  if (day === 6 && timeInMinutes >= 330) return false;      // Thứ 7 từ 5:30 trở đi: đóng
+  if (day === 1 && timeInMinutes < 300) return false;       // Thứ 2 trước 5:00: đóng
+  return true;
 }
 
 async function fetchWithRetry(url, isJson = false, retries = 2) {
@@ -230,10 +244,11 @@ async function updateData(triggerSource = "Tự động") {
   isUpdating = true;
   try {
     const isTrading = isVietnamTradingTime();
+    const isForex = isForexMarketOpen();
     
     const [usdRate, dataXAU, sjcPrice] = await Promise.all([
-      isTrading ? getUsdRate() : Promise.resolve(null),
-      fetchWithRetry("https://api.gold-api.com/price/XAU", true),
+      isForex ? getUsdRate() : Promise.resolve(null),
+      isForex ? fetchWithRetry("https://api.gold-api.com/price/XAU", true) : Promise.resolve(null),
       isTrading ? getSjcPrice() : Promise.resolve(0)
     ]);
 
@@ -245,8 +260,8 @@ async function updateData(triggerSource = "Tự động") {
     const isUsdLive = usdRate !== null;
 
     // Alert Telegram khi từng nguồn API bị fail
-    if (!isXauLive) sendTelegram(`⚠️ *API giá vàng thế giới (XAU) thất bại*\nKhông lấy được giá từ gold-api.com`, 'api_xau');
-    if (isTrading && !isUsdLive) sendTelegram(`⚠️ *API tỷ giá USD thất bại*\nKhông lấy được tỷ giá từ Vietcombank`, 'api_usd');
+    if (isForex && !isXauLive) sendTelegram(`⚠️ *API giá vàng thế giới (XAU) thất bại*\nKhông lấy được giá từ gold-api.com`, 'api_xau');
+    if (isForex && !isUsdLive) sendTelegram(`⚠️ *API tỷ giá USD thất bại*\nKhông lấy được tỷ giá từ Vietcombank`, 'api_usd');
     if (isTrading && !isSjcLive) sendTelegram(`⚠️ *API giá SJC thất bại*\nCả DOJI lẫn BTMC đều không trả được giá`, 'api_sjc');
 
     let sjc = isSjcLive ? sjcPrice : (lastRecord ? lastRecord.sjc : 0);
@@ -291,11 +306,9 @@ async function updateData(triggerSource = "Tự động") {
     const xauChange = xau - cachedLastSavedXau;
 
     let failedAPIs = [];
-    if (isTrading) {
-      if (!isSjcLive) failedAPIs.push("SJC");
-      if (!isUsdLive) failedAPIs.push("USD");
-    }
-    if (!isXauLive) failedAPIs.push("XAU");
+    if (isTrading && !isSjcLive) failedAPIs.push("SJC");
+    if (isForex && !isUsdLive) failedAPIs.push("USD");
+    if (isForex && !isXauLive) failedAPIs.push("XAU");
 
     let currentStatus = failedAPIs.length === 0 ? "Live" : `Delayed (Lỗi: ${failedAPIs.join(", ")})`;
 
@@ -328,7 +341,7 @@ async function updateData(triggerSource = "Tự động") {
 
       try {
         // Tối ưu: Chỉ dọn dẹp khi số lượng thực tế trong RAM vượt ngưỡng
-        if (cachedHistory.length >= 1000) {
+        if (cachedHistory.length > 1000) {
            const lastItem = cachedHistory[cachedHistory.length - 1];
            await History.deleteMany({ createdAt: { $lt: lastItem.createdAt } });
         }
