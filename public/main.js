@@ -50,7 +50,11 @@ function initSSE() {
   evtSource.onopen = () => { console.log("🟢 SSE kết nối."); };
   evtSource.onmessage = (event) => {
     if (!event.data) return;
-    const d = JSON.parse(event.data);
+    let d;
+    try { d = JSON.parse(event.data); } catch(e) {
+      console.error('[SSE] JSON parse lỗi:', e);
+      return;
+    }
     if (!d?.updatedAt) return;
     
     elements.lastTime.style.color = "#10b981";
@@ -86,7 +90,10 @@ async function load() {
       lastSJCValue = d.sjc;
       safeFetchHistory(isFirstLoad);
     }
-  } catch(e) {}
+  } catch(e) {
+    console.error('[load] Lỗi:', e);
+    sendClientAlert(`load thất bại: ${e.message}`, 'client_load');
+  }
 }
 
 function renderMain(d) {
@@ -140,6 +147,16 @@ function renderMain(d) {
   if (elements.lastTime.textContent !== newStatusText) elements.lastTime.textContent = newStatusText;
 }
 
+async function sendClientAlert(message, key = 'client_alert') {
+  try {
+    await fetch('/api/alert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, key })
+    });
+  } catch (e) { /* silent — tránh loop nếu server down */ }
+}
+
 async function fetchHistory() {
   try {
     const limit = isExpanded ? 1000 : 50; 
@@ -164,7 +181,10 @@ async function fetchHistory() {
       renderTable(); 
       updateChart(currentData);
     }
-  } catch(e) {}
+  } catch(e) {
+    console.error('[fetchHistory] Lỗi:', e);
+    sendClientAlert(`fetchHistory thất bại: ${e.message}`, 'client_fetch_history');
+  }
 }
 
 function renderTable() {
@@ -408,9 +428,9 @@ try {
     renderMain(parsedMain);
     lastSJCValue = parsedMain.sjc; 
   }
-  const cachedHistory = localStorage.getItem('xau_hist_cache');
-  if (cachedHistory) {
-    historyData = JSON.parse(cachedHistory); currentData = historyData;
+  const histCache = localStorage.getItem('xau_hist_cache');
+  if (histCache) {
+    historyData = JSON.parse(histCache); currentData = historyData;
     renderTable(); updateChart(currentData);
   }
 } catch(e) { }

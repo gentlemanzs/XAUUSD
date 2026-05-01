@@ -67,6 +67,13 @@ function logApiError(apiName, attempt, error) {
   console.warn(`⚠️  [${ts}] API "${apiName}" thất bại (lần ${attempt}): ${error.message}`);
 }
 
+const HistorySchema = new mongoose.Schema({
+  usd: Number, xau: Number, sjc: Number, worldVND: Number, diff: Number, percent: String, status: String
+}, { timestamps: true });
+
+HistorySchema.index({ createdAt: -1, sjc: 1 });
+HistorySchema.index({ createdAt: -1 });
+const History = mongoose.model("History", HistorySchema);
 async function preloadCache() {
   try {
     const historyData = await History.find()
@@ -125,14 +132,6 @@ mongoose.connection.on('error', (err) => {
   console.error("🔥 Lỗi Mất Kết Nối MongoDB:", err);
   sendTelegram(`🔥 *MongoDB mất kết nối*\nLỗi: ${err.message}`, "mongo_runtime");
 });
-
-const HistorySchema = new mongoose.Schema({
-  usd: Number, xau: Number, sjc: Number, worldVND: Number, diff: Number, percent: String, status: String
-}, { timestamps: true });
-
-HistorySchema.index({ createdAt: -1, sjc: 1 });
-HistorySchema.index({ createdAt: -1 });
-const History = mongoose.model("History", HistorySchema);
 
 setInterval(() => {
   for (const c of [...clients]) {
@@ -337,16 +336,16 @@ async function updateData(triggerSource = "Tự động") {
         percent: savedDoc.percent, _id: savedDoc._id
       };
       cachedHistory.unshift(slimDoc);
-      if (cachedHistory.length > 1000) cachedHistory.pop(); 
 
-      try {
-        // Tối ưu: Chỉ dọn dẹp khi số lượng thực tế trong RAM vượt ngưỡng
-        if (cachedHistory.length > 1000) {
-           const lastItem = cachedHistory[cachedHistory.length - 1];
-           await History.deleteMany({ createdAt: { $lt: lastItem.createdAt } });
+      // Dọn dẹp RAM + DB khi vượt 1000 bản ghi
+      if (cachedHistory.length > 1000) {
+        try {
+          const lastItem = cachedHistory[cachedHistory.length - 1];
+          cachedHistory.pop();
+          await History.deleteMany({ createdAt: { $lt: lastItem.createdAt } });
+        } catch (err) {
+          console.warn(`⚠️  [${new Date().toISOString()}] Lỗi dọn dẹp overflow:`, err.message);
         }
-      } catch (err) {
-        console.warn(`⚠️  [${new Date().toISOString()}] Lỗi dọn dẹp overflow:`, err.message);
       }
     }
 
@@ -423,6 +422,16 @@ app.post("/api/history/bulk-delete", async (req, res) => {
     cachedHistory = cachedHistory.filter(item => !ids.includes(item._id.toString()));
     res.json({ ok: true });
   } catch (error) { res.status(500).json({ error: "Lỗi xóa" }); }
+});
+
+app.post("/api/alert", async (req, res) => {
+  try {
+    const { message, key } = req.body;
+    if (!message || typeof message !== 'string') return res.status(400).json({ error: "Thiếu message" });
+    const safeKey = (typeof key === 'string' && key) ? key : 'client_alert';
+    await sendTelegram(`📱 *Client Error*\n${message.slice(0, 500)}`, safeKey);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: "Lỗi gửi alert" }); }
 });
 
 cron.schedule("* * * * *", () => {
