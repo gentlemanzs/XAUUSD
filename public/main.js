@@ -35,7 +35,6 @@ const chartObserver = new IntersectionObserver((entries) => {
 document.addEventListener("DOMContentLoaded", () => {
   const chartEl = document.getElementById('gapChart');
   if (chartEl) chartObserver.observe(chartEl);
-  // Không gọi fetchHistory() ở đây — SSE sẽ trigger sau khi connect
 });
 
 function safeFetchHistory(isInit = false) {
@@ -64,11 +63,10 @@ function initSSE() {
     }
 
     renderMain(d);
-    if (lastSJCValue === null || d.sjc !== lastSJCValue || needsHistoryFetch) {
-      const isFirstLoad = lastSJCValue === null || needsHistoryFetch;
+    if (lastSJCValue === null || d.sjc !== lastSJCValue) {
+      const isFirstLoad = lastSJCValue === null;
       lastSJCValue = d.sjc;
-      needsHistoryFetch = false;
-      safeFetchHistory(isFirstLoad);
+      safeFetchHistory(isFirstLoad); 
     }
   };
   evtSource.onerror = () => {
@@ -142,7 +140,7 @@ function renderMain(d) {
 
 async function fetchHistory() {
   try {
-    const limit = isExpanded ? 300 : 50; 
+    const limit = isExpanded ? 1000 : 50; 
     const res = await fetch(`${HIST_API}?limit=${limit}`, { cache: "no-store" });
     historyData = await res.json(); 
     
@@ -401,19 +399,17 @@ function updateChart(fullData) {
   });
 }
 
-let needsHistoryFetch = true; // Fix vấn đề 1: mặc định cần fetch history
 try {
   const cachedMain = localStorage.getItem('xau_main_cache');
   if (cachedMain) {
     const parsedMain = JSON.parse(cachedMain);
     renderMain(parsedMain);
-    lastSJCValue = parsedMain.sjc;
+    lastSJCValue = parsedMain.sjc; 
   }
   const cachedHistory = localStorage.getItem('xau_hist_cache');
   if (cachedHistory) {
     historyData = JSON.parse(cachedHistory); currentData = historyData;
     renderTable(); updateChart(currentData);
-    needsHistoryFetch = false; // Đã có cache → không cần fetch ngay
   }
 } catch(e) { }
 

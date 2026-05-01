@@ -67,20 +67,12 @@ function logApiError(apiName, attempt, error) {
   console.warn(`⚠️  [${ts}] API "${apiName}" thất bại (lần ${attempt}): ${error.message}`);
 }
 
-const HistorySchema = new mongoose.Schema({
-  usd: Number, xau: Number, sjc: Number, worldVND: Number, diff: Number, percent: String, status: String
-}, { timestamps: true });
-
-HistorySchema.index({ createdAt: -1, sjc: 1 });
-HistorySchema.index({ createdAt: -1 });
-const History = mongoose.model("History", HistorySchema);
-
 async function preloadCache() {
   try {
     const historyData = await History.find()
       .select("createdAt xau sjc diff percent _id") 
       .sort({ createdAt: -1 })
-      .limit(300)
+      .limit(1000)
       .lean();
       
     if (historyData.length > 0) {
@@ -112,7 +104,6 @@ mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000, maxPoo
     
     const server = app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
-           sendTelegram("🚀 Bot Telegram đã kết nối thành công!");
       updateData("Khởi động Server");
     });
     server.keepAliveTimeout = 65000;
@@ -129,6 +120,13 @@ mongoose.connection.on('error', (err) => {
   sendTelegram(`🔥 *MongoDB mất kết nối*\nLỗi: ${err.message}`, "mongo_runtime");
 });
 
+const HistorySchema = new mongoose.Schema({
+  usd: Number, xau: Number, sjc: Number, worldVND: Number, diff: Number, percent: String, status: String
+}, { timestamps: true });
+
+HistorySchema.index({ createdAt: -1, sjc: 1 });
+HistorySchema.index({ createdAt: -1 });
+const History = mongoose.model("History", HistorySchema);
 
 setInterval(() => {
   for (const c of [...clients]) {
@@ -328,12 +326,12 @@ async function updateData(triggerSource = "Tự động") {
         percent: savedDoc.percent, _id: savedDoc._id
       };
       cachedHistory.unshift(slimDoc);
-      if (cachedHistory.length > 300) cachedHistory.pop(); 
+      if (cachedHistory.length > 1000) cachedHistory.pop(); 
 
       try {
         const overflowRecord = await History.findOne()
           .sort({ createdAt: -1 })
-          .skip(300)
+          .skip(1000)
           .select('createdAt _id')
           .lean();
           
@@ -400,10 +398,10 @@ app.get("/api/gold", async (req, res) => {
 });
 
 app.get("/api/history", async (req, res) => {
-  const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 300);
+  const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 1000);
   if (cachedHistory.length > 0) return res.json(cachedHistory.slice(0, limit));
   
-  const data = await History.find().select("createdAt xau sjc diff percent _id").sort({ createdAt: -1 }).limit(300).lean();
+  const data = await History.find().select("createdAt xau sjc diff percent _id").sort({ createdAt: -1 }).limit(1000).lean();
   
   for (const item of data) {
     item.timeStr = formatTimeVN(item.createdAt);
