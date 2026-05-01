@@ -341,10 +341,15 @@ function updateChart(fullData) {
   let lastDateLabel = null;
   for (let i = totalPoints - 1; i >= 0; i--) {
     const r = data[i];
-    const dateStr = r.timeStr ? r.timeStr.substring(0, 5) : null;
-    if (dateStr && dateStr !== lastDateLabel) {
-      labels.push(dateStr);
-      lastDateLabel = dateStr;
+    // Dùng filterDateStr (YYYY-MM-DD) để lấy ngày dd/mm, KHÔNG dùng timeStr (HH:MM)
+    let dateLabel = null;
+    if (r.filterDateStr) {
+      const parts = r.filterDateStr.split('-'); // ["YYYY","MM","DD"]
+      if (parts.length === 3) dateLabel = `${parts[2]}/${parts[1]}`; // "dd/mm"
+    }
+    if (dateLabel && dateLabel !== lastDateLabel) {
+      labels.push(dateLabel);
+      lastDateLabel = dateLabel;
     } else {
       labels.push('');
     }
