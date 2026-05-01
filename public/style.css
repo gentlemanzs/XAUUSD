@@ -202,7 +202,7 @@ th.col-diff {
 .footer {
   text-align: center;
   padding: 2rem 0 1rem;
-  font-size: 0.75rem;
+  font-size: 1rem;
   color: var(--secondary-text); /* Tận dụng biến màu có sẵn */
   opacity: 0.6;
   font-weight: 500;
