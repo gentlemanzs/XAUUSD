@@ -74,6 +74,7 @@ const HistorySchema = new mongoose.Schema({
 HistorySchema.index({ createdAt: -1, sjc: 1 });
 HistorySchema.index({ createdAt: -1 });
 const History = mongoose.model("History", HistorySchema);
+
 async function preloadCache() {
   try {
     const historyData = await History.find()
@@ -209,7 +210,7 @@ async function getUsdRate() {
   return cachedUsdRate; 
 }
 
-async function getPriceFromXml(url, selector, attrName, isBtmc = false) {
+async function getPriceFromXml(url, selector, attrName) {
   try {
     const xml = await fetchWithRetry(url, false);
     if (!xml) return 0;
@@ -342,7 +343,7 @@ async function updateData(triggerSource = "Tự động") {
         try {
           const lastItem = cachedHistory[cachedHistory.length - 1];
           cachedHistory.pop();
-          await History.deleteMany({ createdAt: { $lt: lastItem.createdAt } });
+          await History.deleteMany({ createdAt: { $lte: lastItem.createdAt }, _id: { $ne: lastItem._id } });
         } catch (err) {
           console.warn(`⚠️  [${new Date().toISOString()}] Lỗi dọn dẹp overflow:`, err.message);
         }
@@ -401,17 +402,18 @@ app.get("/api/gold", async (req, res) => {
 app.get("/api/history", async (req, res) => {
   const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 1000);
   if (cachedHistory.length > 0) return res.json(cachedHistory.slice(0, limit));
-  
-  const data = await History.find().select("createdAt xau sjc diff percent _id").sort({ createdAt: -1 }).limit(1000).lean();
-  
-  for (const item of data) {
-    item.timeStr = formatTimeVN(item.createdAt);
-    // Fix điểm 1: Bổ sung filterDateStr khi bốc từ Database để trả về API
-    item.filterDateStr = new Date(item.createdAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+  try {
+    const data = await History.find().select("createdAt xau sjc diff percent _id").sort({ createdAt: -1 }).limit(1000).lean();
+    for (const item of data) {
+      item.timeStr = formatTimeVN(item.createdAt);
+      item.filterDateStr = new Date(item.createdAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+    }
+    cachedHistory = data;
+    res.json(cachedHistory.slice(0, limit));
+  } catch (e) {
+    console.error('❌ /api/history lỗi:', e.message);
+    res.status(500).json({ error: "Lỗi tải lịch sử" });
   }
-  cachedHistory = data;
-  
-  res.json(cachedHistory.slice(0, limit));
 });
 
 app.post("/api/history/bulk-delete", async (req, res) => {

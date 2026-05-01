@@ -338,9 +338,16 @@ function updateChart(fullData) {
   const labels = [];
   const gaps = [];
 
+  let lastDateLabel = null;
   for (let i = totalPoints - 1; i >= 0; i--) {
     const r = data[i];
-    labels.push(r.timeStr ? r.timeStr.substring(0, 5) : "--:--");
+    const dateStr = r.timeStr ? r.timeStr.substring(0, 5) : null;
+    if (dateStr && dateStr !== lastDateLabel) {
+      labels.push(dateStr);
+      lastDateLabel = dateStr;
+    } else {
+      labels.push('');
+    }
     gaps.push(r.diff / 1000000);
   }
 
