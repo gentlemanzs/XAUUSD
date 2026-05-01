@@ -100,7 +100,7 @@ header {
 .change-up { color: var(--up-color); } 
 .change-down { color: var(--down-color); }
 
-/* --- TABLE CẤU HÌNH MỚI --- */
+/* --- TABLE CẤU HÌNH --- */
 .table-wrapper { 
   background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); 
   overflow-x: auto; margin-bottom: 2rem; 
@@ -110,33 +110,30 @@ table {
   width: 100%; 
   border-collapse: collapse; 
   font-size: 0.95rem; 
-  /* Tăng lên 720px để lề to không bị ép chữ rơi xuống dòng trên điện thoại */
   min-width: 720px; 
   table-layout: fixed; 
 }
 
-/* Đẩy cột giữa to ra để ép cột Diff (12%) sát về mép phải */
 th:nth-child(1), td:nth-child(1) { width: 18%; } /* Time */
 th:nth-child(2), td:nth-child(2) { width: 20%; } /* XAU */
 th:nth-child(3), td:nth-child(3) { width: 25%; } /* SJC */
 th:nth-child(4), td:nth-child(4) { width: 25%; } /* Gap */
 th:nth-child(5), td:nth-child(5) { width: 12%; } /* Diff */
 
-/* Mặc định căn trái toàn bộ */
 th { background: #f1f5f9; padding: 14px 16px; text-align: left !important; color: var(--secondary-text); }
 td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: left !important; }
 
-/* CỘT TIME: Thụt lề phải để nhường chỗ trống lề trái cho Checkbox */
+/* CỘT TIME */
 .col-time {
   position: relative;
   padding-left: 36px !important;
 }
 
-/* CHECKBOX: Đưa về sát mép lề trái ô Time */
+/* CHECKBOX: Ép cứng kích thước đồng nhất và top: 52% */
 .check-action {
   position: absolute;
   left: 12px; 
-  top: 50%;
+  top: 52%; /* Đã sửa thành 52% theo yêu cầu */
   transform: translateY(-50%);
   opacity: 0;
   visibility: hidden;
@@ -144,8 +141,8 @@ td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-alig
   transition: all 0.2s ease;
   margin: 0;
   cursor: pointer;
-  width: 13px; 
-  height: 13px;
+  width: 13px !important; /* Ép cứng để trên/dưới bằng nhau */
+  height: 13px !important; 
 }
 
 .table-wrapper.is-expanded .check-action {
@@ -154,18 +151,16 @@ td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-alig
   pointer-events: auto;
 }
 
-/* TĂNG THỤT LỀ CÁC CỘT GIÁ TRỊ */
 th:nth-child(2), td:nth-child(2),
 th:nth-child(3), td:nth-child(3),
 th:nth-child(4), td:nth-child(4) {
   padding-left: 36px !important;
 }
 
-/* RIÊNG CỘT DIFF: Thụt lề tiêu đề để cân bằng với đệm của Badge (8px) */
 td:nth-child(5) { padding-left: 16px !important; }
 th:nth-child(5) { padding-left: 24px !important; }
 
-/* Filter Box */
+/* --- FILTER BOX GIAO DIỆN --- */
 .filter-box { 
   position: absolute;
   left: 120px; 
@@ -177,7 +172,7 @@ th:nth-child(5) { padding-left: 24px !important; }
   pointer-events: none;
   transition: all 0.2s ease;
   background: var(--bg-color); 
-  z-index: 10;
+  z-index: 20; /* Tăng Z-index để nổi lên trên */
 }
 .filter-box.show {
   opacity: 1;
@@ -185,15 +180,23 @@ th:nth-child(5) { padding-left: 24px !important; }
   pointer-events: auto;
 }
 
+/* Ép thanh Filter thành Menu Dropdown Nổi trên Mobile để chống tràn và che khuất */
 @media (max-width: 768px) {
   .filter-box {
-    max-width: calc(100vw - 180px);
-    overflow-x: auto;
-    padding-bottom: 5px;
+    left: 0;
+    top: 45px; /* Nằm ngay dưới tiêu đề History */
+    width: 100%;
+    max-width: none;
+    background: var(--card-bg); /* Nền trắng như thẻ Card */
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15); /* Đổ bóng mạnh để tách biệt khỏi bảng */
+    flex-wrap: wrap; /* Các nút sẽ tự xuống dòng nếu hẹp */
+    border: 1px solid var(--border-color);
   }
 }
 
-input[type="date"] { padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); }
+input[type="date"] { padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; }
 
 .btn-filter, .btn-delete-multi, .btn-reset { 
   border: 1px solid transparent; 
@@ -212,7 +215,6 @@ input[type="date"] { padding: 8px; border-radius: 8px; border: 1px solid var(--b
 .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; display: inline-block; }
 .badge-up { background: rgba(251, 252, 251, 0.1); color: #000408; }
 .badge-down { background: rgba(255, 255, 255, 0.1); color: #000408; }
-.log-checkbox, #selectAll { width: 13px; height: 13px; cursor: pointer; }
 
 .pagination { display: flex; justify-content: center; gap: 8px; padding: 15px; border-top: 1px solid var(--border-color); }
 .page-btn { padding: 6px 12px; border: 1px solid var(--border-color); background: var(--card-bg); border-radius: 6px; cursor: pointer; color: var(--primary-text); font-weight: 600; transition: 0.2s;}
