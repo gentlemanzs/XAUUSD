@@ -203,14 +203,7 @@ th:nth-child(5) { padding-left: 24px !important; }
 input[type="date"] { padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; }
 
 .btn-filter, .btn-delete-multi, .btn-reset { 
-  border: 1px solid transparent; 
-  padding: 6px 12px;
-  border-radius: 8px; 
-  font-weight: 700; 
-  cursor: pointer; 
-  color: var(--primary-text); /* Đổi màu chữ thành màu tối hẳn */
-  background: #f1f5f9; /* Thêm nền xám nhạt */
-  transition: 0.2s; 
+  padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 0.8rem; 
 }
 .btn-filter:hover, .btn-delete-multi:hover, .btn-reset:hover { 
   background: rgba(0, 0, 0, 0.05); 
