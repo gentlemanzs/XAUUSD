@@ -74,7 +74,7 @@ header {
   .card-value { font-size: 1.5rem; } 
 }
 
-.container { width: 100%; max-width: 1200px; margin: 0 auto; background: var(--bg-color); min-height: auto; padding: 80px 15px 0.5rem 15px; box-sizing: border-box; }
+.container { width: 100%; max-width: 1200px; margin: 0 auto; background: var(--bg-color); min-height: 100vh; padding: 80px 15px 3rem 15px; box-sizing: border-box; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
 
 .card { background: var(--card-bg); border-radius: 16px; padding: 1.5rem; border: 1px solid var(--border-color); transition: 0.3s; will-change: transform; transform: translateZ(0);}
@@ -199,11 +199,3 @@ th.col-diff {
 .chart-scroll-container::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
 .chart-scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 .chart-scroll-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-.footer {
-  text-align: center;
-  padding: 2rem 0 1rem;
-  font-size: 0.8rem;
-  color: var(--secondary-text); /* Tận dụng biến màu có sẵn */
-  opacity: 0.6;
-  font-weight: 500;
-}
