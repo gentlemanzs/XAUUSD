@@ -199,10 +199,10 @@ function renderTable() {
   displayData.forEach(r => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td class="col-time">${r.timeStr || '--'}</td>
       <td class="col-action">
         <input type="checkbox" class="log-checkbox" value="${r._id}">
       </td>
+      <td class="col-time">${r.timeStr || '--'}</td> 
       <td>${fmtXAU.format(r.xau)}</td>
       <td>${fmtVND.format(r.sjc)}</td>
       <td>${fmtVND.format(r.diff)}</td>

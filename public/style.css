@@ -149,7 +149,7 @@ th:nth-child(4), td:nth-child(4) { width: 23%; }
 th:nth-child(5), td:nth-child(5) { width: 23%; }
 th:nth-child(6), td:nth-child(6) { width: 19%; }
 
-th { background: #f1f5f9; padding: 14px 16px; text-align: left; color: var(--secondary-text); }
+th { background: #f1f5f9; padding: 14px 16px; text-align: right; color: var(--secondary-text); }
 td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; }
 
 .col-action {
@@ -160,7 +160,13 @@ td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-alig
   visibility: visible;
 }
 
+.col-time {
+  text-align: left !important;
+}
 
+th.col-diff {
+  padding-right: 24px !important;
+}
 
 .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
 .badge-up { background: rgba(251, 252, 251, 0.1); color: #000408 ; }
