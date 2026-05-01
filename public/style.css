@@ -129,33 +129,39 @@ table {
   table-layout: fixed; 
 }
 
-/* Cố định width tất cả cột để table-layout: fixed hoạt động đúng, tránh reflow khi toggle */
-th:nth-child(1), td:nth-child(1) { width: 40px; }
-th:nth-child(2), td:nth-child(2) { width: 26%; }
-th:nth-child(3), td:nth-child(3) { width: 16%; }
-th:nth-child(4), td:nth-child(4) { width: 20%; }
+/* Cột action ẩn hoàn toàn (width=0) khi chưa expand, mở ra khi expand */
+th:nth-child(1), td:nth-child(1) {
+  width: 0;
+  padding: 0 !important;
+  overflow: hidden;
+  border: none;
+}
+.table-wrapper.is-expanded th:nth-child(1),
+.table-wrapper.is-expanded td:nth-child(1) {
+  width: 40px;
+  padding: 14px 8px !important;
+}
+
+/* Các cột data: khi chưa expand chiếm 100%, khi expand nhường 40px cho col-action */
+th:nth-child(2), td:nth-child(2) { width: 24%; }
+th:nth-child(3), td:nth-child(3) { width: 17%; }
+th:nth-child(4), td:nth-child(4) { width: 21%; }
 th:nth-child(5), td:nth-child(5) { width: 20%; }
 th:nth-child(6), td:nth-child(6) { width: 18%; }
 
 th { background: #f1f5f9; padding: 14px 16px; text-align: right; color: var(--secondary-text); }
 td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; }
 
-.col-action { 
-  /* Dùng visibility thay display để giữ nguyên layout, tránh reflow khi toggle */
+.col-action {
+  text-align: center !important;
   visibility: hidden;
-  width: 40px; 
-  text-align: center !important; 
-  padding-left: 8px !important; 
-  padding-right: 8px !important; 
 }
-
 .table-wrapper.is-expanded .col-action {
   visibility: visible;
 }
 
-.col-time { 
+.col-time {
   text-align: left !important;
-  padding-left: 16px !important;
 }
 
 th.col-diff {

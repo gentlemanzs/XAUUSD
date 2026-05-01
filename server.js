@@ -67,6 +67,14 @@ function logApiError(apiName, attempt, error) {
   console.warn(`⚠️  [${ts}] API "${apiName}" thất bại (lần ${attempt}): ${error.message}`);
 }
 
+const HistorySchema = new mongoose.Schema({
+  usd: Number, xau: Number, sjc: Number, worldVND: Number, diff: Number, percent: String, status: String
+}, { timestamps: true });
+
+HistorySchema.index({ createdAt: -1, sjc: 1 });
+HistorySchema.index({ createdAt: -1 });
+const History = mongoose.model("History", HistorySchema);
+
 async function preloadCache() {
   try {
     const historyData = await History.find()
@@ -120,13 +128,6 @@ mongoose.connection.on('error', (err) => {
   sendTelegram(`🔥 *MongoDB mất kết nối*\nLỗi: ${err.message}`, "mongo_runtime");
 });
 
-const HistorySchema = new mongoose.Schema({
-  usd: Number, xau: Number, sjc: Number, worldVND: Number, diff: Number, percent: String, status: String
-}, { timestamps: true });
-
-HistorySchema.index({ createdAt: -1, sjc: 1 });
-HistorySchema.index({ createdAt: -1 });
-const History = mongoose.model("History", HistorySchema);
 
 setInterval(() => {
   for (const c of [...clients]) {
