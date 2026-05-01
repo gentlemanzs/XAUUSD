@@ -206,8 +206,9 @@ function renderTable() {
       <td>${fmtXAU.format(r.xau)}</td>
       <td>${fmtVND.format(r.sjc)}</td>
       <td>${fmtVND.format(r.diff)}</td>
-      <td><span class="badge ${(r.percent || '').includes('-') ? 'badge-down' : 'badge-up'}">${r.percent || '--'}</span></td>
+      <td><span class="badge ${(r.percent || '').includes('-') ? 'badge-down' : 'badge-up'}"></span></td>
     `;
+    tr.querySelector('td:last-child span').textContent = r.percent || '--';
     fragment.appendChild(tr);
   });
 

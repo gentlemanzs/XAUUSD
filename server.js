@@ -337,17 +337,6 @@ async function updateData(triggerSource = "Tự động") {
         percent: savedDoc.percent, _id: savedDoc._id
       };
       cachedHistory.unshift(slimDoc);
-
-      // Dọn dẹp RAM + DB khi vượt 1000 bản ghi
-      if (cachedHistory.length > 1000) {
-        try {
-          const lastItem = cachedHistory[cachedHistory.length - 1];
-          cachedHistory.pop();
-          await History.deleteMany({ createdAt: { $lte: lastItem.createdAt }, _id: { $ne: lastItem._id } });
-        } catch (err) {
-          console.warn(`⚠️  [${new Date().toISOString()}] Lỗi dọn dẹp overflow:`, err.message);
-        }
-      }
     }
 
     if (process.env.NODE_ENV !== 'production') {
