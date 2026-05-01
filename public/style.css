@@ -199,3 +199,11 @@ th.col-diff {
 .chart-scroll-container::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
 .chart-scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 .chart-scroll-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.footer {
+  text-align: center;
+  padding: 2rem 0 1rem;
+  font-size: 0.75rem;
+  color: var(--secondary-text); /* Tận dụng biến màu có sẵn */
+  opacity: 0.6;
+  font-weight: 500;
+}
