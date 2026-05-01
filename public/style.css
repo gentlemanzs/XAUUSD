@@ -129,22 +129,33 @@ table {
   table-layout: fixed; 
 }
 
+/* Cố định width tất cả cột để table-layout: fixed hoạt động đúng, tránh reflow khi toggle */
+th:nth-child(1), td:nth-child(1) { width: 40px; }
+th:nth-child(2), td:nth-child(2) { width: 26%; }
+th:nth-child(3), td:nth-child(3) { width: 16%; }
+th:nth-child(4), td:nth-child(4) { width: 20%; }
+th:nth-child(5), td:nth-child(5) { width: 20%; }
+th:nth-child(6), td:nth-child(6) { width: 18%; }
+
 th { background: #f1f5f9; padding: 14px 16px; text-align: right; color: var(--secondary-text); }
 td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; }
 
 .col-action { 
-  display: none; 
+  /* Dùng visibility thay display để giữ nguyên layout, tránh reflow khi toggle */
+  visibility: hidden;
   width: 40px; 
   text-align: center !important; 
   padding-left: 8px !important; 
   padding-right: 8px !important; 
 }
 
+.table-wrapper.is-expanded .col-action {
+  visibility: visible;
+}
+
 .col-time { 
   text-align: left !important;
-}
-.table-wrapper.is-expanded .col-time {
-  padding-left: 4px !important; 
+  padding-left: 16px !important;
 }
 
 th.col-diff {

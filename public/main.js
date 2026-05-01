@@ -170,7 +170,6 @@ function renderTable() {
   const startIdx = isExpanded ? (currentPage - 1) * pageSize : 0;
   const endIdx = startIdx + pageSize;
   const displayData = currentData.slice(startIdx, endIdx);
-  const displayStyle = isExpanded ? "table-cell" : "none";
   document.getElementById('selectAll').checked = false;
 
   const fragment = document.createDocumentFragment();
@@ -178,7 +177,7 @@ function renderTable() {
   displayData.forEach(r => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td class="col-action" style="display: ${displayStyle};">
+      <td class="col-action">
         <input type="checkbox" class="log-checkbox" value="${r._id}">
       </td>
       <td class="col-time">${r.timeStr || '--'}</td> 
@@ -235,7 +234,7 @@ function toggleFilterBox() {
   isExpanded = !isExpanded;
   elements.filterBox.style.display = isExpanded ? "flex" : "none";
   elements.toggleBtn.innerText = isExpanded ? "−" : "+";
-  elements.actionHeader.style.display = isExpanded ? "table-cell" : "none";
+  // col-action visibility giờ được điều khiển hoàn toàn bằng CSS class is-expanded
   
   const wrapper = document.querySelector('.table-wrapper');
   if (isExpanded) wrapper.classList.add('is-expanded');
