@@ -91,11 +91,11 @@ async function preloadCache() {
       cachedHistory = historyData;
     }
 
-    const last = await History.findOne().select('sjc diff xau usd').sort({ createdAt: -1 }).lean();
+    const last = historyData[0]; // đã sort createdAt: -1, phần tử đầu là mới nhất
     if (last) {
       cachedLastSavedXau = last.xau;
       latestData = { sjc: last.sjc, xau: last.xau, usd: last.usd };
-      const diffRecord = await History.findOne({ sjc: { $ne: last.sjc } }).select('sjc diff').sort({ createdAt: -1 }).lean();
+      const diffRecord = historyData.find(r => r.sjc !== last.sjc);
       lastDifferentSjc = diffRecord ? { sjc: diffRecord.sjc, diff: diffRecord.diff } : { sjc: last.sjc, diff: last.diff };
       console.log(`📦 Đã nạp (Preload) toàn bộ ${historyData.length} dòng History lên RAM.`);
     }
@@ -286,7 +286,7 @@ async function updateData(triggerSource = "Tự động") {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       yesterday.setHours(23, 59, 59, 999);
-      const lastDayRecord = await History.findOne({ createdAt: { $lte: yesterday } }).select('sjc').sort({ createdAt: -1 }).lean().catch(() => null);
+      const lastDayRecord = cachedHistory.find(r => new Date(r.createdAt) <= yesterday);
       cachedYesterdaySjc = lastDayRecord ? lastDayRecord.sjc : sjc;
       cachedYesterdayDate = todayStr;
     }
