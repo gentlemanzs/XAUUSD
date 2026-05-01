@@ -420,7 +420,7 @@ function updateChart(fullData) {
             ticks: { maxTicksLimit: 6, callback: (val) => val.toFixed(1) + 'M', color: '#64748b', font: { size: 11 } },
             grid: { color: 'rgba(226, 232, 240, 0.6)' }
           },
-          x: { ticks: { autoSkip: true, maxRotation: 0, color: '#64748b', font: { size: 10 } }, grid: { display: false } }
+          x: { offset: true, ticks: { autoSkip: true, maxRotation: 0, color: '#64748b', font: { size: 10 } }, grid: { display: false } }
         }
       }
     });
