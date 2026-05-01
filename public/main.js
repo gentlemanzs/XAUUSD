@@ -207,7 +207,7 @@ function renderTable() {
       <td>${fmtVND.format(r.sjc)}</td>
       <td>${fmtVND.format(r.diff)}</td>
       <td><span class="badge ${(r.percent || '').includes('-') ? 'badge-down' : 'badge-up'}"></span></td>
-    \`;
+    `;
     tr.querySelector('td:last-child span').textContent = r.percent || '--';
     fragment.appendChild(tr);
   });
