@@ -129,20 +129,24 @@ td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-alig
   padding-left: 36px !important;
 }
 
-/* CHECKBOX: Ép cứng kích thước đồng nhất và top: 52% */
+/* CHECKBOX: Ép cứng viền, không cho trình duyệt tự can thiệp kích thước */
 .check-action {
   position: absolute;
   left: 12px; 
-  top: 52%; /* Đã sửa thành 52% theo yêu cầu */
+  top: 52%; 
   transform: translateY(-50%);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
   transition: all 0.2s ease;
-  margin: 0;
   cursor: pointer;
-  width: 13px !important; /* Ép cứng để trên/dưới bằng nhau */
+  
+  /* Các thuộc tính ép kích thước tuyệt đối */
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 13px !important; 
   height: 13px !important; 
+  box-sizing: border-box !important;
 }
 
 .table-wrapper.is-expanded .check-action {
@@ -172,7 +176,7 @@ th:nth-child(5) { padding-left: 24px !important; }
   pointer-events: none;
   transition: all 0.2s ease;
   background: var(--bg-color); 
-  z-index: 20; /* Tăng Z-index để nổi lên trên */
+  z-index: 20; 
 }
 .filter-box.show {
   opacity: 1;
@@ -180,18 +184,18 @@ th:nth-child(5) { padding-left: 24px !important; }
   pointer-events: auto;
 }
 
-/* Ép thanh Filter thành Menu Dropdown Nổi trên Mobile để chống tràn và che khuất */
+/* Ép thanh Filter thành Menu Dropdown Nổi trên Mobile để chống tràn */
 @media (max-width: 768px) {
   .filter-box {
     left: 0;
-    top: 45px; /* Nằm ngay dưới tiêu đề History */
+    top: 45px; 
     width: 100%;
     max-width: none;
-    background: var(--card-bg); /* Nền trắng như thẻ Card */
+    background: var(--card-bg); 
     padding: 15px;
     border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.15); /* Đổ bóng mạnh để tách biệt khỏi bảng */
-    flex-wrap: wrap; /* Các nút sẽ tự xuống dòng nếu hẹp */
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
+    flex-wrap: wrap; 
     border: 1px solid var(--border-color);
   }
 }
