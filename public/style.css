@@ -143,11 +143,11 @@ th:nth-child(1), td:nth-child(1) {
 }
 
 /* Các cột data: khi chưa expand chiếm 100%, khi expand nhường 40px cho col-action */
-th:nth-child(2), td:nth-child(2) { width: 24%; }
-th:nth-child(3), td:nth-child(3) { width: 17%; }
-th:nth-child(4), td:nth-child(4) { width: 21%; }
-th:nth-child(5), td:nth-child(5) { width: 20%; }
-th:nth-child(6), td:nth-child(6) { width: 18%; }
+th:nth-child(2), td:nth-child(2) { width: 16%; }
+th:nth-child(3), td:nth-child(3) { width: 19%; }
+th:nth-child(4), td:nth-child(4) { width: 23%; }
+th:nth-child(5), td:nth-child(5) { width: 23%; }
+th:nth-child(6), td:nth-child(6) { width: 19%; }
 
 th { background: #f1f5f9; padding: 14px 16px; text-align: right; color: var(--secondary-text); }
 td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: right; }
@@ -160,7 +160,9 @@ td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-alig
   visibility: visible;
 }
 
-
+.col-time {
+  text-align: left !important;
+}
 
 th.col-diff {
   padding-right: 24px !important;
