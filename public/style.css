@@ -18,7 +18,7 @@ body {
   background: var(--bg-color) !important; 
   color: var(--primary-text); 
   overflow-x: hidden; 
-  overscroll-behavior-y: contain; 
+  overscroll-behavior-y: auto; /* Đổi thành auto để bật lại Pull-to-refresh của trình duyệt */
 }
 
 header { 
