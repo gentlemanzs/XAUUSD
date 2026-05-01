@@ -304,22 +304,28 @@ function toggleSelectAll(source) {
   checkboxes.forEach(cb => cb.checked = source.checked);
 }
 
+// CẬP NHẬT LẠI HÀM XÓA CÓ BẢO MẬT
 async function deleteSelected() {
   const checkedBoxes = document.querySelectorAll('.log-checkbox:checked');
   if (checkedBoxes.length === 0) { alert("Vui lòng tích chọn ít nhất 1 dòng để xóa."); return; }
   if (!confirm(`Bạn có chắc chắn muốn xóa ${checkedBoxes.length} bản ghi đã chọn?`)) return;
 
+  const secret = prompt("Nhập mật khẩu Admin để xác nhận xóa:");
+  if (secret === null) return; // Hủy nếu người dùng bấm Cancel
+
   const ids = Array.from(checkedBoxes).map(cb => cb.value);
   try {
     const res = await fetch('/api/history/bulk-delete', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids: ids })
+      body: JSON.stringify({ ids: ids, secret: secret }) // Đẩy mật khẩu xuống server
     });
+    
     if (res.ok) {
-      currentPage = 1; // Reset về trang 1 sau khi xóa thành công
+      currentPage = 1;
       await fetchHistory(); 
     } else {
-      alert("Lỗi khi xóa dữ liệu!");
+      const data = await res.json();
+      alert(data.error || "Lỗi khi xóa dữ liệu!");
     }
   } catch(e) { alert("Lỗi mạng!"); }
 }
@@ -443,7 +449,6 @@ function updateChart(fullData) {
   });
 }
 
-// KHỞI CHẠY LÚC LOAD TRANG: Tối ưu UI (Render cache ngay lập tức)
 try {
   const cachedMain = localStorage.getItem('xau_main_cache');
   if (cachedMain) {
@@ -458,10 +463,7 @@ try {
   }
 } catch(e) { }
 
-// Gọi ngầm kiểm tra dữ liệu từ Server đè lên sau
 load(); 
-
-// Lắng nghe sự kiện mới
 initSSE();
 
 document.addEventListener("visibilitychange", () => {
