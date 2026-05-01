@@ -104,6 +104,7 @@ mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000, maxPoo
     
     const server = app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
+      sendTelegram("🚀 Bot Telegram đã kết nối thành công!");
       updateData("Khởi động Server");
     });
     server.keepAliveTimeout = 65000;
