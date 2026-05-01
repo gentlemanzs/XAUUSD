@@ -308,9 +308,7 @@ function toggleSelectAll(source) {
 async function deleteSelected() {
   const checkedBoxes = document.querySelectorAll('.log-checkbox:checked');
   if (checkedBoxes.length === 0) { alert("Vui lòng tích chọn ít nhất 1 dòng để xóa."); return; }
-  if (!confirm(`Bạn có chắc chắn muốn xóa ${checkedBoxes.length} bản ghi đã chọn?`)) return;
-
-  const secret = prompt("Nhập mật khẩu Admin để xác nhận xóa:");
+  const secret = prompt("Nhập mật khẩu để xác nhận xóa:");
   if (secret === null) return; // Hủy nếu người dùng bấm Cancel
 
   const ids = Array.from(checkedBoxes).map(cb => cb.value);
