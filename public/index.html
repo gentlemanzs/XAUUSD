@@ -9,9 +9,9 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0" defer></script>
 
-  <!-- ÉP ĐIỆN THOẠI TẢI LẠI GIAO DIỆN PHIÊN BẢN MỚI -->
-  <link rel="stylesheet" href="style.css?v=25.0">
-  <script src="main.js?v=25.0" defer></script>
+  <!-- BẢN CẬP NHẬT GIAO DIỆN DATA CORE -->
+  <link rel="stylesheet" href="style.css?v=26.0">
+  <script src="main.js?v=26.0" defer></script>
   
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
   <link rel="apple-touch-icon" href="/icon-180.png">
@@ -26,28 +26,30 @@
 
 <body>
 
-  <!-- HIỆU ỨNG PULL-TO-REFRESH: THE QUANTUM VAULT -->
+  <!-- Màn chớp EMP nổ trắng màn hình -->
+  <div class="emp-flash" id="empFlash"></div>
+
+  <!-- HIỆU ỨNG PULL-TO-REFRESH: THE DATA CORE -->
   <div id="cyberPull" class="cyber-pull-container">
-    <div class="vault-door" id="vaultDoor">
-      <div class="vault-lock">
-        <div class="neon-ring ring-1" id="ring1"></div>
-        <div class="neon-ring ring-2" id="ring2"></div>
-        <div class="neon-ring ring-3" id="ring3"></div>
-        <div class="lock-core"></div>
+    <div class="hologram-grid"></div>
+    
+    <div class="core-system">
+      <div class="fiber-lines">
+        <div class="line l-1"><div class="packet"></div></div>
+        <div class="line l-2"><div class="packet"></div></div>
+        <div class="line l-3"><div class="packet"></div></div>
+        <div class="line l-4"><div class="packet"></div></div>
+      </div>
+      
+      <div class="data-core" id="ptrIcon">
+        <div class="core-ring outer"></div>
+        <div class="core-ring inner"></div>
+        <div class="core-center"></div>
       </div>
     </div>
-    
-    <div class="vault-smoke-container" id="vaultSmoke">
-      <div class="smoke smoke-left"></div>
-      <div class="smoke smoke-right"></div>
-      <div class="smoke smoke-center"></div>
-    </div>
 
-    <div class="cyber-text" id="cyberText">Kéo để nhập mã bảo mật...</div>
+    <div class="cyber-text" id="cyberText">Connecting to server...</div>
   </div>
-
-  <!-- Tia Laser Quét Dữ Liệu Toàn Màn Hình -->
-  <div class="laser-scanner" id="laserScanner"></div>
 
   <header>
     <div class="brand"><span>📊</span> XAU DASHBOARD</div>
@@ -56,7 +58,7 @@
     </button>
   </header>
 
-  <div class="container">
+  <div class="container" id="mainContainer">
     <div id="lastTime" style="margin-bottom:1rem; font-size:0.875rem; color:#64748b; font-weight: 500;">Đang kết nối...
     </div>
 
