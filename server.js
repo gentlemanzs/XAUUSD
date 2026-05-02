@@ -158,9 +158,10 @@ setInterval(() => {
 
 let cachedUsdRate = null; 
 let lastUsdFetchTime = 0;
-const USD_CACHE_DURATION = 60 * 60 * 1000; // Cache USD trong 1 tiếng
+const USD_CACHE_DURATION = 60 * 60 * 1000; // Cache USD trong 1 tiếng. Chặn gọi gọi API liên tục.
 
-// Kiểm tra xem có đang trong giờ giao dịch vàng VN không
+// KIỂM TRA MÚI GIỜ VIỆT NAM (DÀNH CHO SJC & USD)
+// Từ 8h30 - 17h00 T2->T5, và 8h30 - 10h30 T7
 function isVietnamTradingTime() {
   const now = new Date();
   const vnTimeStr = now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" });
@@ -170,13 +171,14 @@ function isVietnamTradingTime() {
   const min = vnTime.getMinutes();
   const timeInMinutes = hour * 60 + min;
 
-  if (day === 0) return false; // Chủ nhật đóng
-  if (day >= 1 && day <= 5) return timeInMinutes >= 510 && timeInMinutes <= 1050; // T2-T6: 8h30 - 17h30
-  if (day === 6) return timeInMinutes >= 510 && timeInMinutes <= 630; // Thứ 7: 8h30 - 10h30
+  if (day === 0) return false; // Chủ nhật: Nghỉ
+  if (day >= 1 && day <= 5) return timeInMinutes >= 510 && timeInMinutes <= 1020; // T2-T6: 8h30 (510) - 17h00 (1020)
+  if (day === 6) return timeInMinutes >= 510 && timeInMinutes <= 630; // T7: 8h30 (510) - 10h30 (630)
   return false;
 }
 
-// Forex (XAU, USD) đóng cửa từ 5:30 thứ 7 đến 5:00 thứ 2 (GMT+7)
+// KIỂM TRA MÚI GIỜ FOREX (DÀNH CHO XAU)
+// Từ 5h30 sáng T2 đến 5h00 sáng T7
 function isForexMarketOpen() {
   const now = new Date();
   const vnTimeStr = now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" });
@@ -184,10 +186,10 @@ function isForexMarketOpen() {
   const day = vnTime.getDay();
   const timeInMinutes = vnTime.getHours() * 60 + vnTime.getMinutes();
 
-  if (day === 0) return false;                              // Chủ nhật: đóng cả ngày
-  if (day === 6 && timeInMinutes >= 330) return false;      // Thứ 7 từ 5:30 trở đi: đóng
-  if (day === 1 && timeInMinutes < 300) return false;       // Thứ 2 trước 5:00: đóng
-  return true;
+  if (day === 0) return false;                              // Chủ nhật: Nghỉ trọn ngày
+  if (day === 1 && timeInMinutes < 330) return false;       // Thứ 2: Trước 5h30 sáng (330) là nghỉ
+  if (day === 6 && timeInMinutes >= 300) return false;      // Thứ 7: Sau 5h00 sáng (300) là nghỉ
+  return true; // Còn lại đều là đang mở
 }
 
 // Hàm gọi API có cơ chế thử lại (Retry) nếu thất bại
@@ -269,9 +271,9 @@ async function updateData(triggerSource = "Tự động") {
     const isTrading = isVietnamTradingTime();
     const isForex = isForexMarketOpen();
     
-    // Gọi song song 3 API để tiết kiệm thời gian (chỉ gọi nếu thị trường mở cửa)
+    // ĐIỀU CHỈNH: Cào USD và SJC theo giờ Việt Nam. Cào XAU theo giờ Forex.
     const [usdRate, dataXAU, sjcPrice] = await Promise.all([
-      isForex ? getUsdRate() : Promise.resolve(null),
+      isTrading ? getUsdRate() : Promise.resolve(null),
       isForex ? fetchWithRetry("https://api.gold-api.com/price/XAU", true) : Promise.resolve(null),
       isTrading ? getSjcPrice() : Promise.resolve(0)
     ]);
@@ -283,12 +285,12 @@ async function updateData(triggerSource = "Tự động") {
     const isXauLive = !!(dataXAU && dataXAU.price);
     const isUsdLive = usdRate !== null;
 
-    // Alert Telegram khi từng nguồn API bị fail (Để bạn biết đường mà sửa source)
+    // Alert Telegram khi từng nguồn API bị fail trong giờ nó đáng lẽ phải sống
     if (isForex && !isXauLive) sendTelegram(`⚠️ *API giá vàng thế giới (XAU) thất bại*\nKhông lấy được giá từ gold-api.com`, 'api_xau');
-    if (isForex && !isUsdLive) sendTelegram(`⚠️ *API tỷ giá USD thất bại*\nKhông lấy được tỷ giá từ Vietcombank`, 'api_usd');
+    if (isTrading && !isUsdLive) sendTelegram(`⚠️ *API tỷ giá USD thất bại*\nKhông lấy được tỷ giá từ Vietcombank`, 'api_usd');
     if (isTrading && !isSjcLive) sendTelegram(`⚠️ *API giá SJC thất bại*\nCả DOJI lẫn BTMC đều không trả được giá`, 'api_sjc');
 
-    // Nếu API sống thì lấy giá mới, nếu chết thì lấy giá cũ từ Database chắp vá vào
+    // Nếu API sống thì lấy giá mới, nếu chết hoặc ngoài giờ thì lấy giá cũ từ Database chắp vá vào
     let sjc = isSjcLive ? sjcPrice : (lastRecord ? lastRecord.sjc : 0);
     let xau = isXauLive ? dataXAU.price : (lastRecord ? lastRecord.xau : 2350);
     let usd = isUsdLive ? usdRate : (lastRecord ? lastRecord.usd : 25400); 
@@ -341,7 +343,7 @@ async function updateData(triggerSource = "Tự động") {
 
     let failedAPIs = [];
     if (isTrading && !isSjcLive) failedAPIs.push("SJC");
-    if (isForex && !isUsdLive) failedAPIs.push("USD");
+    if (isTrading && !isUsdLive) failedAPIs.push("USD");
     if (isForex && !isXauLive) failedAPIs.push("XAU");
 
     let currentStatus = failedAPIs.length === 0 ? "Live" : `Delayed (Lỗi: ${failedAPIs.join(", ")})`;
@@ -483,14 +485,18 @@ app.post("/api/alert", async (req, res) => {
   } catch (e) { res.status(500).json({ error: "Lỗi gửi alert" }); }
 });
 
-// ─── CRONJOB: Tự động chạy ngầm theo lịch ────────────────────────────────
-cron.schedule("* * * * *", () => {
+// ─── CRONJOB: Tự động chạy ngầm mỗi 5 phút ────────────────────────────────
+cron.schedule("*/5 * * * *", () => {
   const isTrading = isVietnamTradingTime();
-  const currentMinute = new Date().getMinutes();
+  const isForex = isForexMarketOpen();
   
-  if (isTrading) {
-    updateData("Cronjob 1 phút"); // Đang giờ giao dịch VN thì cập nhật liên tục mỗi phút
-  } else if (currentMinute % 5 === 0) {
-    updateData("Cronjob 5 phút"); // Nghỉ giao dịch thì 5 phút mới ngó 1 lần cho đỡ tốn băng thông
+  // CHỈ cào nếu trong khung giờ VN hoặc thế giới đang mở cửa
+  if (isTrading || isForex) {
+    updateData("Cronjob 5 phút");
+  } else {
+    // 10h30 T7 đến 5h30 T2: Hệ thống vào trạng thái nghỉ ngơi hoàn toàn
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`💤 [${new Date().toLocaleTimeString('vi-VN')}] Cả VN và Thế giới đều nghỉ, Cronjob đang ngủ.`);
+    }
   }
 });

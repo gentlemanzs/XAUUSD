@@ -91,8 +91,9 @@ async function load() {
       safeFetchHistory(isFirstLoad);
     }
   } catch(e) {
-    console.error('[load] Lỗi:', e);
-    sendClientAlert(`load thất bại: ${e.message}`, 'client_load');
+    console.error('[load] Lỗi (thường do mạng chập chờn):', e);
+    // FIX BUG 2: Đã comment/bỏ dòng sendClientAlert dưới đây để không spam Telegram mỗi khi focus lại tab bị rớt mạng
+    // sendClientAlert(`load thất bại: ${e.message}`, 'client_load');
   }
 }
 
@@ -304,10 +305,11 @@ function toggleSelectAll(source) {
   checkboxes.forEach(cb => cb.checked = source.checked);
 }
 
-// CẬP NHẬT LẠI HÀM XÓA CÓ BẢO MẬT
+// Hàm xóa đã bảo mật bằng mật khẩu Admin
 async function deleteSelected() {
   const checkedBoxes = document.querySelectorAll('.log-checkbox:checked');
   if (checkedBoxes.length === 0) { alert("Vui lòng tích chọn ít nhất 1 dòng để xóa."); return; }
+  
   const secret = prompt("Nhập mật khẩu để xác nhận xóa:");
   if (secret === null) return; // Hủy nếu người dùng bấm Cancel
 
@@ -447,17 +449,24 @@ function updateChart(fullData) {
   });
 }
 
+// ─── KHỞI CHẠY LÚC LOAD TRANG ──────────────────────────────────────
 try {
+  // Lấy dữ liệu main từ cache
   const cachedMain = localStorage.getItem('xau_main_cache');
   if (cachedMain) {
     const parsedMain = JSON.parse(cachedMain);
     renderMain(parsedMain);
     lastSJCValue = parsedMain.sjc; 
   }
+  
+  // Lấy dữ liệu lịch sử từ cache
   const histCache = localStorage.getItem('xau_hist_cache');
   if (histCache) {
     historyData = JSON.parse(histCache); currentData = historyData;
     renderTable(); updateChart(currentData);
+  } else {
+    // FIX BUG 1: Nếu cache history bị mất nhưng cache main vẫn còn, bắt buộc phải kéo lịch sử về để chống bảng trống
+    safeFetchHistory(true); 
   }
 } catch(e) { }
 
