@@ -23,42 +23,38 @@
 </head>
 
 <body>
-<!-- Nút Hamburger Menu ở góc trên bên trái -->
-<button id="menu-toggle-btn" class="menu-btn">
-  ☰
-</button>
+  <!-- Lớp phủ tối màu khi mở menu -->
+  <div id="menu-overlay" class="overlay"></div>
 
-<!-- Lớp phủ tối màu khi mở menu (Bấm vào đây để đóng menu) -->
-<div id="menu-overlay" class="overlay"></div>
+  <!-- Khung Menu Trượt (Sidebar) -->
+  <nav id="app-sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <h2>Trạm Quản Lý</h2>
+      <button id="close-menu-btn" class="close-btn">✕</button>
+    </div>
 
-<!-- Khung Menu Trượt (Sidebar) -->
-<nav id="app-sidebar" class="sidebar">
-  <div class="sidebar-header">
-    <h2>Trạm Quản Lý</h2>
-    <!-- Nút X để đóng menu -->
-    <button id="close-menu-btn" class="close-btn">✕</button>
-  </div>
+    <ul class="sidebar-menu">
+      <li class="menu-item auth-action">
+        <a href="#" id="login-register-link">👤 Đăng nhập / Đăng ký</a>
+      </li>
+      <hr class="menu-divider">
+      <li class="menu-item">
+        <a href="#">💼 Tài chính cá nhân</a>
+      </li>
+      <li class="menu-item">
+        <a href="#">🪙 Tích chỉ (Vàng)</a>
+      </li>
+    </ul>
+  </nav>
 
-  <ul class="sidebar-menu">
-    <!-- Nút Đăng nhập / Đăng ký -->
-    <li class="menu-item auth-action">
-      <a href="#" id="login-register-link">👤 Đăng nhập / Đăng ký</a>
-    </li>
-    
-    <hr class="menu-divider">
-    
-    <!-- Các chức năng chính -->
-    <li class="menu-item">
-      <a href="#">💼 Tài chính cá nhân</a>
-    </li>
-    <li class="menu-item">
-      <a href="#">🪙 Tích chỉ (Vàng)</a>
-    </li>
-  </ul>
-</nav>
   <header>
-    <div class="brand"><span>📊</span> XAU DASHBOARD</div>
-    <!-- Thêm nút Force Sync ở đây -->
+    <!-- Gộp Nút Menu và Logo vào 1 cụm để nó dàn hàng ngang đẹp mắt -->
+    <div style="display: flex; align-items: center; gap: 15px;">
+      <button id="menu-toggle-btn" class="menu-btn">☰</button>
+      <div class="brand"><span>📊</span> XAU DASHBOARD</div>
+    </div>
+    
+    <!-- Nút Force Sync -->
     <button id="forceSyncBtn" class="sync-btn" onclick="forceSync()" title="Ép cào dữ liệu ngay lập tức">
       <span id="syncDot" class="sync-dot"></span>
     </button>
