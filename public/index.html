@@ -9,9 +9,9 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0" defer></script>
 
-  <!-- BẢN CẬP NHẬT GIAO DIỆN DATA CORE -->
-  <link rel="stylesheet" href="style.css?v=26.0">
-  <script src="main.js?v=26.0" defer></script>
+  <!-- BẢN CẬP NHẬT GIAO DIỆN ORBITAL STRIKE -->
+  <link rel="stylesheet" href="style.css?v=27.0">
+  <script src="main.js?v=27.0" defer></script>
   
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
   <link rel="apple-touch-icon" href="/icon-180.png">
@@ -26,29 +26,22 @@
 
 <body>
 
-  <!-- Màn chớp EMP nổ trắng màn hình -->
-  <div class="emp-flash" id="empFlash"></div>
-
-  <!-- HIỆU ỨNG PULL-TO-REFRESH: THE DATA CORE -->
+  <!-- HIỆU ỨNG PULL-TO-REFRESH: ORBITAL LASER STRIKE -->
   <div id="cyberPull" class="cyber-pull-container">
-    <div class="hologram-grid"></div>
+    <div class="stars-bg"></div>
     
-    <div class="core-system">
-      <div class="fiber-lines">
-        <div class="line l-1"><div class="packet"></div></div>
-        <div class="line l-2"><div class="packet"></div></div>
-        <div class="line l-3"><div class="packet"></div></div>
-        <div class="line l-4"><div class="packet"></div></div>
+    <div class="satellite-wrapper" id="ptrIcon">
+      <div class="solar-panel panel-left" id="panelLeft"></div>
+      <div class="sat-core">
+        <div class="energy-lens" id="energyLens"></div>
       </div>
+      <div class="solar-panel panel-right" id="panelRight"></div>
       
-      <div class="data-core" id="ptrIcon">
-        <div class="core-ring outer"></div>
-        <div class="core-ring inner"></div>
-        <div class="core-center"></div>
-      </div>
+      <!-- Cột Laser Hủy Diệt -->
+      <div class="laser-beam"></div>
     </div>
 
-    <div class="cyber-text" id="cyberText">Connecting to server...</div>
+    <div class="cyber-text" id="cyberText">CALIBRATING ORBIT...</div>
   </div>
 
   <header>
@@ -58,6 +51,7 @@
     </button>
   </header>
 
+  <!-- Bọc thêm ID vào container để làm hiệu ứng rung chấn -->
   <div class="container" id="mainContainer">
     <div id="lastTime" style="margin-bottom:1rem; font-size:0.875rem; color:#64748b; font-weight: 500;">Đang kết nối...
     </div>
