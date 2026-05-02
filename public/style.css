@@ -200,13 +200,35 @@ th:nth-child(5) { padding-left: 24px !important; }
   }
 }
 
-input[type="date"] { padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; }
-
-.btn-filter, .btn-delete-multi, .btn-reset { 
-  padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); cursor: pointer; font-weight: 600; font-size: 0.8rem; 
+input[type="date"] { 
+  padding: 8px; 
+  border-radius: 8px; 
+  border: 1px solid var(--border-color); 
+  outline: none; 
 }
+
+/* Đoạn đã sửa cho các button */
+.btn-filter, .btn-delete-multi, .btn-reset { 
+  padding: 6px 12px; 
+  border-radius: 6px; 
+  cursor: pointer; 
+  font-weight: 600; 
+  font-size: 0.8rem; 
+  
+  /* Màu nền trong suốt */
+  background: transparent; 
+  /* Viền màu đen */
+  border: 1px solid #000; 
+  /* Màu chữ (nên để đen để dễ nhìn trên nền trong suốt) */
+  color: #000;
+  transition: all 0.3s ease; /* Thêm hiệu ứng mượt mà khi hover */
+}
+
+/* Hiệu ứng khi di chuột qua (hover) */
 .btn-filter:hover, .btn-delete-multi:hover, .btn-reset:hover { 
-  background: transparent;
+  /* Bạn có thể cho nền tối nhẹ hoặc đổi màu chữ để người dùng biết là đã chạm vào nút */
+  background: rgba(0, 0, 0, 0.1); 
+  color: #000;
 }
 
 .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; display: inline-block; }
