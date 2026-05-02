@@ -28,7 +28,7 @@ body {
   background: var(--bg-color) !important; 
   color: var(--primary-text); 
   overflow-x: hidden; 
-  overscroll-behavior-y: auto; /* Đổi thành auto để bật lại Pull-to-refresh của trình duyệt */
+  overscroll-behavior-y: auto;
 }
 
 header { 
@@ -124,22 +124,20 @@ table {
   table-layout: fixed; 
 }
 
-th:nth-child(1), td:nth-child(1) { width: 18%; } /* Time */
-th:nth-child(2), td:nth-child(2) { width: 20%; } /* XAU */
-th:nth-child(3), td:nth-child(3) { width: 25%; } /* SJC */
-th:nth-child(4), td:nth-child(4) { width: 25%; } /* Gap */
-th:nth-child(5), td:nth-child(5) { width: 12%; } /* Diff */
+th:nth-child(1), td:nth-child(1) { width: 18%; }
+th:nth-child(2), td:nth-child(2) { width: 20%; }
+th:nth-child(3), td:nth-child(3) { width: 25%; }
+th:nth-child(4), td:nth-child(4) { width: 25%; }
+th:nth-child(5), td:nth-child(5) { width: 12%; }
 
 th { background: #f1f5f9; padding: 14px 16px; text-align: left !important; color: var(--secondary-text); }
 td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: left !important; }
 
-/* CỘT TIME */
 .col-time {
   position: relative;
   padding-left: 36px !important;
 }
 
-/* CHECKBOX: Ép cứng viền, không cho trình duyệt tự can thiệp kích thước */
 .check-action {
   position: absolute;
   left: 12px; 
@@ -150,8 +148,6 @@ td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-alig
   pointer-events: none;
   transition: all 0.2s ease;
   cursor: pointer;
-  
-  /* Các thuộc tính ép kích thước tuyệt đối */
   margin: 0 !important;
   padding: 0 !important;
   width: 13px !important; 
@@ -170,7 +166,6 @@ th:nth-child(3), td:nth-child(3),
 th:nth-child(4), td:nth-child(4) {
   padding-left: 36px !important;
 }
-
 td:nth-child(5) { padding-left: 16px !important; }
 th:nth-child(5) { padding-left: 24px !important; }
 
@@ -194,52 +189,26 @@ th:nth-child(5) { padding-left: 24px !important; }
   pointer-events: auto;
 }
 
-/* Ép thanh Filter thành Menu Dropdown Nổi trên Mobile để chống tràn */
 @media (max-width: 768px) {
   .filter-box {
-    left: 0;
-    top: 45px; 
-    width: 100%;
-    max-width: none;
-    background: var(--card-bg); 
-    padding: 15px;
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
-    flex-wrap: wrap; 
-    border: 1px solid var(--border-color);
-    box-sizing: border-box; /* Đã thêm box-sizing để sửa lỗi tràn layout sinh ra khoảng trắng bên phải */
+    left: 0; top: 45px; width: 100%; max-width: none; background: var(--card-bg); 
+    padding: 15px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
+    flex-wrap: wrap; border: 1px solid var(--border-color); box-sizing: border-box; 
   }
 }
 
 input[type="date"] { 
-  padding: 8px; 
-  border-radius: 8px; 
-  border: 1px solid var(--border-color); 
-  outline: none; 
+  padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; 
 }
 
-/* Đoạn đã sửa cho các button */
 .btn-filter, .btn-delete-multi, .btn-reset { 
-  padding: 6px 12px; 
-  border-radius: 6px; 
-  cursor: pointer; 
-  font-weight: 600; 
-  font-size: 0.8rem; 
-  
-  /* Màu nền trong suốt */
-  background:  rgba(255,255,255,0.1); 
-  /* Viền màu đen */
-  border: 1px solid var(--border-color); 
-  /* Màu chữ (nên để đen để dễ nhìn trên nền trong suốt) */
-  color: rgb(74, 74, 74);
-  transition: all 0.3s ease; /* Thêm hiệu ứng mượt mà khi hover */
+  padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem; 
+  background: rgba(255,255,255,0.1); border: 1px solid var(--border-color); color: rgb(74, 74, 74);
+  transition: all 0.3s ease;
 }
 
-/* Hiệu ứng khi di chuột qua (hover) */
 .btn-filter:hover, .btn-delete-multi:hover, .btn-reset:hover { 
-  /* Bạn có thể cho nền tối nhẹ hoặc đổi màu chữ để người dùng biết là đã chạm vào nút */
-  background: rgba(0, 0, 0, 0.1); 
-  color: #000;
+  background: rgba(0, 0, 0, 0.1); color: #000;
 }
 
 .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; display: inline-block; }
@@ -252,9 +221,7 @@ input[type="date"] {
 .page-btn:hover:not(:disabled):not(.active) { background: #f1f5f9; }
 .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.chart-card { 
-  padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); 
-}
+.chart-card { padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); }
 .chart-scroll-container { width: 100%; overflow-x: auto; margin-top: 1rem; }
 
 @media (max-width: 640px) {
@@ -265,12 +232,8 @@ input[type="date"] {
   .card-value { font-size: 1.5rem; } 
   .xau-wrapper { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
   .xau-wrapper .sjc-sub { margin-top: 0; }
-  .table-wrapper {
-    transition: margin-top 0.25s ease;
-  }
-  .table-wrapper.is-expanded {
-    margin-top: 130px; 
-  }
+  .table-wrapper { transition: margin-top 0.25s ease; }
+  .table-wrapper.is-expanded { margin-top: 130px; }
 }
 
 .chart-inner-wrapper { height: 320px; position: relative; }
@@ -281,100 +244,150 @@ input[type="date"] {
 
 /* --- NÚT FORCE SYNC --- */
 .sync-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  padding: 0;
-  outline: none;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.2s ease; padding: 0; outline: none;
 }
-
 .sync-btn:hover { background: rgba(255, 255, 255, 0.15); border-color: rgba(255, 255, 255, 0.3); }
-.sync-btn:active { transform: scale(0.9); } /* Hơi lún xuống khi bấm */
-
-/* Chấm xám mặc định */
-.sync-dot {
-  width: 10px;
-  height: 10px;
-  background-color: #64748b; 
-  border-radius: 50%;
-  transition: background-color 0.3s, box-shadow 0.3s;
-}
-
-/* Chấm vàng nhấp nháy khi đang tải */
-.sync-dot.loading {
-  background-color: #fbbf24; 
-  animation: syncPulse 0.8s infinite;
-}
-
-/* Chấm xanh phát sáng khi thành công */
-.sync-dot.success {
-  background-color: #10b981; 
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.8);
-}
+.sync-btn:active { transform: scale(0.9); }
+.sync-dot { width: 10px; height: 10px; background-color: #64748b; border-radius: 50%; transition: background-color 0.3s, box-shadow 0.3s; }
+.sync-dot.loading { background-color: #fbbf24; animation: syncPulse 0.8s infinite; }
+.sync-dot.success { background-color: #10b981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.8); }
 
 @keyframes syncPulse {
-  0% { transform: scale(0.8); opacity: 0.6; }
+  0%, 100% { transform: scale(0.8); opacity: 0.6; }
   50% { transform: scale(1.2); opacity: 1; }
-  100% { transform: scale(0.8); opacity: 0.6; }
 }
-.diff-sub {
-  color: #595959 !important;
-}
+.diff-sub { color: #595959 !important; }
 
 /* --- HIỆU ỨNG CHỚP NHÁY KHI CẬP NHẬT DỮ LIỆU --- */
 @keyframes flashCard {
-  0% { background-color: var(--card-bg); border-color: var(--border-color); }
+  0%, 100% { background-color: var(--card-bg); border-color: var(--border-color); box-shadow: none; }
   30% { background-color: rgba(16, 185, 129, 0.15); border-color: var(--up-color); box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
-  100% { background-color: var(--card-bg); border-color: var(--border-color); box-shadow: none; }
 }
+.flash-update { animation: flashCard 0.8s ease-out forwards; }
 
-.flash-update {
-  animation: flashCard 0.8s ease-out forwards;
-}
 
-/* ===== PULL TO REFRESH: ROCKET THEME ===== */
+/* ==========================================================================
+   PULL TO REFRESH: EPIC ROCKET LAUNCH (VƯỢT ĐỈNH)
+   ========================================================================== */
 .cyber-pull-container {
-  position: fixed; top: -80px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 12px;
-  background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  padding: 10px 20px; border-radius: 40px;
-  border: 1px solid rgba(59, 130, 246, 0.3); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  z-index: 9999; pointer-events: none;
-  transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s, box-shadow 0.3s;
+  position: fixed; top: -160px; left: 0; width: 100%; height: 160px;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 25px;
+  background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+  border-bottom: 2px solid #10b981;
+  box-shadow: 0 15px 30px rgba(0,0,0,0.6), inset 0 -10px 25px rgba(16, 185, 129, 0.2);
+  z-index: 9999; pointer-events: none; overflow: hidden;
 }
-.cyber-pull-container.ready {
-  border-color: rgba(16, 185, 129, 0.8); box-shadow: 0 0 25px rgba(16, 185, 129, 0.2);
-}
-.cyber-text {
-  color: #94a3b8; font-size: 14px; font-weight: 600; font-family: -apple-system, system-ui, sans-serif; transition: color 0.3s;
-}
-.cyber-pull-container.ready .cyber-text { color: #10b981; text-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
 
-/* Rocket Animation */
-.rocket-icon {
-  font-size: 22px; transition: transform 0.1s; display: inline-block;
+/* Background Không Gian & Sao */
+.stars-bg {
+  position: absolute; top: -160px; left: 0; right: 0; bottom: 0;
+  background-image:
+    radial-gradient(2px 2px at 20px 30px, #eee, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 40px 70px, #fff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 80px 140px, #ddd, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 150px 40px, #fff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 200px 120px, #fff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 250px 80px, #ddd, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 320px 150px, #fff, rgba(0,0,0,0));
+  background-repeat: repeat; background-size: 350px 160px;
+  opacity: 0.4; z-index: 0;
 }
-.cyber-pull-container.ready .rocket-icon {
-  animation: rocketShake 0.3s infinite;
+.cyber-pull-container.refreshing .stars-bg {
+  animation: starFall 0.3s linear infinite; opacity: 1;
 }
-.cyber-pull-container.refreshing .rocket-icon {
-  animation: blastOff 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+@keyframes starFall {
+  from { background-position: 0 0; }
+  to { background-position: 0 160px; }
+}
+
+/* Cấu trúc Tên lửa */
+.rocket-wrapper {
+  position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center;
+}
+.rocket-body {
+  font-size: 45px; line-height: 1;
+  transform: rotate(-45deg); /* Bẻ Emoji 🚀 cho nó trỏ thẳng đứng lên trời */
+  filter: drop-shadow(0 0 10px rgba(255,255,255,0.3));
+  margin-bottom: -10px; /* Kéo lửa lại gần đuôi tên lửa */
+}
+
+/* Động cơ & Khói Lửa */
+.exhaust-system {
+  position: relative; width: 20px; height: 30px; 
+  display: flex; justify-content: center; z-index: -1;
+}
+.flame {
+  position: absolute; top: 0; border-radius: 50% 50% 20% 20%;
+  transform-origin: top center; opacity: 0;
+}
+/* Lửa viền ngoài (Cam đỏ) */
+.flame-outer {
+  width: 18px; height: 10px; /* Bị JS can thiệp độ dài */
+  background: linear-gradient(to bottom, #ff9d00, #ff0000, transparent);
+  box-shadow: 0 0 20px #ff4d00;
+}
+/* Lõi lửa siêu nhiệt (Xanh lá up-trend) */
+.flame-core {
+  width: 8px; height: 5px; /* Bị JS can thiệp độ dài */
+  background: #ffffff;
+  box-shadow: 0 0 15px #10b981, 0 0 5px #fff;
+  z-index: 2;
+}
+
+/* Hoạt ảnh bập bùng */
+.cyber-pull-container.ready .flame-outer { animation: flickerOuter 0.1s infinite alternate; }
+.cyber-pull-container.ready .flame-core { animation: flickerCore 0.05s infinite alternate; }
+.cyber-pull-container.refreshing .flame-outer { animation: flickerOuter 0.05s infinite alternate; }
+.cyber-pull-container.refreshing .flame-core { animation: flickerCore 0.02s infinite alternate; }
+
+@keyframes flickerOuter { 0% { transform: scaleX(0.9) scaleY(0.9); } 100% { transform: scaleX(1.1) scaleY(1.1); } }
+@keyframes flickerCore { 0% { transform: scaleX(0.8) scaleY(0.8); } 100% { transform: scaleX(1.2) scaleY(1.2); } }
+
+/* Hạt khói cuộn ra */
+.smoke-particles {
+  position: absolute; top: 10px; display: flex; justify-content: center; gap: 5px;
+}
+.smoke {
+  width: 12px; height: 12px; background: rgba(148, 163, 184, 0.8); 
+  border-radius: 50%; opacity: 0; filter: blur(2px);
+}
+.cyber-pull-container.ready .smoke { animation: smokeRoll 0.6s infinite ease-out; }
+.cyber-pull-container.refreshing .smoke { animation: smokeRoll 0.3s infinite ease-out; }
+
+.smoke:nth-child(1) { animation-delay: 0s; transform-origin: left; }
+.smoke:nth-child(2) { animation-delay: 0.2s; width: 16px; height: 16px; }
+.smoke:nth-child(3) { animation-delay: 0.4s; transform-origin: right; }
+
+@keyframes smokeRoll {
+  0% { transform: translateY(0) scale(0.5); opacity: 0.8; }
+  100% { transform: translateY(30px) scale(3) scaleX(2); opacity: 0; }
+}
+
+/* Hoạt ảnh nhún đà & Phóng lên */
+.cyber-pull-container.ready .rocket-wrapper {
+  animation: rocketShake 0.2s infinite;
 }
 @keyframes rocketShake {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  25% { transform: translateY(2px) rotate(-5deg); }
-  75% { transform: translateY(-2px) rotate(5deg); }
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-1px, 2px); }
+  75% { transform: translate(1px, -2px); }
 }
-@keyframes blastOff {
-  0% { transform: translateY(0) scale(1); opacity: 1; }
-  30% { transform: translateY(-60px) scale(0.8); opacity: 0; }
-  50% { transform: translateY(40px) scale(0.5); opacity: 0; }
-  100% { transform: translateY(0) scale(1); opacity: 1; }
+
+.cyber-pull-container.refreshing .rocket-wrapper {
+  animation: epicLaunch 1.5s cubic-bezier(0.5, 0, 0.2, 1) forwards;
 }
+@keyframes epicLaunch {
+  0% { transform: translateY(0); }
+  10% { transform: translateY(15px); } /* Nhún lấy đà */
+  100% { transform: translateY(-500px); } /* Phóng vọt ra khỏi viền màn hình */
+}
+
+/* Dòng text báo trạng thái */
+.cyber-text {
+  color: #cbd5e1; font-size: 15px; font-weight: 700; font-family: -apple-system, sans-serif;
+  transition: color 0.3s; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px; z-index: 2;
+}
+.cyber-pull-container.ready .cyber-text { color: #10b981; text-shadow: 0 0 10px rgba(16, 185, 129, 0.8); }
+.cyber-pull-container.refreshing .cyber-text { color: #fbbf24; text-shadow: 0 0 10px rgba(251, 191, 36, 0.8); }
