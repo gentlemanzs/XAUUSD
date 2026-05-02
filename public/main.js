@@ -493,3 +493,30 @@ document.addEventListener("visibilitychange", () => {
     }, 500);
   }
 });
+
+// Chờ HTML load xong mới chạy script để tránh lỗi không tìm thấy ID
+document.addEventListener('DOMContentLoaded', () => {
+  const menuBtn = document.getElementById('menu-toggle-btn');
+  const closeBtn = document.getElementById('close-menu-btn');
+  const sidebar = document.getElementById('app-sidebar');
+  const overlay = document.getElementById('menu-overlay');
+
+  // Hàm mở menu: Thêm class 'open' vào sidebar và overlay
+  function openMenu() {
+    sidebar.classList.add('open');
+    overlay.classList.add('open');
+  }
+
+  // Hàm đóng menu: Xóa class 'open' khỏi sidebar và overlay
+  function closeMenu() {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+  }
+
+  // Gắn sự kiện click
+  menuBtn.addEventListener('click', openMenu);
+  closeBtn.addEventListener('click', closeMenu);
+  
+  // Khi click ra vùng tối (overlay) thì cũng tự động đóng menu cho tiện
+  overlay.addEventListener('click', closeMenu);
+});

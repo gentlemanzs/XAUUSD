@@ -316,3 +316,114 @@ input[type="date"] {
 .diff-sub {
   color: #595959 !important;
 }
+
+/* --- NÚT BẤM MENU GÓC TRÁI --- */
+.menu-btn {
+  position: fixed; /* Ghim cố định trên màn hình */
+  top: 15px;
+  left: 15px;
+  font-size: 24px;
+  background: none;
+  border: none;
+  color: #333; /* Màu chữ, bạn có thể đổi theo tông màu web */
+  cursor: pointer;
+  z-index: 998; /* Đảm bảo nút luôn nổi lên trên các thành phần khác */
+  padding: 5px;
+}
+
+/* --- LỚP PHỦ TỐI MÀU (OVERLAY) --- */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5); /* Màu đen trong suốt 50% */
+  opacity: 0; /* Mặc định ẩn */
+  visibility: hidden; /* Không cho click khi đang ẩn */
+  transition: opacity 0.3s ease; /* Hiệu ứng mờ dần mượt mà */
+  z-index: 999; 
+}
+
+/* Khi menu mở, overlay sẽ hiện lên */
+.overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* --- KHUNG MENU TRƯỢT (SIDEBAR) --- */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px; /* Chiều rộng của menu, phù hợp cho mobile */
+  height: 100%;
+  background-color: #ffffff;
+  box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+  z-index: 1000; /* Nổi lên cao nhất, trên cả overlay */
+  
+  /* Giấu menu sang bên trái 100% chiều rộng của nó */
+  transform: translateX(-100%);
+  transition: transform 0.3s ease-in-out; /* Hiệu ứng trượt vào/ra */
+}
+
+/* Lệnh kích hoạt trượt menu vào màn hình */
+.sidebar.open {
+  transform: translateX(0);
+}
+
+/* --- STYLING BÊN TRONG MENU --- */
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background-color: #f4f4f9;
+  border-bottom: 1px solid #ddd;
+}
+
+.sidebar-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.sidebar-menu {
+  list-style: none; /* Bỏ dấu chấm tròn của list */
+  padding: 0;
+  margin: 0;
+}
+
+.menu-item a {
+  display: block;
+  padding: 15px 20px;
+  text-decoration: none;
+  color: #333;
+  font-size: 16px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.2s;
+}
+
+/* Hiệu ứng khi ngón tay chạm/di chuột vào mục menu */
+.menu-item a:hover, .menu-item a:active {
+  background-color: #e9ecef;
+}
+
+.menu-divider {
+  border: 0;
+  height: 5px;
+  background-color: #f4f4f9;
+  margin: 0;
+}
+
+/* Làm nổi bật nút Đăng nhập */
+.auth-action a {
+  font-weight: bold;
+  color: #007bff; /* Màu xanh biển */
+}
