@@ -47,8 +47,7 @@ function safeFetchHistory(isInit = false) {
 function initSSE() {
   if (evtSource && evtSource.readyState !== EventSource.CLOSED) return;
   evtSource = new EventSource("/api/stream");
-  evtSource.onopen = () => { console.log("🟢 SSE kết nối."); };
-  evtSource.onmessage = (event) => {
+   evtSource.onmessage = (event) => {
     if (!event.data) return;
     let d;
     try { d = JSON.parse(event.data); } catch(e) {
@@ -60,10 +59,13 @@ function initSSE() {
     elements.lastTime.style.color = "#10b981";
     setTimeout(() => elements.lastTime.style.color = "#64748b", 2000);
 
+    // IN LOG VÀ CẢNH BÁO
     if (d.failedAPIs && d.failedAPIs.length > 0) {
       console.warn(`[XAU] ⚠️ API lỗi lúc ${d.timeStr}:`, d.failedAPIs.join(", "), "→ Đang dùng data cũ");
     } else {
-      console.log(`[XAU] ✅ Live | XAU: ${d.xau} | SJC: ${d.sjc?.toLocaleString('vi-VN')} | GAP: ${d.diff?.toLocaleString('vi-VN')}`);
+      // IN LOG GỌN NHẸ VÀO F12 MỖI LẦN CẬP NHẬT
+      const timeLog = new Date().toLocaleTimeString('vi-VN');
+      console.log(`Updated at ${timeLog}`);
     }
 
     renderMain(d);
@@ -92,8 +94,6 @@ async function load() {
     }
   } catch(e) {
     console.error('[load] Lỗi (thường do mạng chập chờn):', e);
-    // FIX BUG 2: Đã comment dòng dưới đây để không spam Telegram mỗi khi focus lại tab bị rớt mạng
-    // sendClientAlert(`load thất bại: ${e.message}`, 'client_load');
   }
 }
 
@@ -184,8 +184,6 @@ async function fetchHistory() {
     }
   } catch(e) {
     console.error('[fetchHistory] Lỗi (thường do mạng chập chờn):', e);
-    // FIX BUG 2: Tắt cảnh báo Telegram để tránh spam
-    // sendClientAlert(`fetchHistory thất bại: ${e.message}`, 'client_fetch_history');
   }
 }
 
@@ -306,19 +304,18 @@ function toggleSelectAll(source) {
   checkboxes.forEach(cb => cb.checked = source.checked);
 }
 
-// Hàm xóa đã bảo mật bằng mật khẩu Admin
 async function deleteSelected() {
   const checkedBoxes = document.querySelectorAll('.log-checkbox:checked');
   if (checkedBoxes.length === 0) { alert("Vui lòng tích chọn ít nhất 1 dòng để xóa."); return; }
   
   const secret = prompt("Nhập mật khẩu để xác nhận xóa:");
-  if (secret === null) return; // Hủy nếu người dùng bấm Cancel
+  if (secret === null) return; 
 
   const ids = Array.from(checkedBoxes).map(cb => cb.value);
   try {
     const res = await fetch('/api/history/bulk-delete', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids: ids, secret: secret }) // Đẩy mật khẩu xuống server
+      body: JSON.stringify({ ids: ids, secret: secret }) 
     });
     
     if (res.ok) {
@@ -455,24 +452,19 @@ async function forceSync() {
   const dot = document.getElementById('syncDot');
   if (!dot) return;
   
-  // 1. Chuyển sang trạng thái đang cào (Chấm vàng nhấp nháy)
   dot.className = 'sync-dot loading';
   
   try {
-    // 2. Báo server đi cào dữ liệu
     const res = await fetch('/api/force-sync', { method: 'POST' });
-    
     if (res.ok) {
-      // 3. Cào xong: Đổi sang chấm xanh lá phát sáng
       dot.className = 'sync-dot success';
     } else {
-      dot.className = 'sync-dot'; // Lỗi thì về lại xám
+      dot.className = 'sync-dot'; 
     }
   } catch(e) {
     dot.className = 'sync-dot'; 
   }
   
-  // 4. Bất kể thành công hay thất bại, sau 3 giây trả về chấm xám tàng hình
   setTimeout(() => {
     if (dot.className.includes('success')) {
       dot.className = 'sync-dot';
@@ -482,7 +474,6 @@ async function forceSync() {
 
 // ─── KHỞI CHẠY LÚC LOAD TRANG ──────────────────────────────────────
 try {
-  // Lấy dữ liệu main từ cache
   const cachedMain = localStorage.getItem('xau_main_cache');
   if (cachedMain) {
     const parsedMain = JSON.parse(cachedMain);
@@ -490,13 +481,11 @@ try {
     lastSJCValue = parsedMain.sjc; 
   }
   
-  // Lấy dữ liệu lịch sử từ cache
   const histCache = localStorage.getItem('xau_hist_cache');
   if (histCache) {
     historyData = JSON.parse(histCache); currentData = historyData;
     renderTable(); updateChart(currentData);
   } else {
-    // FIX BUG 1: Nếu cache history bị mất nhưng cache main vẫn còn, bắt buộc phải kéo lịch sử về để chống bảng trống
     safeFetchHistory(true); 
   }
 } catch(e) { }

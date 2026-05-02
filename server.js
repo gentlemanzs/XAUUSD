@@ -1,5 +1,5 @@
 const express = require("express");
-const path = require("path"); 
+const path = require("path");
 const cron = require("node-cron");
 const cors = require("cors");
 const mongoose = require("mongoose");
@@ -24,10 +24,10 @@ const PORT = process.env.PORT || 3000;
 // Các biến lưu trữ dữ liệu trên RAM (Tối ưu tốc độ, hạn chế gọi DB)
 let latestData = null;
 let clients = new Set(); // Chứa các client đang kết nối SSE (Live stream)
-let isUpdating = false; 
+let isUpdating = false;
 
-let lastDifferentSjc = null; 
-let cachedLastSavedXau = null; 
+let lastDifferentSjc = null;
+let cachedLastSavedXau = null;
 let cachedYesterdaySjc = null;
 let cachedYesterdayDate = null;
 let cachedHistory = []; // Mảng chứa lịch sử giá trên RAM
@@ -37,11 +37,11 @@ function formatTimeVN(dateObj) {
   if (!dateObj) return "--";
   const pad = n => String(n).padStart(2, '0');
   const vn = new Date(new Date(dateObj).toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
-  return `${pad(vn.getDate())}/${pad(vn.getMonth()+1)} ${pad(vn.getHours())}:${pad(vn.getMinutes())}`;
+  return `${pad(vn.getDate())}/${pad(vn.getMonth() + 1)} ${pad(vn.getHours())}:${pad(vn.getMinutes())}`;
 }
 
 // ─── TELEGRAM ALERT (Thông báo lỗi qua Telegram) ──────────────────────────
-const TG_TOKEN   = process.env.TG_TOKEN;
+const TG_TOKEN = process.env.TG_TOKEN;
 const TG_CHAT_ID = process.env.TG_CHAT_ID;
 const ALERT_COOLDOWN_MS = 10 * 60 * 1000; // 10 phút — chống spam báo cùng 1 lỗi liên tục
 const alertCooldowns = new Map();
@@ -84,11 +84,11 @@ async function preloadCache() {
   try {
     // Kéo 1000 dòng lịch sử mới nhất
     const historyData = await History.find()
-      .select("createdAt xau sjc diff percent _id") 
+      .select("createdAt xau sjc diff percent usd _id")
       .sort({ createdAt: -1 })
       .limit(1000)
       .lean();
-      
+
     if (historyData.length > 0) {
       for (const item of historyData) {
         item.timeStr = formatTimeVN(item.createdAt);
@@ -100,14 +100,20 @@ async function preloadCache() {
       // --- TỐI ƯU: Lấy trực tiếp từ RAM thay vì gọi DB lần nữa ---
       const last = historyData[0]; // Dòng mới nhất
       cachedLastSavedXau = last.xau;
-      latestData = { sjc: last.sjc, xau: last.xau, usd: last.usd }; 
+      latestData = {
+        sjc: last.sjc,
+        xau: last.xau,
+        usd: last.usd,
+        updatedAt: new Date(), // Thêm dòng này
+        timeStr: formatTimeVN(new Date())
+      };
 
       // Tìm dòng có giá SJC khác với giá hiện tại ngay trong mảng RAM
       let diffRecord = historyData.find(r => r.sjc !== last.sjc);
-      
+
       // Chốt an toàn: Nếu trong mảng không có (do giá đứng im quá lâu), mới phải gọi DB
       if (!diffRecord) {
-         diffRecord = await History.findOne({ sjc: { $ne: last.sjc } }).select('sjc diff').sort({ createdAt: -1 }).lean();
+        diffRecord = await History.findOne({ sjc: { $ne: last.sjc } }).select('sjc diff').sort({ createdAt: -1 }).lean();
       }
 
       lastDifferentSjc = diffRecord ? { sjc: diffRecord.sjc, diff: diffRecord.diff } : { sjc: last.sjc, diff: last.diff };
@@ -119,16 +125,16 @@ async function preloadCache() {
 }
 
 // Kết nối MongoDB
-mongoose.connect(process.env.MONGO_URI, { 
-  serverSelectionTimeoutMS: 5000, 
-  maxPoolSize: 10, 
+mongoose.connect(process.env.MONGO_URI, {
+  serverSelectionTimeoutMS: 5000,
+  maxPoolSize: 10,
   minPoolSize: 2,
-  heartbeatFrequencyMS: 10000 
+  heartbeatFrequencyMS: 10000
 })
-  .then(async () => { 
+  .then(async () => {
     console.log("✅ MongoDB connected");
     await preloadCache(); // Nạp cache
-    
+
     const server = app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       sendTelegram("🚀 Bot Telegram đã kết nối!", "server_start");
@@ -151,12 +157,12 @@ mongoose.connection.on('error', (err) => {
 // Giữ kết nối SSE (Live stream) không bị timeout bằng cách gửi ping mỗi 40s
 setInterval(() => {
   for (const c of [...clients]) {
-    try { c.write(":\n\n"); if (typeof c.flush === "function") c.flush(); } 
+    try { c.write(":\n\n"); if (typeof c.flush === "function") c.flush(); }
     catch (e) { clients.delete(c); }
   }
-}, 40000); 
+}, 40000);
 
-let cachedUsdRate = null; 
+let cachedUsdRate = null;
 let lastUsdFetchTime = 0;
 const USD_CACHE_DURATION = 60 * 60 * 1000; // Cache USD trong 1 tiếng. Chặn gọi gọi API liên tục.
 
@@ -166,7 +172,7 @@ function isVietnamTradingTime() {
   const now = new Date();
   const vnTimeStr = now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" });
   const vnTime = new Date(vnTimeStr);
-  const day = vnTime.getDay(); 
+  const day = vnTime.getDay();
   const hour = vnTime.getHours();
   const min = vnTime.getMinutes();
   const timeInMinutes = hour * 60 + min;
@@ -198,13 +204,13 @@ async function fetchWithRetry(url, isJson = false, retries = 2) {
     try {
       const res = await fetch(url, {
         headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
-        signal: AbortSignal.timeout(5000), keepalive: true 
+        signal: AbortSignal.timeout(5000), keepalive: true
       });
       if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
       return isJson ? await res.json() : await res.text();
     } catch (e) {
       logApiError(url, i + 1, e);
-      if (i === retries - 1) return null; 
+      if (i === retries - 1) return null;
       await new Promise(r => setTimeout(r, 300 * (i + 1))); // Tạm nghỉ trước khi thử lại
     }
   }
@@ -215,7 +221,7 @@ async function getUsdRate() {
   const now = Date.now();
   // Nếu chưa hết 1 tiếng thì dùng lại giá cũ cho đỡ tốn tài nguyên
   if (now - lastUsdFetchTime < USD_CACHE_DURATION && cachedUsdRate !== null) return cachedUsdRate;
-  
+
   const xml = await fetchWithRetry("https://portal.vietcombank.com.vn/Usercontrols/TVPortal.TyGia/pXML.aspx");
   if (xml) {
     const $ = cheerio.load(xml, { xmlMode: true });
@@ -229,7 +235,7 @@ async function getUsdRate() {
     }
     console.warn(`⚠️  [${new Date().toISOString()}] Vietcombank XML: không tìm thấy tỷ giá USD`);
   }
-  return cachedUsdRate; 
+  return cachedUsdRate;
 }
 
 // Hàm hỗ trợ bóc tách giá vàng từ XML
@@ -260,7 +266,7 @@ async function getSjcPrice() {
   if (price > 0) return price;
 
   console.error(`❌ [${new Date().toISOString()}] getSjcPrice: Cả 2 nguồn DOJI và BTMC đều thất bại`);
-  return 0; 
+  return 0;
 }
 
 // ─── HÀM CỐT LÕI: Cập nhật toàn bộ dữ liệu ──────────────────────────────
@@ -271,7 +277,7 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
     // Nếu forceFetch = true, hệ thống sẽ bỏ qua giờ giấc để cào ngay lập tức
     const isTrading = forceFetch || isVietnamTradingTime();
     const isForex = forceFetch || isForexMarketOpen();
-    
+
     // ĐIỀU CHỈNH: Cào USD và SJC theo giờ Việt Nam. Cào XAU theo giờ Forex.
     const [usdRate, dataXAU, sjcPrice] = await Promise.all([
       isTrading ? getUsdRate() : Promise.resolve(null),
@@ -279,9 +285,9 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
       isTrading ? getSjcPrice() : Promise.resolve(0)
     ]);
 
-    let lastRecord = latestData; 
+    let lastRecord = latestData;
     if (!lastRecord) lastRecord = await History.findOne().select('usd xau sjc').sort({ createdAt: -1 }).lean().catch(() => null);
-    
+
     const isSjcLive = sjcPrice > 0;
     const isXauLive = !!(dataXAU && dataXAU.price);
     const isUsdLive = usdRate !== null;
@@ -294,17 +300,17 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
     // Nếu API sống thì lấy giá mới, nếu chết hoặc ngoài giờ thì lấy giá cũ từ Database chắp vá vào
     let sjc = isSjcLive ? sjcPrice : (lastRecord ? lastRecord.sjc : 0);
     let xau = isXauLive ? dataXAU.price : (lastRecord ? lastRecord.xau : 2350);
-    let usd = isUsdLive ? usdRate : (lastRecord ? lastRecord.usd : 25400); 
+    let usd = isUsdLive ? usdRate : (lastRecord ? lastRecord.usd : 25400);
 
     // Nếu không có cả giá cũ lẫn giá mới thì báo lỗi hệ thống
     if (sjc <= 0 || xau <= 0) {
-        if (latestData) {
-          latestData.status = "Delayed (Lỗi hệ thống)";
-          latestData.failedAPIs = ["SYSTEM"]; 
-          const fallbackPayload = `data: ${JSON.stringify(latestData)}\n\n`;
-          for (const c of [...clients]) { try { c.write(fallbackPayload); if (typeof c.flush === "function") c.flush(); } catch (err) { clients.delete(c); } }
-        }
-        return; 
+      if (latestData) {
+        latestData.status = "Delayed (Lỗi hệ thống)";
+        latestData.failedAPIs = ["SYSTEM"];
+        const fallbackPayload = `data: ${JSON.stringify(latestData)}\n\n`;
+        for (const c of [...clients]) { try { c.write(fallbackPayload); if (typeof c.flush === "function") c.flush(); } catch (err) { clients.delete(c); } }
+      }
+      return;
     }
 
     // Công thức tính giá vàng thế giới quy đổi ra VNĐ (Đã bao gồm thuế phí cơ bản)
@@ -318,13 +324,13 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       yesterday.setHours(23, 59, 59, 999);
-      
+
       // Tối ưu: Thử tìm trong RAM trước, không thấy mới lục DB
       let lastDayRecord = cachedHistory.find(r => new Date(r.createdAt) <= yesterday);
       if (!lastDayRecord) {
-         lastDayRecord = await History.findOne({ createdAt: { $lte: yesterday } }).select('sjc').sort({ createdAt: -1 }).lean().catch(() => null);
+        lastDayRecord = await History.findOne({ createdAt: { $lte: yesterday } }).select('sjc').sort({ createdAt: -1 }).lean().catch(() => null);
       }
-      
+
       cachedYesterdaySjc = lastDayRecord ? lastDayRecord.sjc : sjc;
       cachedYesterdayDate = todayStr;
     }
@@ -353,8 +359,8 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
 
     // Đóng gói dữ liệu để gửi cho Client
     latestData = {
-      updatedAt: updatedTimeObj, timeStr: formatTimeVN(updatedTimeObj), 
-      usd, xau, xauChange, sjc, sjcChange, oldGap: lastDifferentSjc.diff,       
+      updatedAt: updatedTimeObj, timeStr: formatTimeVN(updatedTimeObj),
+      usd, xau, xauChange, sjc, sjcChange, oldGap: lastDifferentSjc.diff,
       gapChange, worldVND: Math.round(worldVND), diff: currentGap,
       percent: ((diff / worldVND) * 100).toFixed(2) + "%", status: currentStatus,
       failedAPIs: failedAPIs
@@ -365,20 +371,20 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
       const dbEntry = { ...latestData };
       delete dbEntry.updatedAt; delete dbEntry.timeStr; delete dbEntry.failedAPIs;
       const savedDoc = await History.create(dbEntry);
-      
+
       cachedLastSavedXau = xau;
       lastDifferentSjc = { sjc: sjc, diff: currentGap };
-   
+
       const slimDoc = {
         createdAt: savedDoc.createdAt, timeStr: formatTimeVN(savedDoc.createdAt),
         filterDateStr: new Date(savedDoc.createdAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }),
         xau: savedDoc.xau, sjc: savedDoc.sjc, diff: savedDoc.diff,
         percent: savedDoc.percent, _id: savedDoc._id
       };
-      
+
       // Thêm bản ghi mới vào đầu mảng RAM
       cachedHistory.unshift(slimDoc);
-      
+
       // FIX LỖI TRÀN RAM: Luôn giữ mảng ở kích thước tối đa 1000 phần tử
       if (cachedHistory.length > 1000) {
         cachedHistory.length = 1000;
@@ -392,7 +398,7 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
     // Bắn dữ liệu Live về cho toàn bộ các trình duyệt đang mở web
     const ssePayload = `data: ${JSON.stringify(latestData)}\n\n`;
     for (const c of [...clients]) {
-      try { c.write(ssePayload); if (typeof c.flush === "function") c.flush(); } 
+      try { c.write(ssePayload); if (typeof c.flush === "function") c.flush(); }
       catch (err) { clients.delete(c); }
     }
   } catch (e) {
@@ -415,13 +421,13 @@ app.get("/api/stream", (req, res) => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.setHeader("X-Accel-Buffering", "no");
-    
+
   clients.add(res);
   if (latestData) {
-      res.write(`data: ${JSON.stringify(latestData)}\n\n`);
-      if (typeof res.flush === "function") res.flush();
+    res.write(`data: ${JSON.stringify(latestData)}\n\n`);
+    if (typeof res.flush === "function") res.flush();
   }
-  
+
   req.on("close", () => { clients.delete(res); }); // Gỡ client khi họ tắt tab
 });
 
@@ -429,7 +435,7 @@ app.get("/api/stream", (req, res) => {
 app.post("/api/force-sync", async (req, res) => {
   try {
     // Ép server cào bất chấp giờ đóng/mở cửa
-    await updateData("Ép cào từ giao diện", true); 
+    await updateData("Ép cào từ giao diện", true);
     res.json({ ok: true });
   } catch (error) {
     res.status(500).json({ error: "Lỗi đồng bộ" });
@@ -438,8 +444,8 @@ app.post("/api/force-sync", async (req, res) => {
 
 // API: Lấy dữ liệu hiện tại ngay lập tức (dùng khi mới load trang)
 app.get("/api/gold", async (req, res) => {
-    res.setHeader('Cache-Control', 'public, max-age=1');
-    res.json(latestData || {});
+  res.setHeader('Cache-Control', 'public, max-age=1');
+  res.json(latestData || {});
 });
 
 // API: Lấy bảng lịch sử
@@ -465,24 +471,24 @@ app.get("/api/history", async (req, res) => {
 app.post("/api/history/bulk-delete", async (req, res) => {
   try {
     const { ids, secret } = req.body;
-    
+
     // Đọc mật khẩu từ cấu hình (Railway). Nếu quên cấu hình thì dùng pass cứng "admin123"
-    const adminPass = process.env.ADMIN_PASS || "admin123";
-    
+    const adminPass = process.env.ADMIN_PASS;
+
     if (secret !== adminPass) {
       return res.status(403).json({ error: "Sai mật khẩu Admin!" }); // Từ chối nếu sai pass
     }
 
     if (!ids || !Array.isArray(ids)) return res.status(400).json({ error: "Thiếu danh sách ID" });
-    
+
     await History.deleteMany({ _id: { $in: ids } });
-    
+
     // Lọc bỏ các dòng đã xóa khỏi mảng RAM để giao diện load lại chuẩn xác
     cachedHistory = cachedHistory.filter(item => !ids.includes(item._id.toString()));
-    
+
     res.json({ ok: true });
-  } catch (error) { 
-    res.status(500).json({ error: "Lỗi xóa" }); 
+  } catch (error) {
+    res.status(500).json({ error: "Lỗi xóa" });
   }
 });
 
@@ -501,7 +507,7 @@ app.post("/api/alert", async (req, res) => {
 cron.schedule("*/5 * * * *", () => {
   const isTrading = isVietnamTradingTime();
   const isForex = isForexMarketOpen();
-  
+
   // CHỈ cào nếu trong khung giờ VN hoặc thế giới đang mở cửa
   if (isTrading || isForex) {
     updateData("Cronjob 5 phút");
