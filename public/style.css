@@ -218,9 +218,9 @@ input[type="date"] {
   /* Màu nền trong suốt */
   background: transparent; 
   /* Viền màu đen */
-  border: 1px solid #000; 
+  border: 1px solid #212020; 
   /* Màu chữ (nên để đen để dễ nhìn trên nền trong suốt) */
-  color: #000;
+  color: #252525;
   transition: all 0.3s ease; /* Thêm hiệu ứng mượt mà khi hover */
 }
 
