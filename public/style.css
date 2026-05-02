@@ -63,108 +63,101 @@ input[type="date"] { padding: 8px; border-radius: 8px; border: 1px solid var(--b
 @keyframes syncPulse { 0%, 100% { transform: scale(0.8); opacity: 0.6; } 50% { transform: scale(1.2); opacity: 1; } }
 .diff-sub { color: #595959 !important; }
 
+/* Update Flash Highlight Card (Ánh sáng Laser) */
+@keyframes flashCardLaser {
+  0%, 100% { background-color: var(--card-bg); border-color: var(--border-color); box-shadow: none; }
+  20% { background-color: rgba(0, 255, 255, 0.1); border-color: #0ff; box-shadow: 0 0 30px rgba(0, 255, 255, 0.4), inset 0 0 15px rgba(0, 255, 255, 0.2); }
+}
+.flash-update { animation: flashCardLaser 0.8s ease-out forwards; }
+
 
 /* ==========================================================================
-   PULL TO REFRESH: THE DATA CORE (SIÊU LÕI PHÂN TÍCH)
+   PULL TO REFRESH: ORBITAL LASER STRIKE
    ========================================================================== */
 .cyber-pull-container {
-  position: fixed; top: -160px; left: 0; width: 100%; height: 160px;
-  display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 25px;
-  background: radial-gradient(circle at center, #061224 0%, #000000 100%);
-  border-bottom: 2px solid #00f0ff;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 -10px 20px rgba(0, 240, 255, 0.1);
-  z-index: 9999; pointer-events: none; overflow: hidden;
-  transition: top 0.1s linear; /* Smooth kéo */
+  position: fixed; top: -45vh; left: 0; width: 100%; height: 45vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; padding-bottom: 20px;
+  background: radial-gradient(circle at top, #0b1320 0%, #000 100%);
+  border-bottom: 2px solid #0ff;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.9), inset 0 -10px 30px rgba(0, 255, 255, 0.2);
+  z-index: 9999; pointer-events: none; overflow: visible;
+  transition: top 0.1s linear; 
 }
 
-/* Nền Lưới Cyberspace */
-.hologram-grid {
-  position: absolute; top: -160px; left: 0; right: 0; bottom: 0;
-  background-image: 
-    linear-gradient(rgba(0, 240, 255, 0.15) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 240, 255, 0.15) 1px, transparent 1px);
-  background-size: 20px 20px;
-  transform: perspective(300px) rotateX(45deg) scale(1.5);
-  transform-origin: bottom center; opacity: 0.5; z-index: 0;
-}
-.cyber-pull-container.refreshing .hologram-grid {
-  animation: gridMove 0.5s linear infinite; opacity: 1;
-}
-@keyframes gridMove {
-  from { background-position: 0 0; }
-  to { background-position: 0 20px; }
+/* Sao lấp lánh nhẹ */
+.stars-bg {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background-image: radial-gradient(1px 1px at 20px 30px, #fff, rgba(0,0,0,0)), radial-gradient(2px 2px at 80% 40%, #0ff, rgba(0,0,0,0)), radial-gradient(1px 1px at 70% 80%, #fff, rgba(0,0,0,0));
+  background-repeat: repeat; background-size: 100px 100px;
+  opacity: 0.6; z-index: 0;
 }
 
-/* Hệ thống Lõi Năng Lượng */
-.core-system { position: relative; width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; z-index: 2;}
+/* Vệ tinh Không gian */
+.satellite-wrapper { display: flex; align-items: center; justify-content: center; position: relative; z-index: 10; margin-bottom: 20px; }
 
-/* Mạng lưới cáp truyền dữ liệu */
-.fiber-lines { position: absolute; width: 100%; height: 100%; z-index: 1;}
-.line { position: absolute; top: 50%; left: 50%; width: 200px; height: 1px; background: rgba(0, 240, 255, 0.1); transform-origin: left center;}
-.l-1 { transform: rotate(0deg); } .l-2 { transform: rotate(90deg); } .l-3 { transform: rotate(180deg); } .l-4 { transform: rotate(270deg); }
+/* Pin Năng Lượng Mặt Trời (3D) */
+.solar-panel { 
+  width: 70px; height: 25px; 
+  background: repeating-linear-gradient(90deg, #1e293b, #1e293b 5px, #334155 5px, #334155 10px); 
+  border: 2px solid #475569; border-radius: 4px; 
+  box-shadow: 0 0 10px rgba(0, 150, 255, 0.2); 
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s; 
+}
+.panel-left { transform: perspective(150px) rotateY(60deg); transform-origin: right center; }
+.panel-right { transform: perspective(150px) rotateY(-60deg); transform-origin: left center; }
 
-/* Hạt dữ liệu truyền vào lõi */
-.packet { position: absolute; left: 100px; top: -1px; width: 8px; height: 3px; background: #fff; box-shadow: 0 0 10px #00f0ff; border-radius: 5px; opacity: 0;}
-.cyber-pull-container.ready .packet { animation: dataStream 0.6s infinite linear; }
-.cyber-pull-container.refreshing .packet { animation: dataStream 0.2s infinite linear; }
-
-@keyframes dataStream {
-  0% { transform: translateX(50px); opacity: 0; }
-  50% { opacity: 1; }
-  100% { transform: translateX(0px); opacity: 0; }
+/* Thân Vệ tinh */
+.sat-core { 
+  width: 45px; height: 50px; background: linear-gradient(to bottom, #94a3b8, #475569); 
+  border-radius: 8px 8px 12px 12px; z-index: 2; display: flex; align-items: flex-end; justify-content: center; 
+  box-shadow: inset 0 0 15px #000, 0 5px 10px rgba(0,0,0,0.5); position: relative; margin: 0 -8px; padding-bottom: 5px;
+}
+/* Thấu kính hội tụ (Súng Laser) */
+.energy-lens { 
+  width: 24px; height: 24px; background: #020617; border-radius: 50%; 
+  border: 3px solid #334155; transition: all 0.2s; 
 }
 
-/* Lõi Data Core */
-.data-core { position: relative; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; z-index: 2; transition: transform 0.2s;}
-.core-ring { position: absolute; border-radius: 50%; border: 2px solid #00f0ff; box-shadow: 0 0 10px #00f0ff, inset 0 0 5px #00f0ff; }
-.outer { width: 100%; height: 100%; border-style: dashed; animation: spinCore 4s linear infinite; }
-.inner { width: 60%; height: 60%; border-style: dotted; animation: spinCore 2s linear infinite reverse; }
-.core-center { width: 30%; height: 30%; background: #fff; box-shadow: 0 0 15px #fff, 0 0 30px #00f0ff; border-radius: 50%; }
-
-@keyframes spinCore { 100% { transform: rotate(360deg); } }
-
-/* Trạng thái Overload (Sáng rực) */
-.cyber-pull-container.overload .data-core { transform: scale(1.5); }
-.cyber-pull-container.overload .core-center { box-shadow: 0 0 30px #fff, 0 0 60px #00f0ff; background: #00f0ff; }
-.cyber-pull-container.overload .outer { border-width: 4px; box-shadow: 0 0 20px #00f0ff; }
-
-/* Text thông báo */
-.cyber-text { color: #94a3b8; font-size: 13px; font-weight: 700; font-family: 'Courier New', monospace; transition: color 0.3s; margin-top: 10px; text-transform: uppercase; z-index: 5; text-shadow: 0 0 5px rgba(0,240,255,0.4);}
-.cyber-pull-container.ready .cyber-text { color: #00f0ff; text-shadow: 0 0 15px rgba(0, 240, 255, 0.8); }
-.cyber-pull-container.overload .cyber-text { color: #fff; animation: textFlicker 0.1s infinite; }
-@keyframes textFlicker { 0% { opacity: 0.8; } 100% { opacity: 1; text-shadow: 0 0 20px #fff; } }
-
-/* --- MÀN CHỚP EMP --- */
-.emp-flash {
-  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-  background: #fff; z-index: 10000; pointer-events: none; opacity: 0; visibility: hidden;
+/* TRẠNG THÁI: KHÓA MỤC TIÊU (Mở Pin, Tụ Năng Lượng) */
+.cyber-pull-container.ready .panel-left { transform: perspective(150px) rotateY(0deg); box-shadow: 0 0 20px #0ff; }
+.cyber-pull-container.ready .panel-right { transform: perspective(150px) rotateY(0deg); box-shadow: 0 0 20px #0ff; }
+.cyber-pull-container.ready .energy-lens { 
+  background: #0ff; box-shadow: 0 0 30px #0ff, inset 0 0 15px #fff; border-color: #fff; 
+  animation: pulseLens 0.15s infinite alternate; 
 }
-.emp-flash.fire {
-  animation: empBurst 0.6s cubic-bezier(0.1, 0.9, 0.2, 1) forwards; visibility: visible;
+@keyframes pulseLens { 0% { transform: scale(0.9); } 100% { transform: scale(1.1); } }
+
+/* Text Tình Trạng */
+.cyber-text { color: #94a3b8; font-size: 14px; font-weight: 800; font-family: 'Courier New', monospace; transition: color 0.3s; text-transform: uppercase; z-index: 5; letter-spacing: 2px;}
+.cyber-pull-container.ready .cyber-text { color: #0ff; text-shadow: 0 0 15px rgba(0, 255, 255, 0.8); }
+.cyber-pull-container.firing .cyber-text { color: #fff; text-shadow: 0 0 20px #0ff; animation: shakeText 0.1s infinite; }
+@keyframes shakeText { 0% { transform: translateX(-2px); } 100% { transform: translateX(2px); } }
+
+/* --- CỘT LASER PLASMA HỦY DIỆT --- */
+.laser-beam { 
+  position: absolute; top: 100%; left: 50%; transform: translateX(-50%); 
+  width: 0; height: 0; background: #fff; border-radius: 0 0 50px 50px; z-index: 1; opacity: 0; 
 }
-@keyframes empBurst {
-  0% { opacity: 0; }
-  10% { opacity: 1; background: #fff; box-shadow: inset 0 0 100px #00f0ff; }
-  100% { opacity: 0; background: rgba(0, 240, 255, 0.1); }
+.cyber-pull-container.firing .laser-beam { 
+  animation: orbitalStrike 0.8s cubic-bezier(0.1, 0.9, 0.2, 1) forwards; 
+}
+@keyframes orbitalStrike {
+  0% { width: 4px; height: 0; opacity: 1; box-shadow: 0 0 20px #0ff; }
+  15% { width: 120px; height: 200vh; opacity: 1; box-shadow: 0 0 50px #0ff, 0 0 100px #0ff, 0 0 200px #fff; }
+  50% { width: 180px; height: 200vh; opacity: 1; box-shadow: 0 0 100px #0ff, 0 0 200px #0ff, 0 0 300px #fff; }
+  100% { width: 0; height: 200vh; opacity: 0; box-shadow: none; }
 }
 
-/* --- HIỆU ỨNG NHIỄU SÓNG GLITCH BÁO HIỆU DATA MỚI --- */
-.system-glitch {
-  animation: glitchShake 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 2;
-  filter: contrast(1.2) saturate(1.2) hue-rotate(10deg);
+/* --- RUNG CHẤN GIAO DIỆN (MEGA SHAKE) --- */
+.orbital-impact { 
+  animation: megaShake 0.4s cubic-bezier(.36,.07,.19,.97) forwards; 
+  filter: contrast(1.5) saturate(1.5); 
 }
-@keyframes glitchShake {
-  0% { transform: translate(0) skew(0deg); }
-  20% { transform: translate(-4px, 2px) skew(-2deg); filter: hue-rotate(90deg); }
-  40% { transform: translate(4px, -2px) skew(2deg); filter: invert(0.2); }
-  60% { transform: translate(-2px, 4px) skew(-1deg); filter: hue-rotate(-90deg); }
-  80% { transform: translate(2px, -4px) skew(1deg); filter: blur(1px); }
-  100% { transform: translate(0) skew(0deg); }
+@keyframes megaShake {
+  0% { transform: translate(0,0) scale(1); }
+  20% { transform: translate(-12px, 18px) scale(1.02); filter: drop-shadow(0 0 30px #0ff); }
+  40% { transform: translate(18px, -12px) scale(1.02); filter: drop-shadow(0 0 50px #0ff); }
+  60% { transform: translate(-18px, 12px) scale(1.02); filter: drop-shadow(0 0 30px #0ff); }
+  80% { transform: translate(12px, -18px) scale(1.02); filter: drop-shadow(0 0 50px #0ff); }
+  100% { transform: translate(0,0) scale(1); filter: none; }
 }
-
-/* Update Flash Highlight Card (Viền sáng xanh công nghệ) */
-@keyframes flashCardDataCore {
-  0%, 100% { background-color: var(--card-bg); border-color: var(--border-color); box-shadow: none; }
-  20% { background-color: rgba(0, 240, 255, 0.05); border-color: #00f0ff; box-shadow: 0 0 20px rgba(0, 240, 255, 0.3), inset 0 0 10px rgba(0, 240, 255, 0.1); }
-}
-.flash-update { animation: flashCardDataCore 1s ease-out forwards; }
