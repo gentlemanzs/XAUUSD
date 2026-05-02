@@ -3,7 +3,7 @@ const path = require("path");
 const cron = require("node-cron");
 const cors = require("cors");
 const mongoose = require("mongoose");
-const cheerio = require("cheerio"); // ĐÃ GIỮ LẠI CHEERIO THEO ĐÚNG Ý BẠN
+const cheerio = require("cheerio");
 const compression = require("compression");
 const app = express();
 
@@ -139,11 +139,9 @@ mongoose.connection.on('error', (err) => {
   sendTelegram(`🔥 *MongoDB mất kết nối*\nLỗi: ${err.message}`, "mongo_runtime");
 });
 
-// Giữ kết nối SSE (Live stream) không bị timeout bằng cách gửi ping mỗi 40s
 setInterval(() => {
   for (const c of [...clients]) {
     try { 
-      // FIX MEMORY LEAK: Đảm bảo luồng còn sống thì mới ghi, tránh dồn ứ kết nối bóng ma
       if (!c.writable || c.writableEnded) {
         clients.delete(c);
         continue;
@@ -204,7 +202,6 @@ async function fetchWithRetry(url, isJson = false, retries = 2) {
   }
 }
 
-// Cào tỷ giá USD bằng cheerio
 async function getUsdRate() {
   const now = Date.now();
   if (now - lastUsdFetchTime < USD_CACHE_DURATION && cachedUsdRate !== null) return cachedUsdRate;
@@ -225,7 +222,6 @@ async function getUsdRate() {
   return cachedUsdRate;
 }
 
-// Hàm móc giá bằng cheerio
 async function getPriceFromXml(url, selector, attrName) {
   try {
     const xml = await fetchWithRetry(url, false);
@@ -243,7 +239,6 @@ async function getPriceFromXml(url, selector, attrName) {
   return 0;
 }
 
-// Lấy SJC bằng cheerio
 async function getSjcPrice() {
   let price = await getPriceFromXml("https://giavang.doji.vn/api/giavang/?api_key=258fbd2a72ce8481089d88c678e9fe4f", 'Row[Key="dojihanoile"]', 'Sell');
   if (price > 0) return price;
@@ -372,7 +367,6 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
     const ssePayload = `data: ${JSON.stringify(latestData)}\n\n`;
     for (const c of [...clients]) {
       try { 
-        // FIX MEMORY LEAK: Đảm bảo kết nối tới Client còn mở
         if (!c.writable || c.writableEnded) {
             clients.delete(c);
             continue;
@@ -460,16 +454,6 @@ app.post("/api/history/bulk-delete", async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: "Lỗi xóa" });
   }
-});
-
-app.post("/api/alert", async (req, res) => {
-  try {
-    const { message, key } = req.body;
-    if (!message || typeof message !== 'string') return res.status(400).json({ error: "Thiếu message" });
-    const safeKey = (typeof key === 'string' && key) ? key : 'client_alert';
-    await sendTelegram(`📱 *Client Error*\n${message.slice(0, 500)}`, safeKey);
-    res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: "Lỗi gửi alert" }); }
 });
 
 // ─── CRONJOB: Tự động chạy ngầm mỗi 5 phút ────────────────────────────────

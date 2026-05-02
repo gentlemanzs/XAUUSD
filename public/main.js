@@ -91,7 +91,7 @@ async function load() {
       safeFetchHistory(isFirstLoad);
     }
   } catch(e) {
-    console.error('[load] Lỗi (thường do mạng chập chờn):', e);
+    console.error('[load] Lỗi:', e);
   }
 }
 
@@ -146,16 +146,6 @@ function renderMain(d) {
   if (elements.lastTime.textContent !== newStatusText) elements.lastTime.textContent = newStatusText;
 }
 
-async function sendClientAlert(message, key = 'client_alert') {
-  try {
-    await fetch('/api/alert', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, key })
-    });
-  } catch (e) { }
-}
-
 async function fetchHistory() {
   try {
     const limit = isExpanded ? 1000 : 50; 
@@ -181,7 +171,7 @@ async function fetchHistory() {
       updateChart(currentData);
     }
   } catch(e) {
-    console.error('[fetchHistory] Lỗi (thường do mạng chập chờn):', e);
+    console.error('[fetchHistory] Lỗi:', e);
   }
 }
 
@@ -318,7 +308,6 @@ async function deleteSelected() {
     
     if (res.ok) {
       currentPage = 1;
-      // FIX BUG: Gỡ tích nút Select All sau khi xóa thành công
       const selectAllBtn = document.getElementById('selectAll');
       if (selectAllBtn) selectAllBtn.checked = false;
       
