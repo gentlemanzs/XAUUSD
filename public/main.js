@@ -53,8 +53,8 @@ function initSSE() {
     try { d = JSON.parse(event.data); } catch(e) { return; }
     if (!d?.updatedAt) return;
     
-    elements.lastTime.style.color = "#10b981";
-    setTimeout(() => elements.lastTime.style.color = "#94a3b8", 2000);
+    elements.lastTime.style.color = "#059669"; // Màu xanh báo thành công
+    setTimeout(() => elements.lastTime.style.color = "#64748b", 2000);
 
     renderMain(d);
     if (lastSJCValue === null || d.sjc !== lastSJCValue) {
@@ -65,7 +65,7 @@ function initSSE() {
   };
   evtSource.onerror = () => {
     elements.lastTime.textContent = "🔴 Mất kết nối. Đang thử lại...";
-    elements.lastTime.style.color = "var(--down-color)";
+    elements.lastTime.style.color = "#e11d48";
   };
 }
 
@@ -171,7 +171,7 @@ function renderTable() {
 
   displayData.forEach(r => {
     const tr = document.createElement("tr");
-    // CÁC THUỘC TÍNH data-label PHỤC VỤ CHO GIAO DIỆN ĐIỆN THOẠI
+    // LABEL DI ĐỘNG Ở ĐÂY
     tr.innerHTML = `
       <td class="col-time" data-label="Thời gian">
         <input type="checkbox" class="log-checkbox check-action" value="${r._id}">
@@ -179,8 +179,8 @@ function renderTable() {
       </td> 
       <td data-label="Giá XAU">${fmtXAU.format(r.xau)}</td>
       <td data-label="Giá SJC">${fmtVND.format(r.sjc)}</td>
-      <td data-label="Độ lệch (Gap)">${fmtVND.format(r.diff)}</td>
-      <td data-label="Phần trăm (%)"><span class="badge ${(r.percent || '').includes('-') ? 'badge-down' : 'badge-up'}"></span></td>
+      <td data-label="Độ lệch">${fmtVND.format(r.diff)}</td>
+      <td data-label="Tỷ lệ (%)"><span class="badge ${(r.percent || '').includes('-') ? 'badge-down' : 'badge-up'}"></span></td>
     `;
     tr.querySelector('td:last-child span').textContent = r.percent || '--';
     fragment.appendChild(tr);
@@ -373,7 +373,7 @@ function updateChart(fullData) {
     }
   }
 
-  // MÀU SẮC BIỂU ĐỒ TỐI ƯU CHO NỀN ĐEN GLASSMORPHISM
+  // --- CHART MÀU SÁNG, UY TÍN (CLEAN FINANCE) ---
   if (myChart) {
     myChart.data.labels = labels; myChart.data.datasets[0].data = gaps;
     myChart.options.scales.y.suggestedMin = yMin; myChart.options.scales.y.suggestedMax = yMax;
@@ -384,8 +384,11 @@ function updateChart(fullData) {
       data: {
         labels: labels,
         datasets: [{
-          data: gaps, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          borderWidth: 2, fill: true, tension: 0.3, pointRadius: 3
+          data: gaps, 
+          borderColor: '#2563eb', /* Xanh đậm ngân hàng */
+          backgroundColor: 'rgba(37, 99, 235, 0.1)', /* Phủ bóng xanh mờ */
+          borderWidth: 2, fill: true, tension: 0.3, pointRadius: 3,
+          pointBackgroundColor: '#ffffff', pointBorderColor: '#2563eb'
         }]
       },
       options: {
@@ -394,10 +397,10 @@ function updateChart(fullData) {
         scales: {
           y: {
             suggestedMin: yMin, suggestedMax: yMax, beginAtZero: false,
-            ticks: { maxTicksLimit: 6, callback: (val) => val.toFixed(1) + 'M', color: '#94a3b8', font: { size: 11 } },
-            grid: { color: 'rgba(255, 255, 255, 0.05)' } // Đường kẻ ngang mờ ảo
+            ticks: { maxTicksLimit: 6, callback: (val) => val.toFixed(1) + 'M', color: '#64748b', font: { size: 11, family: "'Segoe UI', sans-serif" } },
+            grid: { color: '#e2e8f0' } /* Kẻ ngang mờ nhạt, sạch sẽ */
           },
-          x: { offset: true, ticks: { autoSkip: true, maxRotation: 0, color: '#94a3b8', font: { size: 10 } }, grid: { display: false } }
+          x: { offset: true, ticks: { autoSkip: true, maxRotation: 0, color: '#64748b', font: { size: 10, family: "'Segoe UI', sans-serif" } }, grid: { display: false } }
         }
       }
     });
