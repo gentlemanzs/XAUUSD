@@ -34,7 +34,7 @@ header { padding: 1rem 2rem; background: var(--header-old); color: white; displa
 .xau-up { color: var(--teal-color); } .xau-down { color: var(--down-color); }
 .change-up { color: var(--up-color); } .change-down { color: var(--down-color); }
 
-/* --- BẢNG HISTORY --- */
+/* BẢNG HISTORY */
 .table-wrapper { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto; margin-bottom: 2rem; }
 table { width: 100%; border-collapse: collapse; font-size: 0.95rem; min-width: 720px; table-layout: fixed; }
 th:nth-child(1), td:nth-child(1) { width: 18%; } th:nth-child(2), td:nth-child(2) { width: 20%; } th:nth-child(3), td:nth-child(3) { width: 25%; } th:nth-child(4), td:nth-child(4) { width: 25%; } th:nth-child(5), td:nth-child(5) { width: 12%; }
@@ -46,7 +46,7 @@ td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-alig
 th:nth-child(2), td:nth-child(2), th:nth-child(3), td:nth-child(3), th:nth-child(4), td:nth-child(4) { padding-left: 36px !important; }
 td:nth-child(5) { padding-left: 16px !important; } th:nth-child(5) { padding-left: 24px !important; }
 
-/* --- FILTER BOX --- */
+/* FILTER BOX */
 .filter-box { position: absolute; left: 120px; display: flex; gap: 10px; align-items: center; opacity: 0; visibility: hidden; pointer-events: none; transition: all 0.2s ease; background: var(--bg-color); z-index: 20; }
 .filter-box.show { opacity: 1; visibility: visible; pointer-events: auto; }
 @media (max-width: 768px) { .filter-box { left: 0; top: 45px; width: 100%; max-width: none; background: var(--card-bg); padding: 15px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); flex-wrap: wrap; border: 1px solid var(--border-color); box-sizing: border-box; } }
@@ -55,113 +55,116 @@ input[type="date"] { padding: 8px; border-radius: 8px; border: 1px solid var(--b
 .btn-filter:hover, .btn-delete-multi:hover, .btn-reset:hover { background: rgba(0, 0, 0, 0.1); color: #000; }
 .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; display: inline-block; } .badge-up { background: rgba(251, 252, 251, 0.1); color: #000408; } .badge-down { background: rgba(255, 255, 255, 0.1); color: #000408; }
 .pagination { display: flex; justify-content: center; gap: 8px; padding: 15px; border-top: 1px solid var(--border-color); } .page-btn { padding: 6px 12px; border: 1px solid var(--border-color); background: var(--card-bg); border-radius: 6px; cursor: pointer; color: var(--primary-text); font-weight: 600; transition: 0.2s;} .page-btn.active { background: var(--accent-color); color: white; border-color: var(--accent-color); } .page-btn:hover:not(:disabled):not(.active) { background: #f1f5f9; } .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
 .chart-card { padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); } .chart-scroll-container { width: 100%; overflow-x: auto; margin-top: 1rem; }
 @media (max-width: 640px) { .usd-card { display: none; } #lastTime { margin-top: 5px; margin-bottom: 0.6rem; } .xau-wrapper { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; } .xau-wrapper .sjc-sub { margin-top: 0; } .table-wrapper { transition: margin-top 0.25s ease; } .table-wrapper.is-expanded { margin-top: 130px; } }
 .chart-inner-wrapper { height: 320px; position: relative; } .chart-scroll-container::-webkit-scrollbar { height: 8px; } .chart-scroll-container::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; } .chart-scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-
 .sync-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; padding: 0; outline: none; }
 .sync-btn:active { transform: scale(0.9); } .sync-dot { width: 10px; height: 10px; background-color: #64748b; border-radius: 50%; transition: background-color 0.3s, box-shadow 0.3s; } .sync-dot.loading { background-color: #fbbf24; animation: syncPulse 0.8s infinite; } .sync-dot.success { background-color: #10b981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.8); }
 @keyframes syncPulse { 0%, 100% { transform: scale(0.8); opacity: 0.6; } 50% { transform: scale(1.2); opacity: 1; } }
 .diff-sub { color: #595959 !important; }
 
+
 /* ==========================================================================
-   PULL TO REFRESH: THE QUANTUM VAULT (KÉT SẮT LƯỢNG TỬ & MATRIX)
+   PULL TO REFRESH: THE DATA CORE (SIÊU LÕI PHÂN TÍCH)
    ========================================================================== */
 .cyber-pull-container {
-  position: fixed; top: -55vh; left: 0; width: 100%; height: 55vh;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  background: radial-gradient(circle at center, #1e293b 0%, #020617 100%);
-  border-bottom: 4px solid #334155;
-  box-shadow: 0 25px 50px rgba(0,0,0,0.8), inset 0 -5px 15px rgba(255,255,255,0.1);
+  position: fixed; top: -160px; left: 0; width: 100%; height: 160px;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 25px;
+  background: radial-gradient(circle at center, #061224 0%, #000000 100%);
+  border-bottom: 2px solid #00f0ff;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 -10px 20px rgba(0, 240, 255, 0.1);
   z-index: 9999; pointer-events: none; overflow: hidden;
+  transition: top 0.1s linear; /* Smooth kéo */
 }
 
-/* Két Sắt Khổng Lồ */
-.vault-door {
-  position: relative; width: 160px; height: 160px;
-  background: linear-gradient(135deg, #334155, #0f172a);
-  border-radius: 50%; border: 8px solid #475569;
-  box-shadow: 0 0 40px rgba(0,0,0,0.9), inset 0 0 20px rgba(0,0,0,0.8);
-  display: flex; align-items: center; justify-content: center;
-  transition: transform 0.1s; z-index: 2;
+/* Nền Lưới Cyberspace */
+.hologram-grid {
+  position: absolute; top: -160px; left: 0; right: 0; bottom: 0;
+  background-image: 
+    linear-gradient(rgba(0, 240, 255, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.15) 1px, transparent 1px);
+  background-size: 20px 20px;
+  transform: perspective(300px) rotateX(45deg) scale(1.5);
+  transform-origin: bottom center; opacity: 0.5; z-index: 0;
+}
+.cyber-pull-container.refreshing .hologram-grid {
+  animation: gridMove 0.5s linear infinite; opacity: 1;
+}
+@keyframes gridMove {
+  from { background-position: 0 0; }
+  to { background-position: 0 20px; }
 }
 
-/* Các vòng Neon mã hóa */
-.vault-lock { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
-.neon-ring { position: absolute; border-radius: 50%; border: 3px dashed rgba(59, 130, 246, 0.6); box-shadow: 0 0 10px rgba(59, 130, 246, 0.3); transition: border-color 0.2s, box-shadow 0.2s; }
-.ring-1 { width: 120px; height: 120px; border-width: 4px; }
-.ring-2 { width: 90px; height: 90px; border: 3px dotted rgba(59, 130, 246, 0.8); animation-direction: reverse; }
-.ring-3 { width: 60px; height: 60px; border-width: 2px; }
+/* Hệ thống Lõi Năng Lượng */
+.core-system { position: relative; width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; z-index: 2;}
 
-/* Lõi khóa */
-.lock-core { width: 25px; height: 25px; border-radius: 50%; background: #1e293b; border: 4px solid #3b82f6; box-shadow: 0 0 15px #3b82f6; transition: all 0.3s; }
+/* Mạng lưới cáp truyền dữ liệu */
+.fiber-lines { position: absolute; width: 100%; height: 100%; z-index: 1;}
+.line { position: absolute; top: 50%; left: 50%; width: 200px; height: 1px; background: rgba(0, 240, 255, 0.1); transform-origin: left center;}
+.l-1 { transform: rotate(0deg); } .l-2 { transform: rotate(90deg); } .l-3 { transform: rotate(180deg); } .l-4 { transform: rotate(270deg); }
 
-/* Khi đã đủ lực -> Mở khóa (Xanh Cyan ngọc) */
-.cyber-pull-container.unlocking .neon-ring { border-color: #0ff; box-shadow: 0 0 20px #0ff, inset 0 0 10px #0ff; }
-.cyber-pull-container.unlocking .lock-core { background: #0ff; border-color: #fff; box-shadow: 0 0 30px #0ff; }
-.cyber-pull-container.unlocking .vault-door { animation: vaultShake 0.4s infinite; }
+/* Hạt dữ liệu truyền vào lõi */
+.packet { position: absolute; left: 100px; top: -1px; width: 8px; height: 3px; background: #fff; box-shadow: 0 0 10px #00f0ff; border-radius: 5px; opacity: 0;}
+.cyber-pull-container.ready .packet { animation: dataStream 0.6s infinite linear; }
+.cyber-pull-container.refreshing .packet { animation: dataStream 0.2s infinite linear; }
 
-@keyframes vaultShake {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  25% { transform: translate(-3px, 3px) rotate(-1deg); }
-  75% { transform: translate(3px, -3px) rotate(1deg); }
+@keyframes dataStream {
+  0% { transform: translateX(50px); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translateX(0px); opacity: 0; }
 }
 
-/* Khi Két Sắt bung mở */
-.cyber-pull-container.burst .vault-door {
-  animation: vaultBurstOpen 0.5s cubic-bezier(0.8, 0, 0.2, 1) forwards;
-}
-@keyframes vaultBurstOpen {
-  0% { transform: scale(1); filter: brightness(2); }
-  100% { transform: scale(3); filter: brightness(0); opacity: 0; }
-}
+/* Lõi Data Core */
+.data-core { position: relative; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; z-index: 2; transition: transform 0.2s;}
+.core-ring { position: absolute; border-radius: 50%; border: 2px solid #00f0ff; box-shadow: 0 0 10px #00f0ff, inset 0 0 5px #00f0ff; }
+.outer { width: 100%; height: 100%; border-style: dashed; animation: spinCore 4s linear infinite; }
+.inner { width: 60%; height: 60%; border-style: dotted; animation: spinCore 2s linear infinite reverse; }
+.core-center { width: 30%; height: 30%; background: #fff; box-shadow: 0 0 15px #fff, 0 0 30px #00f0ff; border-radius: 50%; }
 
-/* Khói lạnh thoát ra từ két sắt */
-.vault-smoke-container { position: absolute; width: 100%; height: 100%; top: 0; left: 0; display: flex; align-items: center; justify-content: center; z-index: 1; pointer-events: none; }
-.smoke { position: absolute; width: 80px; height: 80px; background: rgba(200, 230, 255, 0.4); border-radius: 50%; filter: blur(20px); opacity: 0; }
-.cyber-pull-container.burst .smoke-left { animation: smokeSpreadLeft 1.5s ease-out forwards; }
-.cyber-pull-container.burst .smoke-right { animation: smokeSpreadRight 1.5s ease-out forwards; }
-.cyber-pull-container.burst .smoke-center { animation: smokeSpreadCenter 1.5s ease-out forwards; }
+@keyframes spinCore { 100% { transform: rotate(360deg); } }
 
-@keyframes smokeSpreadLeft { 0% { transform: translate(0,0) scale(0.5); opacity: 0.8; } 100% { transform: translate(-150px, 100px) scale(4); opacity: 0; } }
-@keyframes smokeSpreadRight { 0% { transform: translate(0,0) scale(0.5); opacity: 0.8; } 100% { transform: translate(150px, 100px) scale(4); opacity: 0; } }
-@keyframes smokeSpreadCenter { 0% { transform: translate(0,0) scale(0.5); opacity: 1; } 100% { transform: translate(0, 150px) scale(5); opacity: 0; } }
+/* Trạng thái Overload (Sáng rực) */
+.cyber-pull-container.overload .data-core { transform: scale(1.5); }
+.cyber-pull-container.overload .core-center { box-shadow: 0 0 30px #fff, 0 0 60px #00f0ff; background: #00f0ff; }
+.cyber-pull-container.overload .outer { border-width: 4px; box-shadow: 0 0 20px #00f0ff; }
 
 /* Text thông báo */
-.cyber-text {
-  position: absolute; bottom: 20px; color: #94a3b8; font-size: 15px; font-weight: 700; font-family: monospace, sans-serif;
-  text-transform: uppercase; letter-spacing: 2px; z-index: 5; transition: color 0.3s;
-}
-.cyber-pull-container.unlocking .cyber-text { color: #0ff; text-shadow: 0 0 10px rgba(0, 255, 255, 0.8); }
+.cyber-text { color: #94a3b8; font-size: 13px; font-weight: 700; font-family: 'Courier New', monospace; transition: color 0.3s; margin-top: 10px; text-transform: uppercase; z-index: 5; text-shadow: 0 0 5px rgba(0,240,255,0.4);}
+.cyber-pull-container.ready .cyber-text { color: #00f0ff; text-shadow: 0 0 15px rgba(0, 240, 255, 0.8); }
+.cyber-pull-container.overload .cyber-text { color: #fff; animation: textFlicker 0.1s infinite; }
+@keyframes textFlicker { 0% { opacity: 0.8; } 100% { opacity: 1; text-shadow: 0 0 20px #fff; } }
 
-/* --- TIA LASER QUÉT MÀN HÌNH --- */
-.laser-scanner {
-  position: fixed; top: -10px; left: 0; width: 100vw; height: 5px;
-  background: #0ff; box-shadow: 0 0 20px #0ff, 0 0 40px #0ff;
-  z-index: 9998; opacity: 0; pointer-events: none;
+/* --- MÀN CHỚP EMP --- */
+.emp-flash {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  background: #fff; z-index: 10000; pointer-events: none; opacity: 0; visibility: hidden;
 }
-.laser-scanner.scanning {
-  animation: laserSweep 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+.emp-flash.fire {
+  animation: empBurst 0.6s cubic-bezier(0.1, 0.9, 0.2, 1) forwards; visibility: visible;
 }
-@keyframes laserSweep {
-  0% { transform: translateY(0); opacity: 1; height: 2px; }
-  50% { opacity: 1; height: 8px; box-shadow: 0 0 30px #0ff, 0 0 60px #0ff; }
-  90% { opacity: 1; }
-  100% { transform: translateY(105vh); opacity: 0; height: 2px; }
+@keyframes empBurst {
+  0% { opacity: 0; }
+  10% { opacity: 1; background: #fff; box-shadow: inset 0 0 100px #00f0ff; }
+  100% { opacity: 0; background: rgba(0, 240, 255, 0.1); }
 }
 
-/* --- HIỆU ỨNG NHẢY SỐ MATRIX (Bảo mật lượng tử) --- */
-.matrix-scramble {
-  color: #0ff !important;
-  font-family: 'Courier New', Courier, monospace !important;
-  text-shadow: 0 0 12px #0ff !important;
-  font-weight: 900 !important;
+/* --- HIỆU ỨNG NHIỄU SÓNG GLITCH BÁO HIỆU DATA MỚI --- */
+.system-glitch {
+  animation: glitchShake 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 2;
+  filter: contrast(1.2) saturate(1.2) hue-rotate(10deg);
+}
+@keyframes glitchShake {
+  0% { transform: translate(0) skew(0deg); }
+  20% { transform: translate(-4px, 2px) skew(-2deg); filter: hue-rotate(90deg); }
+  40% { transform: translate(4px, -2px) skew(2deg); filter: invert(0.2); }
+  60% { transform: translate(-2px, 4px) skew(-1deg); filter: hue-rotate(-90deg); }
+  80% { transform: translate(2px, -4px) skew(1deg); filter: blur(1px); }
+  100% { transform: translate(0) skew(0deg); }
 }
 
-/* Cú chớp sáng Flash chốt dữ liệu (Đổi sang màu Xanh Dương Neon cho hợp với concept hầm lượng tử) */
-@keyframes flashCardCyber {
+/* Update Flash Highlight Card (Viền sáng xanh công nghệ) */
+@keyframes flashCardDataCore {
   0%, 100% { background-color: var(--card-bg); border-color: var(--border-color); box-shadow: none; }
-  30% { background-color: rgba(0, 255, 255, 0.1); border-color: #0ff; box-shadow: 0 0 20px rgba(0, 255, 255, 0.3); }
+  20% { background-color: rgba(0, 240, 255, 0.05); border-color: #00f0ff; box-shadow: 0 0 20px rgba(0, 240, 255, 0.3), inset 0 0 10px rgba(0, 240, 255, 0.1); }
 }
-.flash-update { animation: flashCardCyber 0.8s ease-out forwards; }
+.flash-update { animation: flashCardDataCore 1s ease-out forwards; }
