@@ -127,16 +127,62 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) { if 
 
 
 // ==========================================================================
-// SIÊU NHẠY & VỤ NỔ MẶT TRĂNG
+// PULL TO REFRESH: THE QUANTUM VAULT LOGIC (HACK MẬT MÃ & LASER)
 // ==========================================================================
 let startY = 0; 
 let isPulling = false;
 let isRefreshing = false;
-const pullThreshold = 75; // SIÊU NHẠY: Kéo 75px là đã Max lực
+const pullThreshold = 90; // Chỉ cần kéo 90px để mở khóa
 const pullContainer = document.getElementById("cyberPull");
 const textEl = document.getElementById("cyberText");
-const flameOuter = document.getElementById("flameOuter");
-const flameCore = document.getElementById("flameCore");
+const laserScanner = document.getElementById("laserScanner");
+
+const ring1 = document.getElementById("ring1");
+const ring2 = document.getElementById("ring2");
+const ring3 = document.getElementById("ring3");
+
+// Danh sách các ô chứa dữ liệu để làm hiệu ứng hack (scramble)
+const safeIds = ['usd', 'xauValue', 'xauChange', 'sjcValue', 'sjcChange', 'diff', 'percent', 'gapChange'];
+let scrambleTimer;
+
+// Hàm làm chữ nhảy loạn xạ
+function startScramble() {
+  safeIds.forEach(id => {
+     let el = document.getElementById(id);
+     if(el) el.classList.add('matrix-scramble');
+  });
+  scrambleTimer = setInterval(() => {
+     safeIds.forEach(id => {
+        let el = document.getElementById(id);
+        if(!el) return;
+        let len = el.innerText.length || 7;
+        let randStr = "";
+        const chars = "0123456789$#X%@&*";
+        for(let i=0; i<len; i++) {
+           randStr += chars[Math.floor(Math.random() * chars.length)];
+        }
+        el.innerText = randStr;
+     });
+  }, 40); // 40ms thay đổi 1 lần -> Giống phim Hacker
+}
+
+// Hàm dừng hack và dọn dẹp class
+function stopScramble() {
+  clearInterval(scrambleTimer);
+  safeIds.forEach(id => {
+     let el = document.getElementById(id);
+     if(el) el.classList.remove('matrix-scramble');
+  });
+}
+
+function resetVault() {
+  isRefreshing = false;
+  pullContainer.classList.remove('unlocking', 'burst');
+  laserScanner.classList.remove('scanning');
+  ring1.style.transform = '';
+  ring2.style.transform = '';
+  ring3.style.transform = '';
+}
 
 window.addEventListener("touchstart", (e) => { 
   if (window.scrollY <= 0 && !isRefreshing) { 
@@ -153,24 +199,22 @@ window.addEventListener("touchmove", (e) => {
   if (diff > 0 && window.scrollY <= 0) {
     if (e.cancelable) e.preventDefault();
     
-    // NHÂN 4 LẦN LỰC KÉO: Kéo cực ngắn nhưng container lao thẳng xuống 55vh (giữa màn hình)
-    const maxDrop = window.innerHeight * 0.55;
-    const moveY = Math.min(diff * 4, maxDrop); 
+    // Kéo mượt xuống (Nhân 3 lực kéo để tuột xuống nhanh hơn)
+    const moveY = Math.min(diff * 3, window.innerHeight * 0.55); 
     pullContainer.style.top = `calc(-55vh + ${moveY}px)`;
     
-    // Bơm căng nhiên liệu cho lửa
+    // Xoay các vòng Neon ngược chiều nhau tạo cảm giác mở khóa
     const pullRatio = Math.min(diff / pullThreshold, 1);
-    flameOuter.style.opacity = pullRatio;
-    flameOuter.style.height = `${pullRatio * 40}px`; 
-    flameCore.style.opacity = pullRatio;
-    flameCore.style.height = `${pullRatio * 20}px`; 
+    ring1.style.transform = `rotate(${pullRatio * 360}deg)`;
+    ring2.style.transform = `rotate(${-pullRatio * 500}deg)`;
+    ring3.style.transform = `rotate(${pullRatio * 720}deg)`;
     
     if (diff > pullThreshold) {
       pullContainer.classList.add('ready');
-      textEl.innerText = "CHẠY NGAY ĐI!";
+      textEl.innerText = "XÁC NHẬN MỞ KHÓA!";
     } else {
       pullContainer.classList.remove('ready');
-      textEl.innerText = "Kéo để bơm vốn...";
+      textEl.innerText = "Kéo để nhập mã bảo mật...";
     }
   }
 }, { passive: false });
@@ -182,58 +226,58 @@ window.addEventListener("touchend", (e) => {
   
   if (diff > pullThreshold) {
     isRefreshing = true;
+    
+    // Bước 1: Két sắt kêu lạch cạch (shake)
     pullContainer.classList.remove('ready');
-    pullContainer.classList.add('refreshing');
+    pullContainer.classList.add('unlocking');
+    pullContainer.style.top = "0px"; // Cố định két giữa màn hình
+    textEl.innerText = "ĐANG GIẢI MÃ LƯỢNG TỬ...";
     
-    // Gắn cứng container ở top 0 (Giữa màn hình) để thực hiện vụ nổ
-    pullContainer.style.top = "0px";
-    
-    flameOuter.style.height = "60px";
-    flameCore.style.height = "30px";
-    textEl.innerText = "TARGET: THE MOON 🚀";
-    
-    // Thời gian bay của tên lửa lên mặt trăng là 0.6s (khớp với CSS lunarImpact)
+    if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+
+    // Bước 2: Két bật mở (sau 0.4s) và Quét Laser + Hack Số
     setTimeout(() => {
-      // BÙM! Tên lửa chạm mặt trăng -> Kích hoạt nổ
-      pullContainer.classList.add('exploded');
-      textEl.innerText = "BOOOMMM!!!";
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]); // Rung bần bật
-    }, 580); 
-
-    // Bắt đầu gọi API âm thầm
-    load().then(() => {
-      // Đợi vụ nổ quét qua xong (khoảng 1.2s từ lúc bay)
-      setTimeout(() => {
-        textEl.innerText = "ĐÃ CHỐT LỜI XONG!";
-        
-        // Nháy flash các Card
-        const cards = document.querySelectorAll('.card');
-        cards.forEach(card => {
-          card.classList.remove('flash-update'); 
-          void card.offsetWidth;                 
-          card.classList.add('flash-update');    
-        });
-      }, 1200);
-
-      // Thu hồi bầu trời vũ trụ sau 2.5s
-      setTimeout(() => { 
-        pullContainer.style.top = "-55vh"; 
-        setTimeout(() => { 
-          isRefreshing = false;
-          pullContainer.classList.remove('refreshing');
-          pullContainer.classList.remove('exploded');
-          document.querySelectorAll('.card').forEach(c => c.classList.remove('flash-update'));
+      pullContainer.classList.add('burst'); // Nổ mở cửa hầm, nhả khói
+      laserScanner.classList.add('scanning'); // Bắn tia Laser quét xuống
+      
+      startScramble(); // Bắt đầu nhảy số Matrix
+      
+      // Bắt đầu gọi API âm thầm
+      load().then(() => {
+        // Laser mất 1.2s để quét xong. Chờ nó quét xong thì dừng Scramble.
+        setTimeout(() => {
+          stopScramble();
           
-          // Reset hệ thống xả
-          flameOuter.style.height = "0";
-          flameCore.style.height = "0";
-        }, 400);
-      }, 2500);
-    });
+          // Sau khi tắt Scramble, render lại dữ liệu xịn từ LocalStorage (do hàm load() vừa lưu vào)
+          const cached = localStorage.getItem('xau_main_cache');
+          if(cached) renderMain(JSON.parse(cached));
+          
+          textEl.innerText = "DỮ LIỆU ĐÃ ĐƯỢC BẢO MẬT!";
+          
+          // Chớp sáng Card xanh dương báo hiệu thành công
+          const cards = document.querySelectorAll('.card');
+          cards.forEach(card => {
+            card.classList.remove('flash-update'); 
+            void card.offsetWidth;                 
+            card.classList.add('flash-update');    
+          });
+          
+          if (navigator.vibrate) navigator.vibrate(100);
+
+          // Thu hồi UI Két sắt lên trên cùng
+          setTimeout(() => { 
+            pullContainer.style.top = "-55vh"; 
+            setTimeout(() => { resetVault(); document.querySelectorAll('.card').forEach(c => c.classList.remove('flash-update')); }, 400);
+          }, 1200);
+          
+        }, 800); // 800ms là phần thời gian còn lại để tia Laser chạm đáy màn hình
+      });
+      
+    }, 400); // Đợi 0.4s lạch cạch ban đầu
+
   } else {
     // Không đủ lực kéo -> Tụt về
     pullContainer.style.top = "-55vh";
-    flameOuter.style.height = "0";
-    flameCore.style.height = "0";
+    resetVault();
   }
 });
