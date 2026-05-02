@@ -127,7 +127,7 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) { if 
 
 
 // ==========================================================================
-// PULL TO REFRESH: THE DATA CORE LOGIC (EMP & GLITCH)
+// PULL TO REFRESH: ORBITAL LASER STRIKE LOGIC
 // ==========================================================================
 let startY = 0; 
 let isPulling = false;
@@ -135,9 +135,7 @@ let isRefreshing = false;
 const pullThreshold = 100;
 const pullContainer = document.getElementById("cyberPull");
 const textEl = document.getElementById("cyberText");
-const dataCore = document.getElementById("ptrIcon");
 const mainContainer = document.getElementById("mainContainer");
-const empFlash = document.getElementById("empFlash");
 
 window.addEventListener("touchstart", (e) => { 
   if (window.scrollY <= 0 && !isRefreshing) { 
@@ -154,20 +152,16 @@ window.addEventListener("touchmove", (e) => {
   if (diff > 0 && window.scrollY <= 0) {
     if (e.cancelable) e.preventDefault();
     
-    // Kéo lõi xuống
-    const moveY = Math.min(diff * 1.5, 160); 
-    pullContainer.style.top = `${-160 + moveY}px`;
-    
-    // Phóng to lõi theo lực kéo (từ 1x -> 1.5x)
-    const pullRatio = Math.min(diff / pullThreshold, 1);
-    dataCore.style.transform = `scale(${1 + pullRatio * 0.5})`;
+    // Kéo bầu trời không gian xuống
+    const moveY = Math.min(diff * 1.2, window.innerHeight * 0.45); 
+    pullContainer.style.top = `calc(-45vh + ${moveY}px)`;
     
     if (diff > pullThreshold) {
       pullContainer.classList.add('ready');
-      textEl.innerText = "OVERLOAD PREPARATION...";
+      textEl.innerText = "TARGET LOCKED!";
     } else {
       pullContainer.classList.remove('ready');
-      textEl.innerText = "CONNECTING TO NETWORK...";
+      textEl.innerText = "CALIBRATING ORBIT...";
     }
   }
 }, { passive: false });
@@ -177,65 +171,59 @@ window.addEventListener("touchend", (e) => {
   isPulling = false;
   const diff = e.changedTouches[0].clientY - startY;
   
-  // Dọn dẹp scale thủ công để nhường chỗ cho CSS Animation
-  dataCore.style.transform = '';
-  
   if (diff > pullThreshold) {
     isRefreshing = true;
-    pullContainer.classList.remove('ready');
-    pullContainer.classList.add('refreshing', 'overload');
-    textEl.innerText = "CORE OVERLOAD! STANDBY...";
     
-    // Kéo căng container lên một chút tạo độ nén trước khi nổ
+    // Giữ vệ tinh tại chỗ, chuyển trạng thái Firing để bắn Laser
+    pullContainer.classList.remove('ready');
+    pullContainer.classList.add('firing');
     pullContainer.style.top = "0px"; 
-
-    // Đợi 0.3s cho hiệu ứng Overload sáng rực lên rồi mới call API
+    textEl.innerText = "ORBITAL STRIKE INBOUND!!!";
+    
+    // Chờ 150ms để tia Laser cắm từ trên trời xuống chạm đất
     setTimeout(() => {
+      // 1. Kích hoạt rung chuyển toàn màn hình (Mega Shake)
+      mainContainer.classList.add('orbital-impact');
+      
+      // 2. Rung vật lý điện thoại cực mạnh
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
+      
+      // 3. Gọi API lấy số mới
       load().then(() => {
-        // --- 1. KÍCH HOẠT XUNG EMP TÓE SÁNG ---
-        empFlash.classList.add('fire');
-        if (navigator.vibrate) navigator.vibrate(100); // Rung nổ
-        
-        // --- 2. KÍCH HOẠT NHIỄU SÓNG GLITCH SAU KHI NỔ (0.1s sau) ---
+        // Chờ 800ms để hoạt ảnh bắn Laser trên CSS chạy xong
         setTimeout(() => {
-          mainContainer.classList.add('system-glitch');
-          textEl.innerText = "DATA SYNC SUCCESSFUL";
+          textEl.innerText = "DATA OVERWRITTEN!";
           
-          // Sau khi Glitch xong (0.4s), render data mới và nháy viền thẻ
-          setTimeout(() => {
-            mainContainer.classList.remove('system-glitch');
-            
-            // Cập nhật lại UI từ Cache
-            const cached = localStorage.getItem('xau_main_cache');
-            if(cached) renderMain(JSON.parse(cached));
-            
-            // Chớp sáng Card xanh Neon
-            const cards = document.querySelectorAll('.card');
-            cards.forEach(card => {
-              card.classList.remove('flash-update'); 
-              void card.offsetWidth;                 
-              card.classList.add('flash-update');    
-            });
-            
-            // Dọn dẹp EMP Flash
-            empFlash.classList.remove('fire');
-            
-            // Thu hồi Lõi Năng Lượng
-            pullContainer.style.top = "-160px";
-            setTimeout(() => {
+          // Gỡ hiệu ứng rung chấn
+          mainContainer.classList.remove('orbital-impact');
+          
+          // Render dữ liệu mới từ LocalStorage và chớp sáng Card
+          const cached = localStorage.getItem('xau_main_cache');
+          if(cached) renderMain(JSON.parse(cached));
+          
+          const cards = document.querySelectorAll('.card');
+          cards.forEach(card => {
+            card.classList.remove('flash-update'); 
+            void card.offsetWidth;                 
+            card.classList.add('flash-update');    
+          });
+          
+          // Kéo vệ tinh về vũ trụ
+          setTimeout(() => { 
+            pullContainer.style.top = "-45vh"; 
+            setTimeout(() => { 
               isRefreshing = false;
-              pullContainer.classList.remove('refreshing', 'overload');
+              pullContainer.classList.remove('firing');
               document.querySelectorAll('.card').forEach(c => c.classList.remove('flash-update'));
             }, 300);
-            
-          }, 400); // Đợi glitch xong
+          }, 1500);
           
-        }, 100); // Đợi EMP vừa sáng lên
+        }, 800); 
       });
-    }, 300);
+    }, 150); // Mất 150ms để tia Laser chạm đích
 
   } else {
     // Không đủ lực kéo -> Tụt về
-    pullContainer.style.top = "-160px";
+    pullContainer.style.top = "-45vh";
   }
 });
