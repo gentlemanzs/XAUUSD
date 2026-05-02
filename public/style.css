@@ -327,3 +327,14 @@ input[type="date"] {
 .diff-sub {
   color: #595959 !important;
 }
+
+/* --- HIỆU ỨNG CHỚP NHÁY KHI CẬP NHẬT DỮ LIỆU --- */
+@keyframes flashCard {
+  0% { background-color: var(--card-bg); border-color: var(--border-color); }
+  30% { background-color: rgba(16, 185, 129, 0.15); border-color: var(--up-color); box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
+  100% { background-color: var(--card-bg); border-color: var(--border-color); box-shadow: none; }
+}
+
+.flash-update {
+  animation: flashCard 0.8s ease-out forwards;
+}

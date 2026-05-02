@@ -643,14 +643,22 @@ window.addEventListener("touchend", (e) => {
       pullContainer.classList.add('ready');
       bars.forEach((bar, idx) => bar.style.height = `${targetHeights[idx]}px`);
       
-      // Rung phản hồi nhẹ báo thành công (nếu thiết bị hỗ trợ)
-      if (navigator.vibrate) navigator.vibrate(50);
+      // === PHẦN CODE THÊM VÀO: CHỚP NHÁY CÁC Ô CARD ===
+      const cards = document.querySelectorAll('.card');
+      cards.forEach(card => {
+        card.classList.remove('flash-update'); // Gỡ class cũ nếu có
+        void card.offsetWidth;                 // Ép trình duyệt reset lại animation
+        card.classList.add('flash-update');    // Gắn class để nháy sáng
+      });
+      // ===============================================
       
       setTimeout(() => { 
         pullContainer.style.top = "-80px"; 
         setTimeout(() => { 
           isRefreshing = false;
           pullContainer.classList.remove('ready');
+          // Dọn dẹp class chớp nháy sau khi chạy xong
+          cards.forEach(card => card.classList.remove('flash-update'));
         }, 300);
       }, 1200);
     });
