@@ -220,7 +220,7 @@ input[type="date"] {
   /* Viền màu đen */
   border: 1px solid var(--border-color); 
   /* Màu chữ (nên để đen để dễ nhìn trên nền trong suốt) */
-  color: white;
+  color: rgb(74, 74, 74);
   transition: all 0.3s ease; /* Thêm hiệu ứng mượt mà khi hover */
 }
 
