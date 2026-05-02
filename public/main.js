@@ -92,7 +92,7 @@ async function load() {
     }
   } catch(e) {
     console.error('[load] Lỗi (thường do mạng chập chờn):', e);
-    // FIX BUG 2: Đã comment/bỏ dòng sendClientAlert dưới đây để không spam Telegram mỗi khi focus lại tab bị rớt mạng
+    // FIX BUG 2: Đã comment dòng dưới đây để không spam Telegram mỗi khi focus lại tab bị rớt mạng
     // sendClientAlert(`load thất bại: ${e.message}`, 'client_load');
   }
 }
@@ -183,8 +183,9 @@ async function fetchHistory() {
       updateChart(currentData);
     }
   } catch(e) {
-    console.error('[fetchHistory] Lỗi:', e);
-    sendClientAlert(`fetchHistory thất bại: ${e.message}`, 'client_fetch_history');
+    console.error('[fetchHistory] Lỗi (thường do mạng chập chờn):', e);
+    // FIX BUG 2: Tắt cảnh báo Telegram để tránh spam
+    // sendClientAlert(`fetchHistory thất bại: ${e.message}`, 'client_fetch_history');
   }
 }
 
@@ -447,6 +448,36 @@ function updateChart(fullData) {
       scrollContainer.scrollLeft = (totalPoints < minPointsToFill) ? 0 : scrollContainer.scrollWidth;
     }
   });
+}
+
+// --- HÀM XỬ LÝ NÚT FORCE SYNC ---
+async function forceSync() {
+  const dot = document.getElementById('syncDot');
+  if (!dot) return;
+  
+  // 1. Chuyển sang trạng thái đang cào (Chấm vàng nhấp nháy)
+  dot.className = 'sync-dot loading';
+  
+  try {
+    // 2. Báo server đi cào dữ liệu
+    const res = await fetch('/api/force-sync', { method: 'POST' });
+    
+    if (res.ok) {
+      // 3. Cào xong: Đổi sang chấm xanh lá phát sáng
+      dot.className = 'sync-dot success';
+    } else {
+      dot.className = 'sync-dot'; // Lỗi thì về lại xám
+    }
+  } catch(e) {
+    dot.className = 'sync-dot'; 
+  }
+  
+  // 4. Bất kể thành công hay thất bại, sau 3 giây trả về chấm xám tàng hình
+  setTimeout(() => {
+    if (dot.className.includes('success')) {
+      dot.className = 'sync-dot';
+    }
+  }, 3000);
 }
 
 // ─── KHỞI CHẠY LÚC LOAD TRANG ──────────────────────────────────────

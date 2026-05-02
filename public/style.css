@@ -239,3 +239,49 @@ input[type="date"] { padding: 8px; border-radius: 8px; border: 1px solid var(--b
 .chart-scroll-container::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
 .chart-scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 .chart-scroll-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* --- NÚT FORCE SYNC --- */
+.sync-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  outline: none;
+}
+
+.sync-btn:hover { background: rgba(255, 255, 255, 0.15); border-color: rgba(255, 255, 255, 0.3); }
+.sync-btn:active { transform: scale(0.9); } /* Hơi lún xuống khi bấm */
+
+/* Chấm xám mặc định */
+.sync-dot {
+  width: 10px;
+  height: 10px;
+  background-color: #64748b; 
+  border-radius: 50%;
+  transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+/* Chấm vàng nhấp nháy khi đang tải */
+.sync-dot.loading {
+  background-color: #fbbf24; 
+  animation: syncPulse 0.8s infinite;
+}
+
+/* Chấm xanh phát sáng khi thành công */
+.sync-dot.success {
+  background-color: #10b981; 
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.8);
+}
+
+@keyframes syncPulse {
+  0% { transform: scale(0.8); opacity: 0.6; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.8); opacity: 0.6; }
+}

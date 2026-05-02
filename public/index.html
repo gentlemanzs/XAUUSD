@@ -9,7 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0" defer></script>
 
 <!-- ÉP ĐIỆN THOẠI TẢI LẠI GIAO DIỆN BẰNG VERSION 8.0 -->
-<link rel="stylesheet" href="style.css?v=11.0">
+<link rel="stylesheet" href="style.css?v=12.0">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
 <link rel="apple-touch-icon" href="/icon-180.png">
 <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png">
@@ -24,16 +24,20 @@
 
 <header>
   <div class="brand"><span>📊</span> XAU DASHBOARD</div>
+  <!-- Thêm nút Force Sync ở đây -->
+  <button id="forceSyncBtn" class="sync-btn" onclick="forceSync()" title="Ép cào dữ liệu ngay lập tức">
+    <span id="syncDot" class="sync-dot"></span>
+  </button>
 </header>
 
 <div class="container">
   <div id="lastTime" style="margin-bottom:1rem; font-size:0.875rem; color:#64748b; font-weight: 500;">Đang kết nối...</div>
 
   <div class="grid">
-    <div class="card usd-card"><div class="card-title">💵 USD VND</div><div id="usd" class="card-value">--</div></div>
+    <div class="card usd-card"><div class="card-title">💵 USD</div><div id="usd" class="card-value">--</div></div>
     
     <div class="card highlight">
-      <div class="card-title">🌍 XAU USD</div>
+      <div class="card-title">🌍 XAU</div>
       <div class="card-value xau-wrapper">
         <div id="xauValue">--</div>
         <div id="xauChange" class="sjc-sub"></div>
@@ -41,7 +45,7 @@
     </div>
     
     <div class="card highlight">
-      <div class="card-title">🧈 SJC Gold</div>
+      <div class="card-title">🧈 SJC</div>
       <div class="card-value">
         <div id="sjcValue">--</div>
         <div id="sjcChange" class="sjc-sub"></div>
@@ -76,9 +80,9 @@
             Time
             <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)" title="Chọn tất cả" class="check-action">
           </th>
-          <th>XAU ($)</th>
-          <th>SJC (VND)</th>
-          <th>Gap (VND)</th>
+          <th>XAU</th>
+          <th>SJC</th>
+          <th>Gap</th>
           <th class="col-diff">Diff</th>
         </tr>
       </thead>
@@ -100,6 +104,6 @@
   </div>
 </div>
 <!-- ÉP TẢI LẠI JS -->
-<script src="main.js?v=11.0" defer></script>
+<script src="main.js?v=12.0" defer></script>
 </body>
 </html>

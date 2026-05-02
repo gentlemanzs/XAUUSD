@@ -264,12 +264,13 @@ async function getSjcPrice() {
 }
 
 // ─── HÀM CỐT LÕI: Cập nhật toàn bộ dữ liệu ──────────────────────────────
-async function updateData(triggerSource = "Tự động") {
+async function updateData(triggerSource = "Tự động", forceFetch = false) {
   if (isUpdating) return; // Chống chạy đè nếu tác vụ trước chưa xong
   isUpdating = true;
   try {
-    const isTrading = isVietnamTradingTime();
-    const isForex = isForexMarketOpen();
+    // Nếu forceFetch = true, hệ thống sẽ bỏ qua giờ giấc để cào ngay lập tức
+    const isTrading = forceFetch || isVietnamTradingTime();
+    const isForex = forceFetch || isForexMarketOpen();
     
     // ĐIỀU CHỈNH: Cào USD và SJC theo giờ Việt Nam. Cào XAU theo giờ Forex.
     const [usdRate, dataXAU, sjcPrice] = await Promise.all([
@@ -422,6 +423,17 @@ app.get("/api/stream", (req, res) => {
   }
   
   req.on("close", () => { clients.delete(res); }); // Gỡ client khi họ tắt tab
+});
+
+// API: Nút bấm ép cào dữ liệu ngay lập tức
+app.post("/api/force-sync", async (req, res) => {
+  try {
+    // Ép server cào bất chấp giờ đóng/mở cửa
+    await updateData("Ép cào từ giao diện", true); 
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: "Lỗi đồng bộ" });
+  }
 });
 
 // API: Lấy dữ liệu hiện tại ngay lập tức (dùng khi mới load trang)
