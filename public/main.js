@@ -495,15 +495,15 @@ document.addEventListener("visibilitychange", () => {
 });
 
 // ──────────────────────────────────────
-// PULL TO REFRESH: RADAR SPINNER LOGIC
+// PULL TO REFRESH: ROCKET LOGIC
 // ──────────────────────────────────────
 let startY = 0; 
 let isPulling = false;
 let isRefreshing = false;
-const pullThreshold = 100;
+const pullThreshold = 100; // Giảm lực kéo một chút cho dễ vuốt
 const pullContainer = document.getElementById("cyberPull");
 const textEl = document.getElementById("cyberText");
-const radarIcon = document.getElementById("ptrIcon");
+const rocketIcon = document.getElementById("ptrIcon");
 
 window.addEventListener("touchstart", (e) => { 
   if (window.scrollY <= 0 && !isRefreshing) { 
@@ -522,16 +522,17 @@ window.addEventListener("touchmove", (e) => {
     const moveY = Math.min(diff * 0.4, 90); 
     pullContainer.style.top = `${-80 + moveY}px`;
     
-    // Quay radar theo ngón tay người dùng
+    // Tên lửa lún xuống bệ phóng khi kéo
     const pullRatio = Math.min(diff / pullThreshold, 1);
-    radarIcon.style.transform = `rotate(${pullRatio * 270}deg)`;
+    rocketIcon.style.transform = `translateY(${pullRatio * 5}px)`;
     
     if (diff > pullThreshold) {
       pullContainer.classList.add('ready');
-      textEl.innerText = "Thả tay để quét!";
+      textEl.innerText = "Phóng!";
+      rocketIcon.style.transform = ''; // Nhường lại cho CSS rung lắc
     } else {
       pullContainer.classList.remove('ready');
-      textEl.innerText = "Kéo xuống để tải...";
+      textEl.innerText = "Kéo để nạp nhiên liệu...";
     }
   }
 }, { passive: false });
@@ -540,17 +541,17 @@ window.addEventListener("touchend", (e) => {
   if (!isPulling || isRefreshing) return;
   isPulling = false;
   const diff = e.changedTouches[0].clientY - startY;
+  rocketIcon.style.transform = '';
   
   if (diff > pullThreshold) {
     isRefreshing = true;
     pullContainer.classList.remove('ready');
     pullContainer.classList.add('refreshing');
     pullContainer.style.top = "20px"; 
-    radarIcon.style.transform = ''; // Reset để nhường CSS animation xoay tròn
-    textEl.innerText = "Đang quét dữ liệu...";
+    textEl.innerText = "Đang bay tìm dữ liệu...";
     
     load().then(() => {
-      textEl.innerText = "Cập nhật thành công!";
+      textEl.innerText = "Hạ cánh an toàn!";
       pullContainer.classList.remove('refreshing');
       pullContainer.classList.add('ready');
       

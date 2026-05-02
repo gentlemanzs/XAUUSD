@@ -339,10 +339,10 @@ input[type="date"] {
   animation: flashCard 0.8s ease-out forwards;
 }
 
-/* ===== PULL TO REFRESH: RADAR SPINNER THEME ===== */
+/* ===== PULL TO REFRESH: ROCKET THEME ===== */
 .cyber-pull-container {
   position: fixed; top: -80px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 15px;
+  display: flex; align-items: center; gap: 12px;
   background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   padding: 10px 20px; border-radius: 40px;
   border: 1px solid rgba(59, 130, 246, 0.3); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -357,25 +357,24 @@ input[type="date"] {
 }
 .cyber-pull-container.ready .cyber-text { color: #10b981; text-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
 
-/* Radar Spinner */
-.radar-spinner {
-  width: 22px; height: 22px;
-  border: 3px solid rgba(59, 130, 246, 0.2);
-  border-top-color: #3b82f6;
-  border-radius: 50%;
-  transition: border-color 0.3s;
+/* Rocket Animation */
+.rocket-icon {
+  font-size: 22px; transition: transform 0.1s; display: inline-block;
 }
-.cyber-pull-container.ready .radar-spinner {
-  border-top-color: #10b981;
+.cyber-pull-container.ready .rocket-icon {
+  animation: rocketShake 0.3s infinite;
 }
-.cyber-pull-container.refreshing .radar-spinner {
-  border-top-color: #10b981;
-  border-right-color: rgba(16, 185, 129, 0.3);
-  border-bottom-color: rgba(16, 185, 129, 0.3);
-  border-left-color: rgba(16, 185, 129, 0.3);
-  animation: radarSpin 0.7s linear infinite;
+.cyber-pull-container.refreshing .rocket-icon {
+  animation: blastOff 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
-@keyframes radarSpin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+@keyframes rocketShake {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(2px) rotate(-5deg); }
+  75% { transform: translateY(-2px) rotate(5deg); }
+}
+@keyframes blastOff {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  30% { transform: translateY(-60px) scale(0.8); opacity: 0; }
+  50% { transform: translateY(40px) scale(0.5); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
 }
