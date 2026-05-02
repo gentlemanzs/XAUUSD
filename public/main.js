@@ -50,21 +50,11 @@ function initSSE() {
    evtSource.onmessage = (event) => {
     if (!event.data) return;
     let d;
-    try { d = JSON.parse(event.data); } catch(e) {
-      console.error('[SSE] JSON parse lỗi:', e);
-      return;
-    }
+    try { d = JSON.parse(event.data); } catch(e) { return; }
     if (!d?.updatedAt) return;
     
     elements.lastTime.style.color = "#10b981";
-    setTimeout(() => elements.lastTime.style.color = "#64748b", 2000);
-
-    if (d.failedAPIs && d.failedAPIs.length > 0) {
-      console.warn(`[XAU] ⚠️ API lỗi lúc ${d.timeStr}:`, d.failedAPIs.join(", "), "→ Đang dùng data cũ");
-    } else {
-      const timeLog = new Date().toLocaleTimeString('vi-VN');
-      console.log(`Updated at ${timeLog}`);
-    }
+    setTimeout(() => elements.lastTime.style.color = "#94a3b8", 2000);
 
     renderMain(d);
     if (lastSJCValue === null || d.sjc !== lastSJCValue) {
@@ -90,9 +80,7 @@ async function load() {
       lastSJCValue = d.sjc;
       safeFetchHistory(isFirstLoad);
     }
-  } catch(e) {
-    console.error('[load] Lỗi:', e);
-  }
+  } catch(e) { console.error('[load] Lỗi:', e); }
 }
 
 function renderMain(d) {
@@ -132,7 +120,6 @@ function renderMain(d) {
   const isUp = change >= 0;
   const sjcColorClass = isUp ? 'sjc-sub change-up' : 'sjc-sub change-down';
   const sjcValueStr = fmtVND.format(d.sjc);
-
   const sjcChangeStr = `${isUp ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}`;
 
   if (elements.sjcValue.textContent !== sjcValueStr) elements.sjcValue.textContent = sjcValueStr;
@@ -170,9 +157,7 @@ async function fetchHistory() {
       renderTable(); 
       updateChart(currentData);
     }
-  } catch(e) {
-    console.error('[fetchHistory] Lỗi:', e);
-  }
+  } catch(e) { console.error('[fetchHistory] Lỗi:', e); }
 }
 
 function renderTable() {
@@ -186,15 +171,16 @@ function renderTable() {
 
   displayData.forEach(r => {
     const tr = document.createElement("tr");
+    // CÁC THUỘC TÍNH data-label PHỤC VỤ CHO GIAO DIỆN ĐIỆN THOẠI
     tr.innerHTML = `
-      <td class="col-time">
-        <span>${r.timeStr || '--'}</span>
+      <td class="col-time" data-label="Thời gian">
         <input type="checkbox" class="log-checkbox check-action" value="${r._id}">
+        <span>${r.timeStr || '--'}</span>
       </td> 
-      <td>${fmtXAU.format(r.xau)}</td>
-      <td>${fmtVND.format(r.sjc)}</td>
-      <td>${fmtVND.format(r.diff)}</td>
-      <td><span class="badge ${(r.percent || '').includes('-') ? 'badge-down' : 'badge-up'}"></span></td>
+      <td data-label="Giá XAU">${fmtXAU.format(r.xau)}</td>
+      <td data-label="Giá SJC">${fmtVND.format(r.sjc)}</td>
+      <td data-label="Độ lệch (Gap)">${fmtVND.format(r.diff)}</td>
+      <td data-label="Phần trăm (%)"><span class="badge ${(r.percent || '').includes('-') ? 'badge-down' : 'badge-up'}"></span></td>
     `;
     tr.querySelector('td:last-child span').textContent = r.percent || '--';
     fragment.appendChild(tr);
@@ -257,11 +243,7 @@ function toggleFilterBox() {
   else wrapper.classList.remove('is-expanded');
   
   currentPage = 1; 
-  if (isExpanded) {
-    fetchHistory(); 
-  } else {
-    renderTable();
-  }
+  if (isExpanded) { fetchHistory(); } else { renderTable(); }
 }
 
 function applyFilter() {
@@ -274,17 +256,12 @@ function applyFilter() {
     if (endStr && r.filterDateStr > endStr) return false;
     return true;
   });
-  currentPage = 1; 
-  renderTable(); 
-  updateChart(currentData);
+  currentPage = 1; renderTable(); updateChart(currentData);
 }
 
 function resetFilter() {
   elements.startDate.value = ""; elements.endDate.value = "";
-  currentData = historyData; 
-  currentPage = 1; 
-  renderTable(); 
-  updateChart(currentData);
+  currentData = historyData; currentPage = 1; renderTable(); updateChart(currentData);
 }
 
 function toggleSelectAll(source) {
@@ -310,7 +287,6 @@ async function deleteSelected() {
       currentPage = 1;
       const selectAllBtn = document.getElementById('selectAll');
       if (selectAllBtn) selectAllBtn.checked = false;
-      
       await fetchHistory(); 
     } else {
       const data = await res.json();
@@ -323,8 +299,7 @@ function updateChart(fullData) {
   if (!fullData || fullData.length < 2) {
     lastChartSignature = "";
     if (myChart) {
-      myChart.data.labels = [];
-      myChart.data.datasets[0].data = [];
+      myChart.data.labels = []; myChart.data.datasets[0].data = [];
       myChart.update('none');
     }
     return;
@@ -353,8 +328,7 @@ function updateChart(fullData) {
       if (parts.length === 3) dateLabel = `${parts[2]}/${parts[1]}`;
     }
     if (dateLabel && dateLabel !== lastDateLabel) {
-      labels.push(dateLabel);
-      lastDateLabel = dateLabel;
+      labels.push(dateLabel); lastDateLabel = dateLabel;
     } else {
       labels.push('');
     }
@@ -377,16 +351,14 @@ function updateChart(fullData) {
   }
 
   const validGaps = gaps.filter(g => g !== null);
-  let yMin = 0;
-  let yMax = 0;
+  let yMin = 0; let yMax = 0;
 
   if (validGaps.length === 0) return;
 
   const minVal = Math.min(...validGaps);
   const maxVal = Math.max(...validGaps);
   const padding = Math.max((maxVal - minVal) * 0.2, 0.5);
-  yMin = minVal - padding;
-  yMax = maxVal + padding;
+  yMin = minVal - padding; yMax = maxVal + padding;
 
   const calculatedWidth = totalPoints * minSpacing;
   
@@ -401,6 +373,7 @@ function updateChart(fullData) {
     }
   }
 
+  // MÀU SẮC BIỂU ĐỒ TỐI ƯU CHO NỀN ĐEN GLASSMORPHISM
   if (myChart) {
     myChart.data.labels = labels; myChart.data.datasets[0].data = gaps;
     myChart.options.scales.y.suggestedMin = yMin; myChart.options.scales.y.suggestedMax = yMax;
@@ -421,10 +394,10 @@ function updateChart(fullData) {
         scales: {
           y: {
             suggestedMin: yMin, suggestedMax: yMax, beginAtZero: false,
-            ticks: { maxTicksLimit: 6, callback: (val) => val.toFixed(1) + 'M', color: '#64748b', font: { size: 11 } },
-            grid: { color: 'rgba(226, 232, 240, 0.6)' }
+            ticks: { maxTicksLimit: 6, callback: (val) => val.toFixed(1) + 'M', color: '#94a3b8', font: { size: 11 } },
+            grid: { color: 'rgba(255, 255, 255, 0.05)' } // Đường kẻ ngang mờ ảo
           },
-          x: { offset: true, ticks: { autoSkip: true, maxRotation: 0, color: '#64748b', font: { size: 10 } }, grid: { display: false } }
+          x: { offset: true, ticks: { autoSkip: true, maxRotation: 0, color: '#94a3b8', font: { size: 10 } }, grid: { display: false } }
         }
       }
     });
@@ -438,18 +411,27 @@ function updateChart(fullData) {
   });
 }
 
-// --- HÀM XỬ LÝ NÚT FORCE SYNC ---
+// --- HÀM XỬ LÝ NÚT FORCE SYNC CÓ BẮT MẬT KHẨU ---
 async function forceSync() {
+  const secret = prompt("Nhập mật khẩu để ép cào dữ liệu mới:");
+  if (secret === null) return;
+
   const dot = document.getElementById('syncDot');
   if (!dot) return;
-  
   dot.className = 'sync-dot loading';
   
   try {
-    const res = await fetch('/api/force-sync', { method: 'POST' });
+    const res = await fetch('/api/force-sync', { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: secret })
+    });
+    
     if (res.ok) {
       dot.className = 'sync-dot success';
     } else {
+      const err = await res.json();
+      alert(err.error || "Lỗi cập nhật!");
       dot.className = 'sync-dot'; 
     }
   } catch(e) {
@@ -457,9 +439,7 @@ async function forceSync() {
   }
   
   setTimeout(() => {
-    if (dot.className.includes('success')) {
-      dot.className = 'sync-dot';
-    }
+    if (dot.className.includes('success')) { dot.className = 'sync-dot'; }
   }, 3000);
 }
 
