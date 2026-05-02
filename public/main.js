@@ -127,62 +127,17 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) { if 
 
 
 // ==========================================================================
-// PULL TO REFRESH: THE QUANTUM VAULT LOGIC (HACK MẬT MÃ & LASER)
+// PULL TO REFRESH: THE DATA CORE LOGIC (EMP & GLITCH)
 // ==========================================================================
 let startY = 0; 
 let isPulling = false;
 let isRefreshing = false;
-const pullThreshold = 90; // Chỉ cần kéo 90px để mở khóa
+const pullThreshold = 100;
 const pullContainer = document.getElementById("cyberPull");
 const textEl = document.getElementById("cyberText");
-const laserScanner = document.getElementById("laserScanner");
-
-const ring1 = document.getElementById("ring1");
-const ring2 = document.getElementById("ring2");
-const ring3 = document.getElementById("ring3");
-
-// Danh sách các ô chứa dữ liệu để làm hiệu ứng hack (scramble)
-const safeIds = ['usd', 'xauValue', 'xauChange', 'sjcValue', 'sjcChange', 'diff', 'percent', 'gapChange'];
-let scrambleTimer;
-
-// Hàm làm chữ nhảy loạn xạ
-function startScramble() {
-  safeIds.forEach(id => {
-     let el = document.getElementById(id);
-     if(el) el.classList.add('matrix-scramble');
-  });
-  scrambleTimer = setInterval(() => {
-     safeIds.forEach(id => {
-        let el = document.getElementById(id);
-        if(!el) return;
-        let len = el.innerText.length || 7;
-        let randStr = "";
-        const chars = "0123456789$#X%@&*";
-        for(let i=0; i<len; i++) {
-           randStr += chars[Math.floor(Math.random() * chars.length)];
-        }
-        el.innerText = randStr;
-     });
-  }, 40); // 40ms thay đổi 1 lần -> Giống phim Hacker
-}
-
-// Hàm dừng hack và dọn dẹp class
-function stopScramble() {
-  clearInterval(scrambleTimer);
-  safeIds.forEach(id => {
-     let el = document.getElementById(id);
-     if(el) el.classList.remove('matrix-scramble');
-  });
-}
-
-function resetVault() {
-  isRefreshing = false;
-  pullContainer.classList.remove('unlocking', 'burst');
-  laserScanner.classList.remove('scanning');
-  ring1.style.transform = '';
-  ring2.style.transform = '';
-  ring3.style.transform = '';
-}
+const dataCore = document.getElementById("ptrIcon");
+const mainContainer = document.getElementById("mainContainer");
+const empFlash = document.getElementById("empFlash");
 
 window.addEventListener("touchstart", (e) => { 
   if (window.scrollY <= 0 && !isRefreshing) { 
@@ -199,22 +154,20 @@ window.addEventListener("touchmove", (e) => {
   if (diff > 0 && window.scrollY <= 0) {
     if (e.cancelable) e.preventDefault();
     
-    // Kéo mượt xuống (Nhân 3 lực kéo để tuột xuống nhanh hơn)
-    const moveY = Math.min(diff * 3, window.innerHeight * 0.55); 
-    pullContainer.style.top = `calc(-55vh + ${moveY}px)`;
+    // Kéo lõi xuống
+    const moveY = Math.min(diff * 1.5, 160); 
+    pullContainer.style.top = `${-160 + moveY}px`;
     
-    // Xoay các vòng Neon ngược chiều nhau tạo cảm giác mở khóa
+    // Phóng to lõi theo lực kéo (từ 1x -> 1.5x)
     const pullRatio = Math.min(diff / pullThreshold, 1);
-    ring1.style.transform = `rotate(${pullRatio * 360}deg)`;
-    ring2.style.transform = `rotate(${-pullRatio * 500}deg)`;
-    ring3.style.transform = `rotate(${pullRatio * 720}deg)`;
+    dataCore.style.transform = `scale(${1 + pullRatio * 0.5})`;
     
     if (diff > pullThreshold) {
       pullContainer.classList.add('ready');
-      textEl.innerText = "XÁC NHẬN MỞ KHÓA!";
+      textEl.innerText = "OVERLOAD PREPARATION...";
     } else {
       pullContainer.classList.remove('ready');
-      textEl.innerText = "Kéo để nhập mã bảo mật...";
+      textEl.innerText = "CONNECTING TO NETWORK...";
     }
   }
 }, { passive: false });
@@ -224,60 +177,65 @@ window.addEventListener("touchend", (e) => {
   isPulling = false;
   const diff = e.changedTouches[0].clientY - startY;
   
+  // Dọn dẹp scale thủ công để nhường chỗ cho CSS Animation
+  dataCore.style.transform = '';
+  
   if (diff > pullThreshold) {
     isRefreshing = true;
-    
-    // Bước 1: Két sắt kêu lạch cạch (shake)
     pullContainer.classList.remove('ready');
-    pullContainer.classList.add('unlocking');
-    pullContainer.style.top = "0px"; // Cố định két giữa màn hình
-    textEl.innerText = "ĐANG GIẢI MÃ LƯỢNG TỬ...";
+    pullContainer.classList.add('refreshing', 'overload');
+    textEl.innerText = "CORE OVERLOAD! STANDBY...";
     
-    if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+    // Kéo căng container lên một chút tạo độ nén trước khi nổ
+    pullContainer.style.top = "0px"; 
 
-    // Bước 2: Két bật mở (sau 0.4s) và Quét Laser + Hack Số
+    // Đợi 0.3s cho hiệu ứng Overload sáng rực lên rồi mới call API
     setTimeout(() => {
-      pullContainer.classList.add('burst'); // Nổ mở cửa hầm, nhả khói
-      laserScanner.classList.add('scanning'); // Bắn tia Laser quét xuống
-      
-      startScramble(); // Bắt đầu nhảy số Matrix
-      
-      // Bắt đầu gọi API âm thầm
       load().then(() => {
-        // Laser mất 1.2s để quét xong. Chờ nó quét xong thì dừng Scramble.
+        // --- 1. KÍCH HOẠT XUNG EMP TÓE SÁNG ---
+        empFlash.classList.add('fire');
+        if (navigator.vibrate) navigator.vibrate(100); // Rung nổ
+        
+        // --- 2. KÍCH HOẠT NHIỄU SÓNG GLITCH SAU KHI NỔ (0.1s sau) ---
         setTimeout(() => {
-          stopScramble();
+          mainContainer.classList.add('system-glitch');
+          textEl.innerText = "DATA SYNC SUCCESSFUL";
           
-          // Sau khi tắt Scramble, render lại dữ liệu xịn từ LocalStorage (do hàm load() vừa lưu vào)
-          const cached = localStorage.getItem('xau_main_cache');
-          if(cached) renderMain(JSON.parse(cached));
+          // Sau khi Glitch xong (0.4s), render data mới và nháy viền thẻ
+          setTimeout(() => {
+            mainContainer.classList.remove('system-glitch');
+            
+            // Cập nhật lại UI từ Cache
+            const cached = localStorage.getItem('xau_main_cache');
+            if(cached) renderMain(JSON.parse(cached));
+            
+            // Chớp sáng Card xanh Neon
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+              card.classList.remove('flash-update'); 
+              void card.offsetWidth;                 
+              card.classList.add('flash-update');    
+            });
+            
+            // Dọn dẹp EMP Flash
+            empFlash.classList.remove('fire');
+            
+            // Thu hồi Lõi Năng Lượng
+            pullContainer.style.top = "-160px";
+            setTimeout(() => {
+              isRefreshing = false;
+              pullContainer.classList.remove('refreshing', 'overload');
+              document.querySelectorAll('.card').forEach(c => c.classList.remove('flash-update'));
+            }, 300);
+            
+          }, 400); // Đợi glitch xong
           
-          textEl.innerText = "DỮ LIỆU ĐÃ ĐƯỢC BẢO MẬT!";
-          
-          // Chớp sáng Card xanh dương báo hiệu thành công
-          const cards = document.querySelectorAll('.card');
-          cards.forEach(card => {
-            card.classList.remove('flash-update'); 
-            void card.offsetWidth;                 
-            card.classList.add('flash-update');    
-          });
-          
-          if (navigator.vibrate) navigator.vibrate(100);
-
-          // Thu hồi UI Két sắt lên trên cùng
-          setTimeout(() => { 
-            pullContainer.style.top = "-55vh"; 
-            setTimeout(() => { resetVault(); document.querySelectorAll('.card').forEach(c => c.classList.remove('flash-update')); }, 400);
-          }, 1200);
-          
-        }, 800); // 800ms là phần thời gian còn lại để tia Laser chạm đáy màn hình
+        }, 100); // Đợi EMP vừa sáng lên
       });
-      
-    }, 400); // Đợi 0.4s lạch cạch ban đầu
+    }, 300);
 
   } else {
     // Không đủ lực kéo -> Tụt về
-    pullContainer.style.top = "-55vh";
-    resetVault();
+    pullContainer.style.top = "-160px";
   }
 });
