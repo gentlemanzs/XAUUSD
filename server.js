@@ -1,7 +1,6 @@
 const express = require("express");
 const path = require("path");
 const cron = require("node-cron");
-const cors = require("cors");
 const mongoose = require("mongoose");
 const cheerio = require("cheerio");
 const compression = require("compression");
@@ -9,7 +8,6 @@ const app = express();
 
 app.set('trust proxy', 1);
 app.use(compression({ level: 6, threshold: 1024 }));
-app.use(cors()); 
 app.use(express.json({ limit: "10kb" })); 
 
 app.use(express.static(path.join(__dirname, "public"), {
@@ -22,7 +20,7 @@ const PORT = process.env.PORT || 3000;
 let latestData = null;
 let clients = new Set(); 
 let isUpdating = false; 
-
+let lastForceSync = 0;
 let lastDifferentSjc = null; 
 let cachedLastSavedXau = null; 
 let cachedYesterdaySjc = null;
@@ -406,6 +404,12 @@ app.get("/api/stream", (req, res) => {
 });
 
 app.post("/api/force-sync", async (req, res) => {
+  const now = Date.now();
+  // CHỐT CHẶN BẢO MẬT: Phải đợi ít nhất 10s mới được bấm lại
+  if (now - lastForceSync < 10000) {
+    return res.status(429).json({ error: "Thao tác quá nhanh, vui lòng đợi!" });
+  }
+  lastForceSync = now;
   try {
     await updateData("Ép cào từ giao diện", true);
     res.json({ ok: true });
@@ -445,7 +449,10 @@ app.post("/api/history/bulk-delete", async (req, res) => {
       return res.status(403).json({ error: "Sai mật khẩu Admin!" }); 
     }
 
-    if (!ids || !Array.isArray(ids)) return res.status(400).json({ error: "Thiếu danh sách ID" });
+    // Vá NoSQL Injection: Kiểm tra phải là mảng, không rỗng, và mọi phần tử ĐỀU PHẢI LÀ STRING
+    if (!Array.isArray(ids) || ids.length === 0 || !ids.every(id => typeof id === 'string')) {
+      return res.status(400).json({ error: "Dữ liệu không hợp lệ (Invalid Payload)" });
+    }
 
     await History.deleteMany({ _id: { $in: ids } });
     cachedHistory = cachedHistory.filter(item => !ids.includes(item._id.toString()));
@@ -458,14 +465,7 @@ app.post("/api/history/bulk-delete", async (req, res) => {
 
 // ─── CRONJOB: Tự động chạy ngầm mỗi 5 phút ────────────────────────────────
 cron.schedule("*/5 * * * *", () => {
-  const isTrading = isVietnamTradingTime();
-  const isForex = isForexMarketOpen();
-
-  if (isTrading || isForex) {
+  if (isVietnamTradingTime() || isForexMarketOpen()) {
     updateData("Cronjob 5 phút");
-  } else {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`💤 [${new Date().toLocaleTimeString('vi-VN')}] Cả VN và Thế giới đều nghỉ, Cronjob đang ngủ.`);
-    }
   }
 });
