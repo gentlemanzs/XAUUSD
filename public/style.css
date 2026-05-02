@@ -338,3 +338,44 @@ input[type="date"] {
 .flash-update {
   animation: flashCard 0.8s ease-out forwards;
 }
+
+/* ===== PULL TO REFRESH: RADAR SPINNER THEME ===== */
+.cyber-pull-container {
+  position: fixed; top: -80px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 15px;
+  background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  padding: 10px 20px; border-radius: 40px;
+  border: 1px solid rgba(59, 130, 246, 0.3); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  z-index: 9999; pointer-events: none;
+  transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s, box-shadow 0.3s;
+}
+.cyber-pull-container.ready {
+  border-color: rgba(16, 185, 129, 0.8); box-shadow: 0 0 25px rgba(16, 185, 129, 0.2);
+}
+.cyber-text {
+  color: #94a3b8; font-size: 14px; font-weight: 600; font-family: -apple-system, system-ui, sans-serif; transition: color 0.3s;
+}
+.cyber-pull-container.ready .cyber-text { color: #10b981; text-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
+
+/* Radar Spinner */
+.radar-spinner {
+  width: 22px; height: 22px;
+  border: 3px solid rgba(59, 130, 246, 0.2);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  transition: border-color 0.3s;
+}
+.cyber-pull-container.ready .radar-spinner {
+  border-top-color: #10b981;
+}
+.cyber-pull-container.refreshing .radar-spinner {
+  border-top-color: #10b981;
+  border-right-color: rgba(16, 185, 129, 0.3);
+  border-bottom-color: rgba(16, 185, 129, 0.3);
+  border-left-color: rgba(16, 185, 129, 0.3);
+  animation: radarSpin 0.7s linear infinite;
+}
+@keyframes radarSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

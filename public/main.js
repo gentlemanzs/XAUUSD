@@ -494,91 +494,16 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-/* ===== HIỆU ỨNG PULL TO REFRESH: NHỊP ĐẬP THỊ TRƯỜNG (CYBER PULSE) ===== */
-const style = document.createElement('style');
-style.innerHTML = `
-  .cyber-pull-container {
-    position: fixed; top: -80px; left: 50%; transform: translateX(-50%);
-    display: flex; align-items: center; gap: 15px;
-    background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px);
-    padding: 12px 24px; border-radius: 40px;
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    z-index: 9999;
-    transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s, box-shadow 0.3s;
-    pointer-events: none;
-  }
-  
-  /* Trạng thái đã kéo đủ lực */
-  .cyber-pull-container.ready {
-    border-color: rgba(16, 185, 129, 0.8);
-    box-shadow: 0 0 25px rgba(16, 185, 129, 0.2);
-  }
-
-  .pulse-bars {
-    display: flex; gap: 4px; align-items: flex-end; height: 24px;
-  }
-  .pulse-bar {
-    width: 5px; height: 4px; border-radius: 2px;
-    background: #3b82f6; 
-    transition: background 0.3s;
-  }
-  
-  /* Đổi màu khi sẵn sàng */
-  .cyber-pull-container.ready .pulse-bar { background: #10b981; }
-  
-  /* Animation khi đang tải */
-  .cyber-pull-container.refreshing .pulse-bar {
-    background: #10b981;
-    animation: pulseWave 0.5s ease-in-out infinite alternate;
-  }
-  .cyber-pull-container.refreshing .pulse-bar:nth-child(1) { animation-delay: 0.0s; }
-  .cyber-pull-container.refreshing .pulse-bar:nth-child(2) { animation-delay: 0.1s; }
-  .cyber-pull-container.refreshing .pulse-bar:nth-child(3) { animation-delay: 0.2s; }
-  .cyber-pull-container.refreshing .pulse-bar:nth-child(4) { animation-delay: 0.3s; }
-
-  @keyframes pulseWave {
-    0% { height: 4px; box-shadow: none; }
-    100% { height: 24px; box-shadow: 0 0 10px #10b981; }
-  }
-
-  .cyber-text {
-    color: #94a3b8; font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif;
-    transition: color 0.3s;
-  }
-  .cyber-pull-container.ready .cyber-text { color: #10b981; text-shadow: 0 0 8px rgba(16,185,129,0.4); }
-`;
-document.head.appendChild(style);
-
-// Tạo giao diện HTML
-const pullContainer = document.createElement("div");
-pullContainer.className = "cyber-pull-container";
-pullContainer.innerHTML = `
-  <div class="pulse-bars">
-    <div class="pulse-bar" id="bar1"></div>
-    <div class="pulse-bar" id="bar2"></div>
-    <div class="pulse-bar" id="bar3"></div>
-    <div class="pulse-bar" id="bar4"></div>
-  </div>
-  <div class="cyber-text">Đồng bộ dữ liệu...</div>
-`;
-document.body.appendChild(pullContainer);
-
-// Logic kéo thả
+// ──────────────────────────────────────
+// PULL TO REFRESH: RADAR SPINNER LOGIC
+// ──────────────────────────────────────
 let startY = 0; 
 let isPulling = false;
 let isRefreshing = false;
-const pullThreshold = 120; // Độ dài kéo để kích hoạt
-const textEl = pullContainer.querySelector('.cyber-text');
-const bars = [
-  document.getElementById('bar1'),
-  document.getElementById('bar2'),
-  document.getElementById('bar3'),
-  document.getElementById('bar4')
-];
-
-// Chiều cao tối đa các cột sẽ đạt được khi kéo
-const targetHeights = [12, 24, 16, 20]; 
+const pullThreshold = 100;
+const pullContainer = document.getElementById("cyberPull");
+const textEl = document.getElementById("cyberText");
+const radarIcon = document.getElementById("ptrIcon");
 
 window.addEventListener("touchstart", (e) => { 
   if (window.scrollY <= 0 && !isRefreshing) { 
@@ -594,27 +519,19 @@ window.addEventListener("touchmove", (e) => {
   
   if (diff > 0 && window.scrollY <= 0) {
     if (e.cancelable) e.preventDefault();
-    
-    // Kéo thẻ trượt xuống
     const moveY = Math.min(diff * 0.4, 90); 
     pullContainer.style.top = `${-80 + moveY}px`;
     
-    // Tỷ lệ kéo (từ 0 đến 1)
+    // Quay radar theo ngón tay người dùng
     const pullRatio = Math.min(diff / pullThreshold, 1);
-    
-    // Hiệu ứng ĐỘNG: Cột cao lên theo lực ngón tay
-    bars.forEach((bar, index) => {
-      // Chiều cao cơ bản là 4px, cộng thêm phần trăm tăng trưởng
-      const height = 4 + (targetHeights[index] - 4) * pullRatio;
-      bar.style.height = `${height}px`;
-    });
+    radarIcon.style.transform = `rotate(${pullRatio * 270}deg)`;
     
     if (diff > pullThreshold) {
       pullContainer.classList.add('ready');
-      textEl.innerText = "Thả tay để tải mới!";
+      textEl.innerText = "Thả tay để quét!";
     } else {
       pullContainer.classList.remove('ready');
-      textEl.innerText = "Kéo thêm chút nữa...";
+      textEl.innerText = "Kéo xuống để tải...";
     }
   }
 }, { passive: false });
@@ -624,40 +541,33 @@ window.addEventListener("touchend", (e) => {
   isPulling = false;
   const diff = e.changedTouches[0].clientY - startY;
   
-  // Dọn dẹp style inline để CSS Animation có thể chạy
-  bars.forEach(bar => bar.style.height = '');
-  
   if (diff > pullThreshold) {
     isRefreshing = true;
     pullContainer.classList.remove('ready');
     pullContainer.classList.add('refreshing');
     pullContainer.style.top = "20px"; 
-    textEl.innerText = "Updating...";
+    radarIcon.style.transform = ''; // Reset để nhường CSS animation xoay tròn
+    textEl.innerText = "Đang quét dữ liệu...";
     
-    // Chỉ gọi load() để lấy dữ liệu mới nhất từ API nội bộ
     load().then(() => {
-      textEl.innerText = "Success!";
-      
-      // Dừng nhấp nháy, set các cột full màu xanh
+      textEl.innerText = "Cập nhật thành công!";
       pullContainer.classList.remove('refreshing');
       pullContainer.classList.add('ready');
-      bars.forEach((bar, idx) => bar.style.height = `${targetHeights[idx]}px`);
       
-      // === PHẦN CODE THÊM VÀO: CHỚP NHÁY CÁC Ô CARD ===
       const cards = document.querySelectorAll('.card');
       cards.forEach(card => {
-        card.classList.remove('flash-update'); // Gỡ class cũ nếu có
-        void card.offsetWidth;                 // Ép trình duyệt reset lại animation
-        card.classList.add('flash-update');    // Gắn class để nháy sáng
+        card.classList.remove('flash-update'); 
+        void card.offsetWidth;                 
+        card.classList.add('flash-update');    
       });
-      // ===============================================
+
+      if (navigator.vibrate) navigator.vibrate(50);
       
       setTimeout(() => { 
         pullContainer.style.top = "-80px"; 
         setTimeout(() => { 
           isRefreshing = false;
           pullContainer.classList.remove('ready');
-          // Dọn dẹp class chớp nháy sau khi chạy xong
           cards.forEach(card => card.classList.remove('flash-update'));
         }, 300);
       }, 1200);
