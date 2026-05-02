@@ -216,11 +216,11 @@ input[type="date"] {
   font-size: 0.8rem; 
   
   /* Màu nền trong suốt */
-  background: transparent; 
+  background:  rgba(255,255,255,0.1); 
   /* Viền màu đen */
-  border: 1px solid #212020; 
+  border: 1px solid var(--border-color); 
   /* Màu chữ (nên để đen để dễ nhìn trên nền trong suốt) */
-  color: #252525;
+  color: white;
   transition: all 0.3s ease; /* Thêm hiệu ứng mượt mà khi hover */
 }
 
