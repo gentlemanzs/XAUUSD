@@ -59,11 +59,9 @@ function initSSE() {
     elements.lastTime.style.color = "#10b981";
     setTimeout(() => elements.lastTime.style.color = "#64748b", 2000);
 
-    // IN LOG VÀ CẢNH BÁO
     if (d.failedAPIs && d.failedAPIs.length > 0) {
       console.warn(`[XAU] ⚠️ API lỗi lúc ${d.timeStr}:`, d.failedAPIs.join(", "), "→ Đang dùng data cũ");
     } else {
-      // IN LOG GỌN NHẸ VÀO F12 MỖI LẦN CẬP NHẬT
       const timeLog = new Date().toLocaleTimeString('vi-VN');
       console.log(`Updated at ${timeLog}`);
     }
@@ -320,6 +318,10 @@ async function deleteSelected() {
     
     if (res.ok) {
       currentPage = 1;
+      // FIX BUG: Gỡ tích nút Select All sau khi xóa thành công
+      const selectAllBtn = document.getElementById('selectAll');
+      if (selectAllBtn) selectAllBtn.checked = false;
+      
       await fetchHistory(); 
     } else {
       const data = await res.json();
