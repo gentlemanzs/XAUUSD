@@ -20,14 +20,14 @@ app.use(helmet({
       "script-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
       "script-src-attr": ["'unsafe-inline'"],
       // Thêm dòng này để cho phép trình duyệt fetch file .map và các API nội bộ
-      "connect-src": ["'self'", "https://cdn.jsdelivr.net"]
+      "connect-src": ["'self'", "https://cdn.jsdelivr.net"] 
     }
   }
 }));
 
 // Cấu hình Rate Limit
 const syncLimiter = rateLimit({
-  windowMs: 60 * 1000,
+  windowMs: 60 * 1000, 
   max: 5,
   message: { error: "Bạn thao tác quá nhanh, vui lòng đợi 1 phút!" },
   standardHeaders: true,
@@ -35,14 +35,14 @@ const syncLimiter = rateLimit({
 });
 
 const deleteLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000,
-  max: 5,
+  windowMs: 5 * 60 * 1000, 
+  max: 5, 
   message: { error: "Thử sai mật khẩu quá nhiều lần. Tạm khóa 5 phút." },
 });
 
 app.set('trust proxy', 1);
 app.use(compression({ level: 6, threshold: 1024 }));
-app.use(express.json({ limit: "10kb" }));
+app.use(express.json({ limit: "10kb" })); 
 
 app.use(express.static(path.join(__dirname, "public"), {
   maxAge: "1d",
@@ -54,14 +54,14 @@ const PORT = process.env.PORT || 3000;
 // ============================================================================
 // PHẦN 2: HỆ THỐNG CACHE IN-MEMORY (LƯU TRÊN RAM)
 // ============================================================================
-let latestData = null;
-let clients = new Set();
-let isUpdating = false;
+let latestData = null;      
+let clients = new Set();    
+let isUpdating = false;     
 let lastDifferentSjc = null;
-let cachedLastSavedXau = null;
+let cachedLastSavedXau = null; 
 let cachedYesterdaySjc = null;
 let cachedYesterdayDate = null;
-let cachedHistory = [];
+let cachedHistory = [];     
 
 function formatTimeVN(dateObj) {
   if (!dateObj) return "--";
@@ -75,7 +75,7 @@ function formatTimeVN(dateObj) {
 // ============================================================================
 const TG_TOKEN = process.env.TG_TOKEN;
 const TG_CHAT_ID = process.env.TG_CHAT_ID;
-const ALERT_COOLDOWN_MS = 10 * 60 * 1000;
+const ALERT_COOLDOWN_MS = 10 * 60 * 1000; 
 const alertCooldowns = new Map();
 
 async function sendTelegram(message, alertKey) {
@@ -124,19 +124,19 @@ async function preloadCache() {
       }
       cachedHistory = historyData;
 
-      const last = historyData[0];
+      const last = historyData[0]; 
       cachedLastSavedXau = last.xau;
       latestData = {
         sjc: last.sjc,
         xau: last.xau,
-        usd: last.usd,
+        usd: last.usd,        
         diff: last.diff,          // FIX UI: Điền đủ placeholder cho 차t mượt
-        percent: last.percent,
+        percent: last.percent,    
         worldVND: Math.round(last.xau * last.usd * (37.5 / 31.1035)),
-        gapChange: 0,
-        sjcChange: 0,
+        gapChange: 0, 
+        sjcChange: 0, 
         xauChange: 0,
-        status: "Đang khởi động...",
+        status: "Đang khởi động...", 
         failedAPIs: [],
         updatedAt: new Date(), timeStr: formatTimeVN(new Date())
       };
@@ -159,20 +159,20 @@ async function preloadCache() {
 mongoose.connect(process.env.MONGO_URI, {
   serverSelectionTimeoutMS: 5000, maxPoolSize: 10, minPoolSize: 2, heartbeatFrequencyMS: 10000
 }).then(async () => {
-  console.log("✅ MongoDB connected");
-  await preloadCache();
+    console.log("✅ MongoDB connected");
+    await preloadCache(); 
 
-  const server = app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    sendTelegram("🚀 Bot Telegram đã kết nối!", "server_start");
-    updateData("Khởi động Server");
-  });
-  server.keepAliveTimeout = 65000;
-  server.headersTimeout = 66000;
+    const server = app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      sendTelegram("🚀 Bot Telegram đã kết nối!", "server_start");
+      updateData("Khởi động Server"); 
+    });
+    server.keepAliveTimeout = 65000;
+    server.headersTimeout = 66000;
 }).catch(err => {
-  console.error("❌ MongoDB error:", err);
-  sendTelegram(`❌ *MongoDB kết nối thất bại*\nLỗi: ${err.message}`, "mongo_connect");
-  process.exit(1);
+    console.error("❌ MongoDB error:", err);
+    sendTelegram(`❌ *MongoDB kết nối thất bại*\nLỗi: ${err.message}`, "mongo_connect");
+    process.exit(1);
 });
 
 mongoose.connection.on('error', (err) => {
@@ -182,10 +182,10 @@ mongoose.connection.on('error', (err) => {
 
 setInterval(() => {
   for (const c of [...clients]) {
-    try {
+    try { 
       if (!c.writable || c.writableEnded) { clients.delete(c); continue; }
-      c.write(":\n\n");
-      if (typeof c.flush === "function") c.flush();
+      c.write(":\n\n"); 
+      if (typeof c.flush === "function") c.flush(); 
     }
     catch (e) { clients.delete(c); }
   }
@@ -196,7 +196,7 @@ setInterval(() => {
 // ============================================================================
 let cachedUsdRate = null;
 let lastUsdFetchTime = 0;
-const USD_CACHE_DURATION = 60 * 60 * 1000;
+const USD_CACHE_DURATION = 60 * 60 * 1000; 
 
 function isVietnamTradingTime() {
   const now = new Date();
@@ -204,9 +204,9 @@ function isVietnamTradingTime() {
   const vnTime = new Date(vnTimeStr);
   const day = vnTime.getDay();
   const timeInMinutes = vnTime.getHours() * 60 + vnTime.getMinutes();
-  if (day === 0) return false;
-  if (day >= 1 && day <= 5) return timeInMinutes >= 510 && timeInMinutes <= 1020;
-  if (day === 6) return timeInMinutes >= 510 && timeInMinutes <= 630;
+  if (day === 0) return false; 
+  if (day >= 1 && day <= 5) return timeInMinutes >= 510 && timeInMinutes <= 1020; 
+  if (day === 6) return timeInMinutes >= 510 && timeInMinutes <= 630; 
   return false;
 }
 
@@ -216,10 +216,10 @@ function isForexMarketOpen() {
   const vnTime = new Date(vnTimeStr);
   const day = vnTime.getDay();
   const timeInMinutes = vnTime.getHours() * 60 + vnTime.getMinutes();
-  if (day === 0) return false;
-  if (day === 1 && timeInMinutes < 330) return false;
-  if (day === 6 && timeInMinutes >= 300) return false;
-  return true;
+  if (day === 0) return false;                              
+  if (day === 1 && timeInMinutes < 330) return false;       
+  if (day === 6 && timeInMinutes >= 300) return false;      
+  return true; 
 }
 
 async function fetchWithRetry(url, isJson = false, retries = 2) {
@@ -234,7 +234,7 @@ async function fetchWithRetry(url, isJson = false, retries = 2) {
     } catch (e) {
       logApiError(url, i + 1, e);
       if (i === retries - 1) return null;
-      await new Promise(r => setTimeout(r, 300 * (i + 1)));
+      await new Promise(r => setTimeout(r, 300 * (i + 1))); 
     }
   }
 }
@@ -266,7 +266,7 @@ async function getPriceFromXml(url, selector, attrName) {
     const sellStr = $(selector).attr(attrName);
     if (sellStr) {
       let price = parseFloat(sellStr.replace(/,/g, ""));
-      if (price > 0 && price < 1000000) price *= 1000;
+      if (price > 0 && price < 1000000) price *= 1000; 
       return price;
     }
   } catch (err) { }
@@ -285,7 +285,7 @@ async function getSjcPrice() {
 // PHẦN 6: HÀM CỐT LÕI (CALCULATION & SYNC DATABASE)
 // ============================================================================
 async function updateData(triggerSource = "Tự động", forceFetch = false) {
-  if (isUpdating) return;
+  if (isUpdating) return; 
   isUpdating = true;
   try {
     const isTrading = forceFetch || isVietnamTradingTime();
@@ -309,28 +309,28 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
     if (isTrading && !isSjcLive) sendTelegram(`⚠️ *API giá SJC thất bại*\nCả DOJI lẫn BTMC đều không trả được giá`, 'api_sjc');
 
     let sjc = isSjcLive ? sjcPrice : (lastRecord ? lastRecord.sjc : 0);
-    let xau = isXauLive ? dataXAU.price : (lastRecord ? lastRecord.xau : 0);
-    let usd = isUsdLive ? usdRate : (lastRecord ? lastRecord.usd : 0);
+    let xau = isXauLive ? dataXAU.price : (lastRecord ? lastRecord.xau : 0); 
+    let usd = isUsdLive ? usdRate : (lastRecord ? lastRecord.usd : 0); 
 
     if (sjc <= 0 || xau <= 0 || usd <= 0) {
       if (latestData) {
         latestData.status = "Delayed (Lỗi hệ thống - Thiếu dữ liệu)";
         latestData.failedAPIs = ["SYSTEM_DATA_MISSING"];
         const fallbackPayload = `data: ${JSON.stringify(latestData)}\n\n`;
-        for (const c of [...clients]) {
-          try {
-            c.write(fallbackPayload);
-            if (typeof c.flush === "function") c.flush();
-          } catch (err) {
-            clients.delete(c);
-          }
+        for (const c of [...clients]) { 
+          try { 
+            c.write(fallbackPayload); 
+            if (typeof c.flush === "function") c.flush(); 
+          } catch (err) { 
+            clients.delete(c); 
+          } 
         }
       }
-      return;
+      return; 
     }
 
     const worldVND = xau * usd * (37.5 / 31.1035);
-    const diff = sjc - worldVND;
+    const diff = sjc - worldVND; 
     const currentGap = Math.round(diff);
 
     const todayStr = new Date().toDateString();
@@ -403,13 +403,13 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
 
     const ssePayload = `data: ${JSON.stringify(latestData)}\n\n`;
     for (const c of [...clients]) {
-      try {
+      try { 
         if (!c.writable || c.writableEnded) {
-          clients.delete(c); continue;
+            clients.delete(c); continue;
         }
-        c.write(ssePayload);
-        if (typeof c.flush === "function") c.flush();
-      }
+        c.write(ssePayload); 
+        if (typeof c.flush === "function") c.flush(); 
+      } 
       catch (err) { clients.delete(c); }
     }
   } catch (e) {
@@ -440,8 +440,8 @@ app.get("/api/stream", (req, res) => {
     if (typeof res.flush === "function") res.flush();
   }
 
-  req.on("close", () => { res.end(); clients.delete(res); });
-  req.on("error", () => { res.end(); clients.delete(res); });
+  req.on("close", () => { clients.delete(res); }); 
+  req.on("error", () => { clients.delete(res); }); 
 });
 
 // FIX LỖI 1: Gắn syncLimiter chuẩn chỉ (đã xóa lastForceSync)
@@ -486,7 +486,7 @@ app.post("/api/history/bulk-delete", deleteLimiter, async (req, res) => {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     if (secret !== adminPass) {
-      return res.status(403).json({ error: "Sai mật khẩu Admin!" });
+      return res.status(403).json({ error: "Sai mật khẩu Admin!" }); 
     }
 
     if (!Array.isArray(ids) || ids.length === 0 || !ids.every(id => typeof id === 'string')) {
@@ -499,7 +499,7 @@ app.post("/api/history/bulk-delete", deleteLimiter, async (req, res) => {
     if (cachedHistory.length > 0) {
       const last = cachedHistory[0];
       cachedLastSavedXau = last.xau;
-
+      
       let diffRecord = cachedHistory.find(r => r.sjc !== latestData?.sjc);
       if (diffRecord) {
         lastDifferentSjc = { sjc: diffRecord.sjc, diff: diffRecord.diff };
@@ -513,9 +513,9 @@ app.post("/api/history/bulk-delete", deleteLimiter, async (req, res) => {
       let lastDayRecord = cachedHistory.find(r => new Date(r.createdAt) <= yesterday);
       cachedYesterdaySjc = lastDayRecord ? lastDayRecord.sjc : (latestData ? latestData.sjc : null);
     } else {
-      cachedLastSavedXau = latestData ? latestData.xau : 2350;
-      lastDifferentSjc = latestData ? { sjc: latestData.sjc, diff: latestData.diff } : null;
-      cachedYesterdaySjc = latestData ? latestData.sjc : null;
+       cachedLastSavedXau = latestData ? latestData.xau : 2350;
+       lastDifferentSjc = latestData ? { sjc: latestData.sjc, diff: latestData.diff } : null;
+       cachedYesterdaySjc = latestData ? latestData.sjc : null;
     }
 
     res.json({ ok: true });

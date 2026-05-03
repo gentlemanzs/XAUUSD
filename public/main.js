@@ -190,17 +190,25 @@ function renderMain(d) {
 // ============================================================================
 async function fetchHistory() {
   try {
-    const limit = isExpanded ? 1000 : 50; 
+    const limit = isExpanded ? 1000 : 50; // Trạng thái đóng chỉ lấy 50 dòng cho nhẹ
     const res = await fetch(`${HIST_API}?limit=${limit}`, { cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    
     historyData = await res.json();
 
-    // ĐÃ XÓA vòng lặp tạo filterDateStr dư thừa ở đây
+    // Chuẩn hóa định dạng chuỗi ngày (YYYY-MM-DD) để tính toán filter
+    for (const r of historyData) {
+      if (!r.filterDateStr && r.createdAt) {
+        const d = new Date(r.createdAt);
+        if (!isNaN(d)) {
+          r.filterDateStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+        }
+      }
+    }
 
     try { localStorage.setItem('xau_hist_cache', JSON.stringify(historyData)); } catch (e) { }
     currentData = historyData;
 
+    // Nếu đang có bộ lọc thì apply luôn, nếu không thì render bình thường
     if (elements.startDate.value || elements.endDate.value) {
       applyFilter();
     } else {
@@ -308,17 +316,21 @@ async function applyFilter() {
   const startStr = elements.startDate.value;
   const endStr = elements.endDate.value;
 
+  // Chỉ gọi API 1000 dòng nếu có nhập ngày VÀ chưa từng tải full DB
   if ((startStr || endStr) && !isFullHistoryLoaded) {
     elements.historyTable.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Đang truy xuất dữ liệu...</td></tr>";
     try {
       const res = await fetch(`${HIST_API}?limit=1000`, { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      
       historyData = await res.json();
-      isFullHistoryLoaded = true; 
+      isFullHistoryLoaded = true; // Bật cờ đánh dấu đã tải xong 1000 dòng
       
-      // ĐÃ XÓA vòng lặp tạo filterDateStr dư thừa ở đây
-      
+      for (const r of historyData) {
+        if (!r.filterDateStr && r.createdAt) {
+          const d = new Date(r.createdAt);
+          if (!isNaN(d)) r.filterDateStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+        }
+      }
       try { localStorage.setItem('xau_hist_cache', JSON.stringify(historyData)); } catch (e) { }
     } catch (e) { 
       console.error(e);
