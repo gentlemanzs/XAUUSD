@@ -494,18 +494,16 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-
-// ==========================================================================
-// PULL TO REFRESH: EPIC ROCKET LAUNCH LOGIC
-// ==========================================================================
+// ──────────────────────────────────────
+// PULL TO REFRESH: RADAR SPINNER LOGIC
+// ──────────────────────────────────────
 let startY = 0; 
 let isPulling = false;
 let isRefreshing = false;
-const pullThreshold = 140; // Lực kéo lớn hơn để thấy được cảnh không gian rộng
+const pullThreshold = 100;
 const pullContainer = document.getElementById("cyberPull");
 const textEl = document.getElementById("cyberText");
-const flameOuter = document.getElementById("flameOuter");
-const flameCore = document.getElementById("flameCore");
+const radarIcon = document.getElementById("ptrIcon");
 
 window.addEventListener("touchstart", (e) => { 
   if (window.scrollY <= 0 && !isRefreshing) { 
@@ -521,26 +519,19 @@ window.addEventListener("touchmove", (e) => {
   
   if (diff > 0 && window.scrollY <= 0) {
     if (e.cancelable) e.preventDefault();
+    const moveY = Math.min(diff * 0.4, 90); 
+    pullContainer.style.top = `${-80 + moveY}px`;
     
-    // Kéo trần không gian xuống (Tối đa 160px để khớp với CSS height)
-    const moveY = Math.min(diff * 0.45, 160); 
-    pullContainer.style.top = `${-160 + moveY}px`;
-    
-    // Tỷ lệ sức ép (Lửa phun dài ra và sáng lên theo ngón tay)
+    // Quay radar theo ngón tay người dùng
     const pullRatio = Math.min(diff / pullThreshold, 1);
-    
-    flameOuter.style.opacity = pullRatio;
-    flameOuter.style.height = `${pullRatio * 35}px`; // Phun tối đa 35px
-    
-    flameCore.style.opacity = pullRatio;
-    flameCore.style.height = `${pullRatio * 15}px`; // Lõi phụt 15px
+    radarIcon.style.transform = `rotate(${pullRatio * 270}deg)`;
     
     if (diff > pullThreshold) {
       pullContainer.classList.add('ready');
-      textEl.innerText = "Sẵn sàng cất cánh!";
+      textEl.innerText = "Thả tay để quét!";
     } else {
       pullContainer.classList.remove('ready');
-      textEl.innerText = "Kéo để bơm nhiên liệu...";
+      textEl.innerText = "Kéo xuống để tải...";
     }
   }
 }, { passive: false });
@@ -554,43 +545,34 @@ window.addEventListener("touchend", (e) => {
     isRefreshing = true;
     pullContainer.classList.remove('ready');
     pullContainer.classList.add('refreshing');
-    
-    // Ép ngọn lửa phun Max công suất để phóng
-    flameOuter.style.height = "50px";
-    flameCore.style.height = "25px";
-    textEl.innerText = "🚀 VƯỢT ĐỈNH MỌI THỜI ĐẠI 🚀";
+    pullContainer.style.top = "20px"; 
+    radarIcon.style.transform = ''; // Reset để nhường CSS animation xoay tròn
+    textEl.innerText = "Đang quét dữ liệu...";
     
     load().then(() => {
-      // Chờ cho animation bắn tên lửa lên xong (khoảng 0.8s)
-      setTimeout(() => {
-        textEl.innerText = "DỮ LIỆU ĐÃ CẬP BẾN!";
-        const cards = document.querySelectorAll('.card');
-        cards.forEach(card => {
-          card.classList.remove('flash-update'); 
-          void card.offsetWidth;                 
-          card.classList.add('flash-update');    
-        });
-        if (navigator.vibrate) navigator.vibrate(80);
-      }, 800);
+      textEl.innerText = "Cập nhật thành công!";
+      pullContainer.classList.remove('refreshing');
+      pullContainer.classList.add('ready');
+      
+      const cards = document.querySelectorAll('.card');
+      cards.forEach(card => {
+        card.classList.remove('flash-update'); 
+        void card.offsetWidth;                 
+        card.classList.add('flash-update');    
+      });
 
-      // Đóng panel bầu trời không gian lại
+      if (navigator.vibrate) navigator.vibrate(50);
+      
       setTimeout(() => { 
-        pullContainer.style.top = "-160px"; 
+        pullContainer.style.top = "-80px"; 
         setTimeout(() => { 
           isRefreshing = false;
-          pullContainer.classList.remove('refreshing');
-          document.querySelectorAll('.card').forEach(c => c.classList.remove('flash-update'));
-          
-          // Reset lửa về 0
-          flameOuter.style.height = "0";
-          flameCore.style.height = "0";
+          pullContainer.classList.remove('ready');
+          cards.forEach(card => card.classList.remove('flash-update'));
         }, 300);
-      }, 2000);
+      }, 1200);
     });
   } else {
-    // Không đủ lực -> Tụt về trạng thái giấu diếm
-    pullContainer.style.top = "-160px";
-    flameOuter.style.height = "0";
-    flameCore.style.height = "0";
+    pullContainer.style.top = "-80px";
   }
 });

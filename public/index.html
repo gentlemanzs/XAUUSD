@@ -9,9 +9,9 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0" defer></script>
 
-  <!-- ÉP ĐIỆN THOẠI TẢI LẠI GIAO DIỆN BẰNG VERSION MỚI NHẤT -->
-  <link rel="stylesheet" href="style.css?v=99.0">
-  <script src="main.js?v=99.0" defer></script>
+  <!-- ÉP ĐIỆN THOẠI TẢI LẠI GIAO DIỆN BẰNG VERSION 8.0 -->
+  <link rel="stylesheet" href="style.css?v=22.0">
+  <script src="main.js?v=22.0" defer></script>
   
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
   <link rel="apple-touch-icon" href="/icon-180.png">
@@ -26,26 +26,9 @@
 
 <body>
 
-  <!-- HIỆU ỨNG PULL-TO-REFRESH: EPIC ROCKET LAUNCH -->
-  <div id="cyberPull" class="cyber-pull-container">
-    <div class="stars-bg"></div>
-    <div class="rocket-wrapper" id="ptrIcon">
-      <div class="rocket-body">🚀</div>
-      <div class="exhaust-system">
-        <div class="flame flame-outer" id="flameOuter"></div>
-        <div class="flame flame-core" id="flameCore"></div>
-        <div class="smoke-particles">
-          <div class="smoke"></div>
-          <div class="smoke"></div>
-          <div class="smoke"></div>
-        </div>
-      </div>
-    </div>
-    <div class="cyber-text" id="cyberText">Kéo để bơm vốn...</div>
-  </div>
-
   <header>
     <div class="brand"><span>📊</span> XAU DASHBOARD</div>
+    <!-- Thêm nút Force Sync ở đây -->
     <button id="forceSyncBtn" class="sync-btn" onclick="forceSync()" title="Ép cào dữ liệu ngay lập tức">
       <span id="syncDot" class="sync-dot"></span>
     </button>
