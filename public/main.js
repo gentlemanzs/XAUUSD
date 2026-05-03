@@ -476,26 +476,13 @@ function updateChart(fullData) {
     }
   }
 
-  // --- TÍNH TOÁN Y ĐỘNG & TẠO KHOẢNG ĐỆM CHUẨN TÀI CHÍNH ---
+   // Tự động scale trục tung (Y) dựa trên min/max thực tế
   const validGaps = gaps.filter(g => g !== null);
+  let yMin = 0; let yMax = 0;
   if (validGaps.length === 0) return;
-  const minVal = Math.min(...validGaps);
-  const maxVal = Math.max(...validGaps);
-  
-  // 1. Tìm mốc chẵn ngay dưới giá trị thấp nhất
-  let firstEvenLabel = Math.floor(minVal);
-  if (firstEvenLabel % 2 !== 0) firstEvenLabel -= 1;
-
-  // 2. Tìm mốc chẵn ngay trên giá trị cao nhất
-  let lastEvenLabel = Math.ceil(maxVal);
-  if (lastEvenLabel % 2 !== 0) lastEvenLabel += 1;
-
-  // 3. Mở rộng đáy và đỉnh thêm 1 đơn vị (tạo thành số lẻ) để làm đệm trống
-  // Điều này đảm bảo nhãn chẵn (firstEvenLabel) luôn bắt đầu từ hàng kẻ thứ 2
-  let yMin = firstEvenLabel - 1;
-  let yMax = lastEvenLabel + 1;
-
-  if (yMin >= yMax) { yMin -= 2; yMax += 2; }
+  const minVal = Math.min(...validGaps); const maxVal = Math.max(...validGaps);
+  const padding = Math.max((maxVal - minVal) * 0.2, 0.5);
+  yMin = minVal - padding; yMax = maxVal + padding;
 
   const calculatedWidth = totalPoints * minSpacing;
 
@@ -510,12 +497,11 @@ function updateChart(fullData) {
     }
   }
 
-  // KHỞI TẠO BIỂU ĐỒ DUY NHẤT
+   // Khởi tạo mới hoặc cập nhật Chart
   if (myChart) {
     myChart.data.labels = labels; myChart.data.datasets[0].data = gaps;
-    myChart.options.scales.y.min = yMin; 
-    myChart.options.scales.y.max = yMax;
-    if (isChartVisible) myChart.update('none');
+    myChart.options.scales.y.suggestedMin = yMin; myChart.options.scales.y.suggestedMax = yMax;
+    if (isChartVisible) myChart.update('none'); // Update không có animation (mượt hơn)
   } else {
     myChart = new Chart(ctx, {
       type: 'line',
@@ -528,41 +514,20 @@ function updateChart(fullData) {
       },
       options: {
         responsive: true, maintainAspectRatio: false, animation: false,
-        layout: { padding: { left: 10, right: 10, top: 20, bottom: 0 } },
         plugins: { legend: { display: false } },
         scales: {
           y: {
-            position: 'left',
-            min: yMin, max: yMax, beginAtZero: false,
-            ticks: { 
-              stepSize: 1, 
-              callback: (val) => {
-                if (val === 0) return ''; 
-                if (val % 2 === 0) return val + 'M'; 
-                return ''; 
-              },
-              color: '#64748b', font: { size: 11, weight: '600' },
-              // Nền trắng che đi đường kẻ ngang xuyên qua số, tạo hiệu ứng mượt mà
-              z: 10, backdropColor: 'white', showLabelBackdrop: true, padding: 10
-            }, 
-            grid: { color: 'rgba(226, 232, 240, 0.6)', drawTicks: false },
-            border: { display: false }
+            suggestedMin: yMin, suggestedMax: yMax, beginAtZero: false,
+            ticks: { maxTicksLimit: 6, callback: (val) => val.toFixed(1) + 'M', color: '#64748b', font: { size: 11 } },
+            grid: { color: 'rgba(226, 232, 240, 0.6)' }
           },
-          x: { 
-            offset: true, 
-            ticks: { autoSkip: true, minRotation: 45, maxRotation: 45, color: '#64748b', font: { size: 10 }, padding: 5 }, 
-            grid: { display: false, drawTicks: false }, border: { display: false } 
-          }
+          x: { offset: true, ticks: { autoSkip: true, maxRotation: 0, color: '#64748b', font: { size: 10 } }, grid: { display: false } }
         }
       }
     });
   }
 
-  // CSS HACK: Khóa trục Y khi cuộn ngang
-  const yAxisWidth = myChart.scales.y.width;
-  ctx.canvas.style.position = 'sticky';
-  ctx.canvas.style.left = `-${yAxisWidth}px`; 
-
+  // Tự động cuộn đến điểm dữ liệu mới nhất (nằm bên phải)
   const isAtRightEdge = scrollContainer.scrollWidth - scrollContainer.clientWidth <= scrollContainer.scrollLeft + 50;
   requestAnimationFrame(() => {
     if (isAtRightEdge || data.length <= 10) {
@@ -706,7 +671,7 @@ window.addEventListener("touchend", (e) => {
           cards.forEach(card => card.classList.remove('flash-update'));
         }, 300);
       }, 1200);
-
+      
     }).catch(() => {
       // BẠN ĐÃ QUÊN TOÀN BỘ KHỐI CATCH NÀY:
       textEl.innerText = "Lỗi kết nối!";
