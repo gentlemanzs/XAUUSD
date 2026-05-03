@@ -102,7 +102,9 @@ async function preloadCache() {
       const last = historyData[0]; 
       cachedLastSavedXau = last.xau;
       latestData = {
-        sjc: last.sjc, xau: last.xau, usd: last.usd,
+        sjc: last.sjc,
+        xau: last.xau,
+        usd: last.usd,        
         updatedAt: new Date(), timeStr: formatTimeVN(new Date())
       };
 
@@ -388,9 +390,11 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
       catch (err) { clients.delete(c); }
     }
   } catch (e) {
-  } finally {
-    isUpdating = false;
-  }
+  console.error('[updateData] Lỗi nghiêm trọng:', e.message);
+    sendTelegram(`🔥 *Lỗi Runtime (updateData)*\nChi tiết: ${e.message}`, 'update_fatal');
+} finally {
+  isUpdating = false;
+}
 }
 
 // ============================================================================
