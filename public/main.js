@@ -453,13 +453,13 @@ function updateChart(fullData) {
     }
   }
 
- // --- TÍNH TOÁN Y ĐỘNG & LÀM TRÒN SỐ CHẴN ---
+// --- TÍNH TOÁN Y ĐỘNG & LÀM TRÒN SỐ CHẴN ---
   const validGaps = gaps.filter(g => g !== null);
   if (validGaps.length === 0) return;
   const minVal = Math.min(...validGaps);
   const maxVal = Math.max(...validGaps);
   
-  // Ép đáy (yMin) về số chẵn nhỏ hơn giá trị thực tế để đường x luôn nằm trên đáy
+  // Ép đáy (yMin) về số chẵn nhỏ hơn hoặc bằng giá trị thực tế
   let yMin = Math.floor(minVal);
   if (yMin % 2 !== 0) yMin -= 1;
 
@@ -467,7 +467,7 @@ function updateChart(fullData) {
   let yMax = Math.ceil(maxVal);
   if (yMax % 2 !== 0) yMax += 1;
 
-  if (yMin >= yMax) { yMin -= 2; yMax += 2; } // Chống lỗi biểu đồ đi ngang
+  if (yMin >= yMax) { yMin -= 2; yMax += 2; }
 
   const calculatedWidth = totalPoints * minSpacing;
 
@@ -500,20 +500,20 @@ function updateChart(fullData) {
       },
       options: {
         responsive: true, maintainAspectRatio: false, animation: false,
-        layout: { padding: 0 }, // Loại bỏ padding thừa để ép 2 chart đồng bộ
+        layout: { padding: { top: 15, bottom: 0, left: 0, right: 10 } }, 
         plugins: { legend: { display: false } },
         scales: {
           y: {
             min: yMin, max: yMax, beginAtZero: false,
-            // Bước nhảy = 1: Đảm bảo kẻ ngang mỗi 1M, ẩn chữ
+            // Bước nhảy = 1: Đảm bảo kẻ ngang mỗi 1M, drawTicks: false xóa râu thừa
             ticks: { display: false, stepSize: 1 }, 
-            grid: { color: 'rgba(226, 232, 240, 0.6)' },
+            grid: { color: 'rgba(226, 232, 240, 0.6)', drawTicks: false },
             border: { display: false }
           },
           x: { 
             offset: true, 
-            ticks: { autoSkip: true, minRotation: 45, maxRotation: 45, color: '#64748b', font: { size: 10 } }, 
-            grid: { display: false } 
+            ticks: { autoSkip: true, minRotation: 45, maxRotation: 45, color: '#64748b', font: { size: 10 }, padding: 5 }, 
+            grid: { display: false, drawTicks: false }, border: { display: false } 
           }
         }
       }
@@ -523,6 +523,8 @@ function updateChart(fullData) {
   // ====== 2. TRỤC Y CỐ ĐỊNH (BÊN TRÁI) ======
   const yCanvas = document.getElementById('yAxisChart');
   if (!yCanvas || typeof Chart === 'undefined') return;
+
+  yCanvas.parentElement.style.height = '320px';
 
   const yCtx = yCanvas.getContext('2d');
   if (window.yChartFixed) {
@@ -535,35 +537,35 @@ function updateChart(fullData) {
     window.yChartFixed = new Chart(yCtx, {
       type: 'line',
       data: { 
-        labels: labels, 
+        labels: labels, // Ép dùng chung data trục X với chart chính để khớp độ cao 100%
         datasets: [{ data: gaps, borderColor: 'transparent', backgroundColor: 'transparent', borderWidth: 0, pointRadius: 0, pointHoverRadius: 0 }] 
       }, 
       options: {
         responsive: true, maintainAspectRatio: false, animation: false,
-        // VÁ LỖI KHUẤT CHỮ M: Thêm padding right 5px để tạo khoảng thở an toàn
-        layout: { padding: { right: 5, left: 0, top: 0, bottom: 0 } }, 
+        layout: { padding: { top: 15, bottom: 0, left: 0, right: 0 } }, 
         plugins: { legend: { display: false }, tooltip: { enabled: false } },
         scales: {
           x: { 
             offset: true,
-            ticks: { color: 'transparent', minRotation: 45, maxRotation: 45, font: { size: 10 } },
-            grid: { display: false }, border: { display: false }
+            // Copy Y HỆT cấu hình X của biểu đồ chính, chỉ đổi màu thành tàng hình
+            ticks: { autoSkip: true, color: 'transparent', minRotation: 45, maxRotation: 45, font: { size: 10 }, padding: 5 },
+            grid: { display: false, drawTicks: false }, border: { display: false }
           },
           y: {
-            position: 'right', 
+            position: 'right', // Áp trục bên phải
             min: yMin, max: yMax, beginAtZero: false,
             ticks: { 
-              mirror: false, 
+              mirror: false, // Để chữ bên ngoài trục
               stepSize: 1, 
-              padding: 2, 
+              padding: 5, // Lùi số ra xa nét kẻ 5px, do width đã tăng 60px nên không lo mất chữ M
               callback: (val) => {
-                if (val === 0) return ''; // Ẩn số 0
-                if (val % 2 === 0) return val + 'M'; // In số chẵn (18, 20...)
-                return ''; // Số lẻ bỏ trống
+                if (val === 0) return ''; 
+                if (val % 2 === 0) return val + 'M'; 
+                return ''; 
               },
               color: '#64748b', font: { size: 11, weight: '600' } 
             },
-            grid: { display: false }, border: { display: false } 
+            grid: { display: false, drawTicks: false }, border: { display: false } 
           }
         }
       }
