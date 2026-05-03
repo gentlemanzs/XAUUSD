@@ -18,7 +18,9 @@ app.use(helmet({
     directives: {
       ...helmet.contentSecurityPolicy.getDefaultDirectives(),
       "script-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-      "script-src-attr": ["'unsafe-inline'"]
+      "script-src-attr": ["'unsafe-inline'"],
+      // Thêm dòng này để cho phép trình duyệt fetch file .map và các API nội bộ
+      "connect-src": ["'self'", "https://cdn.jsdelivr.net"] 
     }
   }
 }));
