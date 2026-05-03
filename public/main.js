@@ -498,37 +498,46 @@ function updateChart(fullData) {
             ticks: { display: false }, // <--- THÊM DÒNG NÀY ĐỂ ẨN SỐ KHI CUỘN
             grid: { color: 'rgba(226, 232, 240, 0.6)' }
           },
-          x: { offset: true, ticks: { autoSkip: true, maxRotation: 0, color: '#64748b', font: { size: 10 } }, grid: { display: false } }
+          x: { offset: true, ticks: { autoSkip: true, minRotation: 45, maxRotation: 45, maxRotation: 0, color: '#64748b', font: { size: 10 } }, grid: { display: false } }
         }
       }
     });
   }
-  // ====== THÊM MỚI: VẼ TRỤC Y CỐ ĐỊNH ======
-const yCtx = document.getElementById('yAxisChart').getContext('2d');
-if (window.yChartFixed) {
-  window.yChartFixed.options.scales.y.suggestedMin = yMin;
-  window.yChartFixed.options.scales.y.suggestedMax = yMax;
-  window.yChartFixed.update('none');
-} else {
-  window.yChartFixed = new Chart(yCtx, {
-    type: 'line',
-    data: { labels: [''], datasets: [{ data: [yMin], borderWidth: 0 }] }, // Data tàng hình
-    options: {
-      responsive: true, maintainAspectRatio: false, animation: false,
-      plugins: { legend: { display: false }, tooltip: { enabled: false } },
-      layout: { padding: { top: 0, bottom: 0 } }, 
-      scales: {
-        x: { display: false },
-        y: {
-          position: 'right', // Áp sát mép phải để liền mạch với biểu đồ cuộn
-          suggestedMin: yMin, suggestedMax: yMax, beginAtZero: false,
-          ticks: { maxTicksLimit: 6, callback: (val) => val.toFixed(1) + 'M', color: '#64748b', font: { size: 11 } },
-          grid: { display: false, drawBorder: false } 
+ // ====== THÊM MỚI: VẼ TRỤC Y CỐ ĐỊNH ======
+  const yCanvas = document.getElementById('yAxisChart');
+  if (!yCanvas || typeof Chart === 'undefined') return;
+
+  const yCtx = yCanvas.getContext('2d');
+  if (window.yChartFixed) {
+    window.yChartFixed.options.scales.y.suggestedMin = yMin;
+    window.yChartFixed.options.scales.y.suggestedMax = yMax;
+    window.yChartFixed.update('none');
+  } else {
+    window.yChartFixed = new Chart(yCtx, {
+      type: 'line',
+      // VÁ LỖI CHẤM MÀU: Thêm pointRadius: 0 và pointHoverRadius: 0
+      data: { labels: [''], datasets: [{ data: [yMin], borderWidth: 0, pointRadius: 0, pointHoverRadius: 0 }] }, 
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        layout: { padding: { top: 0, bottom: 0, left: 0, right: 0 } }, 
+        scales: {
+          x: { 
+            display: false,
+            border: { display: false }, // VÁ LỖI KẺ DỌC
+            grid: { display: false }
+          },
+          y: {
+            position: 'left', // VÁ LỖI CẮT CHỮ: Căn trái để chữ không tràn ra ngoài
+            suggestedMin: yMin, suggestedMax: yMax, beginAtZero: false,
+            ticks: { maxTicksLimit: 6, callback: (val) => val.toFixed(1) + 'M', color: '#64748b', font: { size: 11 } },
+            border: { display: false }, // VÁ LỖI KẺ DỌC
+            grid: { display: false } 
+          }
         }
       }
-    }
-  });
-}
+    });
+  }
 
   // Tự động cuộn đến điểm dữ liệu mới nhất (nằm bên phải)
   const isAtRightEdge = scrollContainer.scrollWidth - scrollContainer.clientWidth <= scrollContainer.scrollLeft + 50;
