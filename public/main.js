@@ -395,7 +395,14 @@ async function deleteSelected() {
 // PHẦN 6: VẼ BIỂU ĐỒ (CHART.JS) - BẢN FIX CUỘN NGANG & KHOẢNG ĐỆM HOÀN HẢO
 // ============================================================================
 function updateChart(fullData) {
-  if (!fullData || fullData.length < 2) return;
+  if (!fullData || fullData.length < 2) {
+    lastChartSignature = "";
+    if (myChart) {
+      myChart.data.labels = []; myChart.data.datasets[0].data = [];
+      myChart.update('none');
+    }
+    return;
+  }
 
   const MAX_POINTS = 100;
   const data = fullData.slice(0, MAX_POINTS);
@@ -427,8 +434,7 @@ function updateChart(fullData) {
 
   const wrapper = chartCanvas.parentElement;
   const scrollContainer = document.querySelector('.chart-scroll-container');
-  // Trừ đi 60px của phần trục Y đã bị phủ
-  const containerWidth = (scrollContainer.clientWidth || window.innerWidth) - 60; 
+  const containerWidth = scrollContainer.clientWidth || window.innerWidth;
 
   const maxSpacing = 55; let minSpacing = 35;
   if (totalPoints * minSpacing > 30000) minSpacing = Math.floor(30000 / totalPoints);
@@ -441,22 +447,29 @@ function updateChart(fullData) {
     }
   }
 
-  // --- TÍNH TOÁN Y ĐỘNG ---
+  // --- TÍNH TOÁN Y ĐỘNG & TẠO KHOẢNG ĐỆM CHUẨN TÀI CHÍNH ---
   const validGaps = gaps.filter(g => g !== null);
   if (validGaps.length === 0) return;
   const minVal = Math.min(...validGaps);
   const maxVal = Math.max(...validGaps);
   
+  // 1. Tìm mốc chẵn ngay dưới giá trị thấp nhất
   let firstEvenLabel = Math.floor(minVal);
   if (firstEvenLabel % 2 !== 0) firstEvenLabel -= 1;
+
+  // 2. Tìm mốc chẵn ngay trên giá trị cao nhất
   let lastEvenLabel = Math.ceil(maxVal);
   if (lastEvenLabel % 2 !== 0) lastEvenLabel += 1;
 
+  // 3. Mở rộng đáy và đỉnh thêm 1 đơn vị (tạo thành số lẻ) để làm đệm trống
+  // Điều này đảm bảo nhãn chẵn (firstEvenLabel) luôn bắt đầu từ hàng kẻ thứ 2
   let yMin = firstEvenLabel - 1;
   let yMax = lastEvenLabel + 1;
+
   if (yMin >= yMax) { yMin -= 2; yMax += 2; }
 
   const calculatedWidth = totalPoints * minSpacing;
+
   if (wrapper._lastWidth !== calculatedWidth) {
     wrapper._lastWidth = calculatedWidth;
     if (calculatedWidth > containerWidth) {
@@ -468,10 +481,11 @@ function updateChart(fullData) {
     }
   }
 
-  // ====== 1. LỚP DƯỚI: BIỂU ĐỒ CHÍNH ======
+  // KHỞI TẠO BIỂU ĐỒ DUY NHẤT
   if (myChart) {
     myChart.data.labels = labels; myChart.data.datasets[0].data = gaps;
-    myChart.options.scales.y.min = yMin; myChart.options.scales.y.max = yMax;
+    myChart.options.scales.y.min = yMin; 
+    myChart.options.scales.y.max = yMax;
     if (isChartVisible) myChart.update('none');
   } else {
     myChart = new Chart(ctx, {
@@ -485,14 +499,25 @@ function updateChart(fullData) {
       },
       options: {
         responsive: true, maintainAspectRatio: false, animation: false,
-        layout: { padding: { top: 15, bottom: 0, left: 0, right: 10 } },
+        layout: { padding: { left: 10, right: 10, top: 20, bottom: 0 } },
         plugins: { legend: { display: false } },
         scales: {
           y: {
-            position: 'left', min: yMin, max: yMax,
-            // Ẩn trục Y của biểu đồ chính đi
-            ticks: { display: false, stepSize: 1 }, 
-            grid: { color: 'rgba(226, 232, 240, 0.6)', drawTicks: false }, border: { display: false }
+            position: 'left',
+            min: yMin, max: yMax, beginAtZero: false,
+            ticks: { 
+              stepSize: 1, 
+              callback: (val) => {
+                if (val === 0) return ''; 
+                if (val % 2 === 0) return val + 'M'; 
+                return ''; 
+              },
+              color: '#64748b', font: { size: 11, weight: '600' },
+              // Nền trắng che đi đường kẻ ngang xuyên qua số, tạo hiệu ứng mượt mà
+              z: 10, backdropColor: 'white', showLabelBackdrop: true, padding: 10
+            }, 
+            grid: { color: 'rgba(226, 232, 240, 0.6)', drawTicks: false },
+            border: { display: false }
           },
           x: { 
             offset: true, 
@@ -504,48 +529,11 @@ function updateChart(fullData) {
     });
   }
 
-  // ====== 2. LỚP TRÊN: TRỤC Y CỐ ĐỊNH ======
-  const yCanvas = document.getElementById('yAxisChart');
-  if (!yCanvas) return;
-  const yCtx = yCanvas.getContext('2d');
-  
-  if (window.yChartFixed) {
-    window.yChartFixed.options.scales.y.min = yMin; window.yChartFixed.options.scales.y.max = yMax;
-    window.yChartFixed.update('none');
-  } else {
-    window.yChartFixed = new Chart(yCtx, {
-      type: 'line',
-      // Data tàng hình
-      data: { labels: ['00/00'], datasets: [{ data: [0], borderWidth: 0, pointRadius: 0 }] }, 
-      options: {
-        responsive: true, maintainAspectRatio: false, animation: false,
-        layout: { padding: { top: 15, bottom: 0, left: 0, right: 0 } }, 
-        plugins: { legend: { display: false }, tooltip: { enabled: false } },
-        scales: {
-          x: { 
-            // Trục X tàng hình nhưng phải có cùng góc xoay để ép độ cao khớp nhau
-            ticks: { color: 'transparent', minRotation: 45, maxRotation: 45, font: { size: 10 }, padding: 5 },
-            grid: { display: false, drawTicks: false }, border: { display: false }
-          },
-          y: {
-            position: 'right', min: yMin, max: yMax,
-            ticks: { 
-              mirror: false, padding: 5, stepSize: 1, 
-              callback: (val) => {
-                if (val === 0) return ''; 
-                if (val % 2 === 0) return val + 'M'; 
-                return ''; 
-              },
-              color: '#64748b', font: { size: 11, weight: '600' } 
-            },
-            grid: { display: false, drawTicks: false }, border: { display: false } 
-          }
-        }
-      }
-    });
-  }
+  // CSS HACK: Khóa trục Y khi cuộn ngang
+  const yAxisWidth = myChart.scales.y.width;
+  ctx.canvas.style.position = 'sticky';
+  ctx.canvas.style.left = `-${yAxisWidth}px`; 
 
-  // Tự động cuộn đến điểm dữ liệu mới nhất
   const isAtRightEdge = scrollContainer.scrollWidth - scrollContainer.clientWidth <= scrollContainer.scrollLeft + 50;
   requestAnimationFrame(() => {
     if (isAtRightEdge || data.length <= 10) {
