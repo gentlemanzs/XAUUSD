@@ -493,30 +493,17 @@ app.post("/api/history/bulk-delete", deleteLimiter, async (req, res) => {
       return res.status(400).json({ error: "Dữ liệu không hợp lệ (Invalid Payload)" });
     }
 
+    // 1. Xóa trong Database
     await History.deleteMany({ _id: { $in: ids } });
-    cachedHistory = cachedHistory.filter(item => !ids.includes(item._id.toString()));
 
-    if (cachedHistory.length > 0) {
-      const last = cachedHistory[0];
-      cachedLastSavedXau = last.xau;
-      
-      let diffRecord = cachedHistory.find(r => r.sjc !== latestData?.sjc);
-      if (diffRecord) {
-        lastDifferentSjc = { sjc: diffRecord.sjc, diff: diffRecord.diff };
-      } else if (latestData) {
-        lastDifferentSjc = { sjc: latestData.sjc, diff: latestData.diff };
-      }
+    // --- BẮT ĐẦU ĐOẠN FIX ---
+    // 2. Dọn sạch bóng ma bằng cách nạp lại toàn bộ Cache từ DB (Reset biến RAM)
+    await preloadCache(); 
 
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      yesterday.setHours(23, 59, 59, 999);
-      let lastDayRecord = cachedHistory.find(r => new Date(r.createdAt) <= yesterday);
-      cachedYesterdaySjc = lastDayRecord ? lastDayRecord.sjc : (latestData ? latestData.sjc : null);
-    } else {
-       cachedLastSavedXau = latestData ? latestData.xau : 2350;
-       lastDifferentSjc = latestData ? { sjc: latestData.sjc, diff: latestData.diff } : null;
-       cachedYesterdaySjc = latestData ? latestData.sjc : null;
-    }
+    // 3. Ép cào lại dữ liệu live ngay lập tức để đè cái latestData chuẩn nhất và bắn qua SSE
+    // Lưu ý: Không dùng await ở đây để API trả về ok ngay cho Frontend đỡ lag
+    updateData("Đồng bộ sau khi Admin xóa", true); 
+    // --- KẾT THÚC ĐOẠN FIX ---
 
     res.json({ ok: true });
   } catch (error) {
