@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Gold Dashboard</title>
+
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0" defer></script>
+
+<<<<<<< HEAD
+  <!-- ÉP ĐIỆN THOẠI TẢI LẠI GIAO DIỆN BẰNG VERSION 8.0 -->
+  <link rel="stylesheet" href="style.css?v=22.0">
+  <script src="main.js?v=22.0" defer></script>
+=======
+  <!-- BẢN CẬP NHẬT GIAO DIỆN ORBITAL STRIKE -->
+  <link rel="stylesheet" href="style.css?v=27.0">
+  <script src="main.js?v=27.0" defer></script>
+>>>>>>> cb932aa5fe8aa9548fec55ff621dc33e29eb3be3
+  
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/icon-180.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0f172a">
+
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="XAU Dashboard">
+</head>
+
+<body>
+
+<<<<<<< HEAD
+=======
+  <!-- HIỆU ỨNG PULL-TO-REFRESH: ORBITAL LASER STRIKE -->
+  <div id="cyberPull" class="cyber-pull-container">
+    <div class="stars-bg"></div>
+    
+    <div class="satellite-wrapper" id="ptrIcon">
+      <div class="solar-panel panel-left" id="panelLeft"></div>
+      <div class="sat-core">
+        <div class="energy-lens" id="energyLens"></div>
+      </div>
+      <div class="solar-panel panel-right" id="panelRight"></div>
+      
+      <!-- Cột Laser Hủy Diệt -->
+      <div class="laser-beam"></div>
+    </div>
+
+    <div class="cyber-text" id="cyberText">CALIBRATING ORBIT...</div>
+  </div>
+
+>>>>>>> cb932aa5fe8aa9548fec55ff621dc33e29eb3be3
+  <header>
+    <div class="brand"><span>📊</span> XAU DASHBOARD</div>
+    <!-- Thêm nút Force Sync ở đây -->
+    <button id="forceSyncBtn" class="sync-btn" onclick="forceSync()" title="Ép cào dữ liệu ngay lập tức">
+      <span id="syncDot" class="sync-dot"></span>
+    </button>
+  </header>
+
+  <!-- Bọc thêm ID vào container để làm hiệu ứng rung chấn -->
+  <div class="container" id="mainContainer">
+    <div id="lastTime" style="margin-bottom:1rem; font-size:0.875rem; color:#64748b; font-weight: 500;">Đang kết nối...
+    </div>
+
+    <div class="grid">
+      <div class="card usd-card">
+        <div class="card-title">💵 USD</div>
+        <div id="usd" class="card-value">--</div>
+      </div>
+
+      <div class="card highlight">
+        <div class="card-title">🌍 XAU</div>
+        <div class="card-value xau-wrapper">
+          <div id="xauValue">--</div>
+          <div id="xauChange" class="sjc-sub"></div>
+        </div>
+      </div>
+
+      <div class="card highlight">
+        <div class="card-title">🧈 SJC</div>
+        <div class="card-value">
+          <div id="sjcValue">--</div>
+          <div id="sjcChange" class="sjc-sub"></div>
+        </div>
+      </div>
+
+      <div class="card">
+      <div class="card-title">⚖️ Market Gap</div>
+      <div class="card-value">
+        <div id="diff">--</div>
+        <div id="percent" class="sjc-sub diff-sub">--</div>
+      </div>
+    </div>
+      <div class="card">
+        <div class="card-title">📉 Gap Change</div>
+        <div id="gapChange" class="card-value">--</div>
+      </div>
+    </div>
+
+    <div
+      style="position: relative; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; height: 40px;">
+      <div style="font-size: 1.2rem; font-weight: 700; white-space: nowrap;">📑 History</div>
+
+      <div id="filterBox" class="filter-box">
+        <input type="date" id="startDate" title="Từ ngày">
+        <span style="color: var(--secondary-text); font-weight: bold;">-</span>
+        <input type="date" id="endDate" title="Đến ngày">
+        <button class="btn-filter" onclick="applyFilter()">Filter</button>
+        <button class="btn-reset" onclick="resetFilter()">Clear</button>
+        <button class="btn-delete-multi" onclick="deleteSelected()">Delete</button>
+      </div>
+
+      <button onclick="toggleFilterBox()" id="toggleBtn"
+        style="background:transparent; border:none; font-size:1.8rem; cursor:pointer; color:#64748b; line-height: 1; z-index: 2;">+</button>
+    </div>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th class="col-time">
+              Time
+              <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)" title="Chọn tất cả"
+                class="check-action">
+            </th>
+            <th>XAU</th>
+            <th>SJC</th>
+            <th>Gap</th>
+            <th class="col-diff">Diff</th>
+          </tr>
+        </thead>
+        <tbody id="history"></tbody>
+      </table>
+      <div id="pagination" class="pagination" style="display: none;"></div>
+    </div>
+
+    <div
+      style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; margin-top: 2rem;">
+      <div style="font-size: 1.2rem; font-weight: 700;">📈 XAU-SJC Gap</div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-scroll-container">
+        <div class="chart-inner-wrapper">
+          <canvas id="gapChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
