@@ -459,15 +459,15 @@ function updateChart(fullData) {
   const minVal = Math.min(...validGaps);
   const maxVal = Math.max(...validGaps);
   
-  // Ép đáy (yMin) về số chẵn thấp hơn giá trị nhỏ nhất
+  // Ép đáy (yMin) về số chẵn nhỏ hơn giá trị thực tế để đường x luôn nằm trên đáy
   let yMin = Math.floor(minVal);
   if (yMin % 2 !== 0) yMin -= 1;
 
-  // Ép đỉnh (yMax) lên số chẵn cao hơn giá trị lớn nhất
+  // Ép đỉnh (yMax) lên số chẵn lớn hơn giá trị thực tế
   let yMax = Math.ceil(maxVal);
   if (yMax % 2 !== 0) yMax += 1;
 
-  if (yMin >= yMax) { yMin -= 2; yMax += 2; } // Chống lỗi biểu đồ phẳng lỳ
+  if (yMin >= yMax) { yMin -= 2; yMax += 2; } // Chống lỗi biểu đồ đi ngang
 
   const calculatedWidth = totalPoints * minSpacing;
 
@@ -500,11 +500,12 @@ function updateChart(fullData) {
       },
       options: {
         responsive: true, maintainAspectRatio: false, animation: false,
+        layout: { padding: 0 }, // Loại bỏ padding thừa để ép 2 chart đồng bộ
         plugins: { legend: { display: false } },
         scales: {
           y: {
             min: yMin, max: yMax, beginAtZero: false,
-            // stepSize: 1 vẽ đường kẻ ngang mỗi 1M (VD: 18, 19, 20...)
+            // Bước nhảy = 1: Đảm bảo kẻ ngang mỗi 1M, ẩn chữ
             ticks: { display: false, stepSize: 1 }, 
             grid: { color: 'rgba(226, 232, 240, 0.6)' },
             border: { display: false }
@@ -523,9 +524,11 @@ function updateChart(fullData) {
   const yCanvas = document.getElementById('yAxisChart');
   if (!yCanvas || typeof Chart === 'undefined') return;
 
+  // VÁ LỖI LỆCH PIXEL DO THANH CUỘN: Ép thẻ chứa Y bằng đúng 320px như biểu đồ chính
+  yCanvas.parentElement.style.height = '320px';
+
   const yCtx = yCanvas.getContext('2d');
   if (window.yChartFixed) {
-    // Truyền y hệt data và range để giữ đồng bộ tỷ lệ
     window.yChartFixed.data.labels = labels;
     window.yChartFixed.data.datasets[0].data = gaps;
     window.yChartFixed.options.scales.y.min = yMin;
@@ -535,39 +538,37 @@ function updateChart(fullData) {
     window.yChartFixed = new Chart(yCtx, {
       type: 'line',
       data: { 
-        labels: labels, // Phải có dải label của X để độ cao trục X 2 bên bằng nhau
-        // Dữ liệu y hệt như biểu đồ chính nhưng cho tàng hình hết
+        labels: labels, 
+        // Data ẩn đi nhưng phải giống chart chính để tính toán layout khớp 100%
         datasets: [{ data: gaps, borderColor: 'transparent', backgroundColor: 'transparent', borderWidth: 0, pointRadius: 0, pointHoverRadius: 0 }] 
       }, 
       options: {
         responsive: true, maintainAspectRatio: false, animation: false,
-        plugins: { legend: { display: false }, tooltip: { enabled: false } },
         layout: { padding: 0 }, 
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
         scales: {
           x: { 
             offset: true,
-            // Giữ lại text nghiêng 45 độ nhưng đổi màu trong suốt để chiếm đúng diện tích
+            // Xoay 45 độ vô hình để chiếm diện tích Y bằng đúng với chart chính
             ticks: { color: 'transparent', minRotation: 45, maxRotation: 45, font: { size: 10 } },
             grid: { display: false }, border: { display: false }
           },
           y: {
-            position: 'right',
+            position: 'right', // Áp trục sát bên phải để nối viền với chart bên cạnh
             min: yMin, max: yMax, beginAtZero: false,
             ticks: { 
-              mirror: true, 
-              stepSize: 1, // Khớp tuyệt đối với đường kẻ của biểu đồ chính
+              mirror: false, 
+              stepSize: 1, // Kẻ mỗi 1M giống hệt chart chính
               padding: 5, 
               callback: (val) => {
-                if (val === 0) return ''; // Ẩn hoàn toàn nếu giá trị là 0
-                
-                // Chỉ in số nếu giá trị là số chẵn (18, 20, 22) -> Tự động cách 1 kẻ ngang
+                if (val === 0) return ''; // Ẩn hoàn toàn số 0M
+                // Nếu là chẵn (18, 20, 22...) thì in ra. Số lẻ (19, 21...) thì in rỗng
                 if (val % 2 === 0) return val + 'M';
-                
-                return ''; // Số lẻ (19, 21) để chuỗi rỗng
+                return ''; 
               },
               color: '#64748b', font: { size: 11, weight: '600' } 
             },
-            border: { display: false }, grid: { display: false } 
+            grid: { display: false }, border: { display: false } 
           }
         }
       }
