@@ -222,7 +222,7 @@ async function fetchHistory() {
 
 // Render dữ liệu ra bảng HTML (Có phân trang)
 function renderTable() {
-  const pageSize = isExpanded ? 50 : 10;
+  const pageSize = isExpanded ? 10 : 5;
   const startIdx = isExpanded ? (currentPage - 1) * pageSize : 0;
   const endIdx = startIdx + pageSize;
   const displayData = currentData.slice(startIdx, endIdx);
@@ -261,10 +261,10 @@ function renderTable() {
 // Quản lý các nút phân trang (Chỉ hiện khi mở rộng bảng)
 function renderPagination() {
   const pag = elements.pagination;
-  if (!isExpanded || currentData.length <= 50) { pag.style.display = "none"; return; }
+  if (!isExpanded || currentData.length <= 10) { pag.style.display = "none"; return; }
 
   pag.style.display = "flex"; pag.innerHTML = "";
-  const totalPages = Math.ceil(currentData.length / 50);
+  const totalPages = Math.ceil(currentData.length / 10);
 
   // Nút Previous
   const prevBtn = document.createElement("button");

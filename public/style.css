@@ -131,8 +131,8 @@ th:nth-child(3), td:nth-child(3) { width: 25%; } /* SJC */
 th:nth-child(4), td:nth-child(4) { width: 25%; } /* Gap */
 th:nth-child(5), td:nth-child(5) { width: 12%; } /* Diff */
 
-th { background: #f1f5f9; padding: 14px 16px; text-align: left !important; color: var(--secondary-text); }
-td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: left !important; }
+th { background: #f1f5f9; padding: 8px 16px; text-align: left !important; color: var(--secondary-text); }
+td { padding: 8px 16px; border-bottom: 1px solid var(--border-color); text-align: left !important; }
 
 /* CỘT TIME */
 .col-time {
