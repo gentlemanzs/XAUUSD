@@ -61,12 +61,9 @@ function safeFetchHistory(isInit = false) {
 // PHẦN 3: KẾT NỐI REALTIME (SERVER-SENT EVENTS)
 // ============================================================================
 function initSSE() {
-  // Fix rò rỉ SSE: Đóng hẳn luồng cũ nếu nó đang ở trạng thái lấp lửng (CONNECTING)
+  // Fix rò rỉ SSE: Đóng hẳn luồng cũ nếu nó đang ở trạng thái lấp lửng
   if (evtSource) {
-    // Nếu kết nối đang mở và hoạt động tốt thì giữ nguyên
     if (evtSource.readyState === EventSource.OPEN) return;
-
-    // Nếu không, đóng hẳn để dọn dẹp trước khi tạo mới
     evtSource.close();
   }
 
@@ -149,7 +146,6 @@ function renderMain(d) {
   if (elements.xauValue.textContent !== xauValueStr) elements.xauValue.textContent = xauValueStr;
   if (elements.xauChange.textContent !== xauChangeStr) {
     elements.xauChange.textContent = xauChangeStr;
-    // Fix classList: Xóa class cũ, thêm class mới thay vì ghi đè toàn bộ
     elements.xauChange.classList.remove('xau-up', 'xau-down');
     elements.xauChange.classList.add(isXUp ? 'xau-up' : 'xau-down');
   }
@@ -175,7 +171,6 @@ function renderMain(d) {
   if (elements.sjcValue.textContent !== sjcValueStr) elements.sjcValue.textContent = sjcValueStr;
   if (elements.sjcChange.textContent !== sjcChangeStr) {
     elements.sjcChange.textContent = sjcChangeStr;
-    // Fix classList: Xóa class cũ, thêm class mới
     elements.sjcChange.classList.remove('change-up', 'change-down');
     elements.sjcChange.classList.add(isUp ? 'change-up' : 'change-down');
   }
@@ -191,12 +186,11 @@ function renderMain(d) {
 // ============================================================================
 async function fetchHistory() {
   try {
-    const limit = isExpanded ? 1000 : 50; // Trạng thái đóng chỉ lấy 50 dòng cho nhẹ
+    const limit = isExpanded ? 1000 : 50; 
     const res = await fetch(`${HIST_API}?limit=${limit}`, { cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     historyData = await res.json();
 
-    // Chuẩn hóa định dạng chuỗi ngày (YYYY-MM-DD) để tính toán filter
     for (const r of historyData) {
       if (!r.filterDateStr && r.createdAt) {
         const d = new Date(r.createdAt);
@@ -209,7 +203,6 @@ async function fetchHistory() {
     try { localStorage.setItem('xau_hist_cache', JSON.stringify(historyData)); } catch (e) { }
     currentData = historyData;
 
-    // Nếu đang có bộ lọc thì apply luôn, nếu không thì render bình thường
     if (elements.startDate.value || elements.endDate.value) {
       applyFilter();
     } else {
@@ -228,9 +221,8 @@ function renderTable() {
   const endIdx = startIdx + pageSize;
   const displayData = currentData.slice(startIdx, endIdx);
 
-  document.getElementById('selectAll').checked = false; // Reset checkbox tổng
+  document.getElementById('selectAll').checked = false;
 
-  // Dùng DocumentFragment để insert 1 lần thay vì dán HTML n lần
   const fragment = document.createDocumentFragment();
 
   displayData.forEach(r => {
@@ -259,7 +251,6 @@ function renderTable() {
   renderPagination();
 }
 
-// Quản lý các nút phân trang (Chỉ hiện khi mở rộng bảng)
 function renderPagination() {
   const pag = elements.pagination;
   if (!isExpanded || currentData.length <= 50) { pag.style.display = "none"; return; }
@@ -267,14 +258,12 @@ function renderPagination() {
   pag.style.display = "flex"; pag.innerHTML = "";
   const totalPages = Math.ceil(currentData.length / 50);
 
-  // Nút Previous
   const prevBtn = document.createElement("button");
   prevBtn.className = "page-btn"; prevBtn.innerText = "« Trước";
   prevBtn.disabled = currentPage === 1;
   prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; renderTable(); } };
   pag.appendChild(prevBtn);
 
-  // Tính toán hiển thị 5 trang gần nhất
   let startPage = Math.max(1, currentPage - 2);
   let endPage = Math.min(totalPages, startPage + 4);
   if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
@@ -286,7 +275,6 @@ function renderPagination() {
     pag.appendChild(btn);
   }
 
-  // Nút Next
   const nextBtn = document.createElement("button");
   nextBtn.className = "page-btn"; nextBtn.innerText = "Sau »";
   nextBtn.disabled = currentPage === totalPages;
@@ -294,7 +282,6 @@ function renderPagination() {
   pag.appendChild(nextBtn);
 }
 
-// Bật/tắt trạng thái mở rộng khu vực bảng điều khiển
 function toggleFilterBox() {
   isExpanded = !isExpanded;
 
@@ -311,13 +298,10 @@ function toggleFilterBox() {
   if (isExpanded) { fetchHistory(); } else { renderTable(); }
 }
 
-// Áp dụng bộ lọc ngày
-// VÁ LỖI: Chuyển hàm thành async để ép kéo full 1000 dòng trước khi filter
 async function applyFilter() {
   const startStr = elements.startDate.value;
   const endStr = elements.endDate.value;
 
-  // Nếu có nhập bộ lọc mà RAM đang chỉ chứa 50 dòng thì ép kéo full về
   if ((startStr || endStr) && historyData.length < 1000) {
     elements.historyTable.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Đang truy xuất dữ liệu...</td></tr>";
     try {
@@ -346,7 +330,6 @@ async function applyFilter() {
   updateChart(currentData);
 }
 
-// Xóa bộ lọc
 function resetFilter() {
   elements.startDate.value = ""; elements.endDate.value = "";
   currentData = historyData;
@@ -355,13 +338,11 @@ function resetFilter() {
   updateChart(currentData);
 }
 
-// Hàm hỗ trợ chọn tất cả dòng lịch sử
 function toggleSelectAll(source) {
   const checkboxes = document.querySelectorAll('.log-checkbox');
   checkboxes.forEach(cb => cb.checked = source.checked);
 }
 
-// Xóa các dòng lịch sử (Cần mật khẩu Admin)
 async function deleteSelected() {
   const checkedBoxes = document.querySelectorAll('.log-checkbox:checked');
   if (checkedBoxes.length === 0) { alert("Vui lòng tích chọn ít nhất 1 dòng để xóa."); return; }
@@ -392,7 +373,6 @@ async function deleteSelected() {
 // PHẦN 6: VẼ BIỂU ĐỒ (CHART.JS)
 // ============================================================================
 function updateChart(fullData) {
-  // Tránh lỗi nổ chart khi không đủ dữ liệu
   if (!fullData || fullData.length < 2) {
     lastChartSignature = "";
     if (myChart) {
@@ -402,11 +382,9 @@ function updateChart(fullData) {
     return;
   }
 
-  // Rút gọn chỉ hiển thị tối đa 100 điểm biểu đồ cuối
   const MAX_POINTS = 100;
   const data = fullData.slice(0, MAX_POINTS);
 
-  // So sánh Signature để tránh vẽ lại một khung hình giống hệt nhau
   const currentSignature = `${data.length}_${data[0].createdAt}_${data[data.length - 1].createdAt}`;
   if (currentSignature === lastChartSignature) return;
   lastChartSignature = currentSignature;
@@ -416,7 +394,6 @@ function updateChart(fullData) {
   const totalPoints = data.length;
   const labels = []; const gaps = [];
 
-  // Trục hoành (X) là các ngày, chỉ in nhãn nếu đổi ngày mới
   let lastDateLabel = null;
   for (let i = totalPoints - 1; i >= 0; i--) {
     const r = data[i];
@@ -430,10 +407,9 @@ function updateChart(fullData) {
     } else {
       labels.push('');
     }
-    gaps.push(r.diff / 1000000); // Quy đổi ra triệu VNĐ cho dễ nhìn
+    gaps.push(r.diff / 1000000); 
   }
 
-  // Tính toán chiều rộng động để cuộn ngang trên điện thoại
   const wrapper = chartCanvas.parentElement;
   const scrollContainer = document.querySelector('.chart-scroll-container');
   const containerWidth = scrollContainer.clientWidth || window.innerWidth;
@@ -441,7 +417,6 @@ function updateChart(fullData) {
   const maxSpacing = 110; let minSpacing = 75;
   if (totalPoints * minSpacing > 30000) minSpacing = Math.floor(30000 / totalPoints);
 
-  // Đệm thêm null vào đầu mảng nếu dữ liệu quá ít (để biểu đồ luôn căn lề phải)
   const minPointsToFill = Math.ceil(containerWidth / maxSpacing);
   if (totalPoints > 0 && totalPoints < minPointsToFill) {
     const padCount = minPointsToFill - totalPoints;
@@ -450,7 +425,6 @@ function updateChart(fullData) {
     }
   }
 
-  // Tự động scale trục tung (Y) dựa trên min/max thực tế
   const validGaps = gaps.filter(g => g !== null);
   let yMin = 0; let yMax = 0;
   if (validGaps.length === 0) return;
@@ -471,11 +445,10 @@ function updateChart(fullData) {
     }
   }
 
-  // Khởi tạo mới hoặc cập nhật Chart
   if (myChart) {
     myChart.data.labels = labels; myChart.data.datasets[0].data = gaps;
     myChart.options.scales.y.suggestedMin = yMin; myChart.options.scales.y.suggestedMax = yMax;
-    if (isChartVisible) myChart.update('none'); // Update không có animation (mượt hơn)
+    if (isChartVisible) myChart.update('none'); 
   } else {
     myChart = new Chart(ctx, {
       type: 'line',
@@ -501,7 +474,6 @@ function updateChart(fullData) {
     });
   }
 
-  // Tự động cuộn đến điểm dữ liệu mới nhất (nằm bên phải)
   const isAtRightEdge = scrollContainer.scrollWidth - scrollContainer.clientWidth <= scrollContainer.scrollLeft + 50;
   requestAnimationFrame(() => {
     if (isAtRightEdge || data.length <= 10) {
@@ -514,7 +486,6 @@ function updateChart(fullData) {
 // PHẦN 7: EVENT LISTENER VÀ PULL-TO-REFRESH
 // ============================================================================
 
-// Nút bấm ép đồng bộ trên header
 async function forceSync() {
   const dot = document.getElementById('syncDot');
   if (!dot) return;
@@ -531,7 +502,6 @@ async function forceSync() {
   }, 3000);
 }
 
-// Khởi chạy App ban đầu
 try {
   const cachedMain = localStorage.getItem('xau_main_cache');
   if (cachedMain) {
@@ -552,7 +522,6 @@ try {
 load();
 initSSE();
 
-// Quản lý SSE khi điện thoại tắt/mở màn hình (Tránh tốn pin)
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     if (evtSource) { evtSource.close(); evtSource = null; }
@@ -561,29 +530,44 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-// LOGIC: Kéo thả màn hình (Radar Spinner Theme)
+// LOGIC: Kéo thả màn hình (The Gold Digger Theme)
 let startY = 0;
 let isPulling = false;
 let isRefreshing = false;
-const pullThreshold = 100;
-const pullContainer = document.getElementById("cyberPull");
-const textEl = document.getElementById("cyberText");
-const radarIcon = document.getElementById("ptrIcon");
+const pullThreshold = 130; 
+const pullContainer = document.getElementById("minerPull");
+const rope = document.getElementById("rope");
+const miner = document.getElementById("miner");
+const rock = document.getElementById("rock");
+const tnt = document.getElementById("tnt");
+const explosion = document.getElementById("explosion");
+const goldLoot = document.getElementById("gold-loot");
+const textEl = document.getElementById("pullText");
 
 window.addEventListener("touchstart", (e) => {
-  // VÁ LỖI: Chặn bắt tọa độ nếu trình duyệt đang bị hiệu ứng "nảy cao su" (bouncing)
-  // Chỉ kích hoạt khi cuộn tuyệt đối bằng 0 và không có dấu hiệu nảy
   if (window.scrollY <= 0 && !isRefreshing) {
-    if (e.touches[0].clientY < 0) return; // Safari đang bị kéo lố lên trên thì bỏ qua
+    if (e.touches[0].clientY < 0) return; 
     startY = e.touches[0].clientY;
     isPulling = true;
+    
+    // Reset rạp xiếc về trạng thái ban đầu
+    rock.style.display = "block";
+    tnt.style.display = "none";
+    explosion.style.display = "none";
+    goldLoot.style.display = "none";
+    miner.style.display = "flex";
+    explosion.classList.remove('boom');
+    goldLoot.classList.remove('show');
+    
+    pullContainer.style.transition = 'none';
+    miner.style.transform = `translateY(0px)`;
+    rope.style.height = "0px";
   }
 }, { passive: false });
 
 window.addEventListener("touchmove", (e) => {
   if (!isPulling || isRefreshing) return;
 
-  // VÁ LỖI TĂNG CƯỜNG: Cương quyết khóa cuộn trình duyệt nếu đang thực hiện thao tác kéo màn hình xuống
   if (window.scrollY <= 0 && e.touches[0].clientY > startY) {
     if (e.cancelable) e.preventDefault();
   }
@@ -592,18 +576,21 @@ window.addEventListener("touchmove", (e) => {
   const diff = currentY - startY;
 
   if (diff > 0 && window.scrollY <= 0) {
-    const moveY = Math.min(diff * 0.4, 90);
-    pullContainer.style.top = `${-80 + moveY}px`;
+    const slideDown = Math.min(diff * 0.5, 180); 
+    pullContainer.style.transform = `translateY(${slideDown - 180}px)`;
 
-    const pullRatio = Math.min(diff / pullThreshold, 1);
-    radarIcon.style.transform = `rotate(${pullRatio * 270}deg)`;
+    const drop = Math.min(diff * 0.45, 80);
+    miner.style.transform = `translateY(${drop}px)`;
+    rope.style.height = `${drop + 40}px`;
 
     if (diff > pullThreshold) {
-      pullContainer.classList.add('ready');
-      textEl.innerText = "Thả tay để quét!";
+      miner.classList.add('digging');
+      textEl.innerText = "Thả tay để châm mìn!";
+      textEl.style.color = "#fbbf24"; 
     } else {
-      pullContainer.classList.remove('ready');
-      textEl.innerText = "Kéo xuống để tải...";
+      miner.classList.remove('digging');
+      textEl.innerText = "Kéo xuống để gọi thợ mỏ...";
+      textEl.style.color = "#94a3b8";
     }
   }
 }, { passive: false });
@@ -613,18 +600,34 @@ window.addEventListener("touchend", (e) => {
   isPulling = false;
   const diff = e.changedTouches[0].clientY - startY;
 
+  pullContainer.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+
   if (diff > pullThreshold) {
     isRefreshing = true;
-    pullContainer.classList.remove('ready');
-    pullContainer.classList.add('refreshing');
-    pullContainer.style.top = "20px";
-    radarIcon.style.transform = ''; // Reset để nhường CSS animation xoay tròn
-    textEl.innerText = "Đang quét dữ liệu...";
+    pullContainer.style.transform = `translateY(0px)`; 
+    
+    miner.classList.remove('digging');
+    miner.style.display = "none"; 
+    rope.style.height = "0px";    
+    tnt.style.display = "block";  
+    textEl.innerText = "Đang châm ngòi...";
+    textEl.style.color = "#ef4444"; 
 
     load().then(() => {
-      textEl.innerText = "Cập nhật thành công!";
-      pullContainer.classList.remove('refreshing');
-      pullContainer.classList.add('ready');
+      // 🧨 BOOM!
+      tnt.style.display = "none";
+      rock.style.display = "none";
+      explosion.style.display = "block";
+      goldLoot.style.display = "block";
+      
+      explosion.classList.add('boom');
+      goldLoot.classList.add('show');
+      
+      textEl.innerText = "BÙM! VÀNG RƠI!!!";
+      textEl.style.color = "#10b981"; 
+
+      document.body.classList.add("shake-active");
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
 
       const cards = document.querySelectorAll('.card');
       cards.forEach(card => {
@@ -633,18 +636,17 @@ window.addEventListener("touchend", (e) => {
         card.classList.add('flash-update');
       });
 
-      if (navigator.vibrate) navigator.vibrate(50);
-
       setTimeout(() => {
-        pullContainer.style.top = "-80px";
+        document.body.classList.remove("shake-active");
+        pullContainer.style.transform = `translateY(-100%)`; 
+        
         setTimeout(() => {
           isRefreshing = false;
-          pullContainer.classList.remove('ready');
           cards.forEach(card => card.classList.remove('flash-update'));
         }, 300);
-      }, 1200);
+      }, 1500); 
     });
   } else {
-    pullContainer.style.top = "-80px";
+    pullContainer.style.transform = `translateY(-100%)`;
   }
 });
