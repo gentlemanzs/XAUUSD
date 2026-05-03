@@ -9,8 +9,9 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0" defer></script>
 
-  <link rel="stylesheet" href="style.css?v=99.0">
-  <script src="main.js?v=99.0" defer></script>
+  <!-- ÉP ĐIỆN THOẠI TẢI LẠI GIAO DIỆN BẰNG VERSION 23.0 -->
+  <link rel="stylesheet" href="style.css?v=25.0">
+  <script src="main.js?v=25.0" defer></script>
   
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
   <link rel="apple-touch-icon" href="/icon-180.png">
@@ -25,32 +26,15 @@
 
 <body>
 
-  <!-- Pull-to-Refresh: Cinematic Rocket Theme -->
-  <div id="rocketOverlay" class="rocket-overlay">
-    <div id="rocket" class="rocket-container">
-      <div class="rocket-body">🚀</div>
-      <div class="exhaust-flame"></div>
-      <div class="exhaust-smoke"></div>
-    </div>
-    
-    <div id="explosion" class="explosion-container">
-      <div class="blast"></div>
-      <!-- Các mảnh vụn văng ra -->
-      <div class="debris d1">🔥</div>
-      <div class="debris d2">⚙️</div>
-      <div class="debris d3">🔩</div>
-      <div class="debris d4">💥</div>
-      <div class="debris d5">🔥</div>
-      <div class="debris d6">🪙</div>
-      <div class="debris d7">📈</div>
-      <div class="debris d8">🪙</div>
-    </div>
-    
-    <div id="pullText" class="rocket-text">KÉO XUỐNG ĐỂ PHÓNG...</div>
+  <!-- Pull-to-Refresh: Radar Spinner Theme -->
+  <div id="cyberPull" class="cyber-pull-container">
+    <div class="radar-spinner" id="ptrIcon"></div>
+    <div class="cyber-text" id="cyberText">Đồng bộ dữ liệu...</div>
   </div>
 
   <header>
     <div class="brand"><span>📊</span> XAU DASHBOARD</div>
+    <!-- Thêm nút Force Sync ở đây -->
     <button id="forceSyncBtn" class="sync-btn" onclick="forceSync()" title="Ép cào dữ liệu ngay lập tức">
       <span id="syncDot" class="sync-dot"></span>
     </button>
