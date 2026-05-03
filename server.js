@@ -15,7 +15,7 @@ const app = express();
 // Bật Helmet bảo vệ Header
 app.use(helmet()); 
 
-// Cấu hình Rate Limit (Chỉ khai báo biến, tí nữa gắn sau)
+// Cấu hình Rate Limit
 const syncLimiter = rateLimit({
   windowMs: 60 * 1000, 
   max: 5,
@@ -25,8 +25,8 @@ const syncLimiter = rateLimit({
 });
 
 const deleteLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // Khóa 5 phút
-  max: 5, // Tối đa 5 lần thử sai
+  windowMs: 5 * 60 * 1000, 
+  max: 5, 
   message: { error: "Thử sai mật khẩu quá nhiều lần. Tạm khóa 5 phút." },
 });
 
@@ -120,6 +120,14 @@ async function preloadCache() {
         sjc: last.sjc,
         xau: last.xau,
         usd: last.usd,        
+        diff: last.diff,          // FIX UI: Điền đủ placeholder cho 차t mượt
+        percent: last.percent,    
+        worldVND: Math.round(last.xau * last.usd * (37.5 / 31.1035)),
+        gapChange: 0, 
+        sjcChange: 0, 
+        xauChange: 0,
+        status: "Đang khởi động...", 
+        failedAPIs: [],
         updatedAt: new Date(), timeStr: formatTimeVN(new Date())
       };
 
@@ -130,6 +138,8 @@ async function preloadCache() {
 
       lastDifferentSjc = diffRecord ? { sjc: diffRecord.sjc, diff: diffRecord.diff } : { sjc: last.sjc, diff: last.diff };
       console.log(`📦 Đã nạp (Preload) toàn bộ ${historyData.length} dòng History lên RAM.`);
+    } else {
+      console.log(`⚠️ Database rỗng, chờ cào dữ liệu mới...`);
     }
   } catch (e) {
     console.log("⚠️ Khởi động: Lỗi preload cache:", e.message);
@@ -358,6 +368,7 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
       failedAPIs: failedAPIs
     };
 
+    // CHỈ LƯU VÀO DATABASE NẾU SJC CÓ SỰ THAY ĐỔI
     if (sjc > 0 && (!lastRecord || lastRecord.sjc !== sjc)) {
       const dbEntry = { ...latestData };
       delete dbEntry.updatedAt; delete dbEntry.timeStr; delete dbEntry.failedAPIs;
@@ -392,11 +403,11 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
       catch (err) { clients.delete(c); }
     }
   } catch (e) {
-  console.error('[updateData] Lỗi nghiêm trọng:', e.message);
+    console.error('[updateData] Lỗi nghiêm trọng:', e.message);
     sendTelegram(`🔥 *Lỗi Runtime (updateData)*\nChi tiết: ${e.message}`, 'update_fatal');
-} finally {
-  isUpdating = false;
-}
+  } finally {
+    isUpdating = false;
+  }
 }
 
 // ============================================================================
@@ -423,9 +434,10 @@ app.get("/api/stream", (req, res) => {
   req.on("error", () => { clients.delete(res); }); 
 });
 
-// Gắn limiter vào endpoint force-sync 
+// FIX LỖI 1: Gắn syncLimiter chuẩn chỉ (đã xóa lastForceSync)
 app.post("/api/force-sync", syncLimiter, async (req, res) => {
   try {
+    // Ép server cào API ngay lập tức
     await updateData("Ép cào từ giao diện", true);
     res.json({ ok: true });
   } catch (error) {
