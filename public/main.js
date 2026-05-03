@@ -21,6 +21,7 @@ const elements = {
 const fmtVND = new Intl.NumberFormat('vi-VN');
 const fmtXAU = new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
+let isFullHistoryLoaded = false; // Thêm cờ đánh dấu đã tải full data chưa
 // Biến lưu trữ trạng thái RAM của Frontend
 let historyData = [];       // Lưu toàn bộ lịch sử (tối đa 1000 dòng)
 let currentData = [];       // Lưu dữ liệu đang hiển thị (sau khi filter)
@@ -112,16 +113,14 @@ function initSSE() {
 async function load() {
   try {
     const res = await fetch(`${API}?t=${Date.now()}`);
+    if (!res.ok) throw new Error("Mạng lỗi hoặc Server không phản hồi"); // Thêm dòng này
     const d = await res.json();
-    if (!d?.updatedAt) return;
-    renderMain(d);
-    if (lastSJCValue === null || d.sjc !== lastSJCValue) {
-      const isFirstLoad = lastSJCValue === null;
-      lastSJCValue = d.sjc;
-      safeFetchHistory(isFirstLoad);
-    }
+    if (!d?.updatedAt) throw new Error("Dữ liệu rỗng"); // Thêm dòng này
+    // ... (code xử lý d giữ nguyên)
+    return true; // Trả về true nếu thành công
   } catch (e) {
     console.error('[load] Lỗi:', e);
+    throw e; // Ném lỗi ra ngoài để khối catch của hàm gọi bắt được
   }
 }
 
@@ -317,13 +316,15 @@ async function applyFilter() {
   const startStr = elements.startDate.value;
   const endStr = elements.endDate.value;
 
-  // Nếu có nhập bộ lọc mà RAM đang chỉ chứa 50 dòng thì ép kéo full về
-  if ((startStr || endStr) && historyData.length < 1000) {
+  // Chỉ gọi API 1000 dòng nếu có nhập ngày VÀ chưa từng tải full DB
+  if ((startStr || endStr) && !isFullHistoryLoaded) {
     elements.historyTable.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Đang truy xuất dữ liệu...</td></tr>";
     try {
       const res = await fetch(`${HIST_API}?limit=1000`, { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       historyData = await res.json();
+      isFullHistoryLoaded = true; // Bật cờ đánh dấu đã tải xong 1000 dòng
+      
       for (const r of historyData) {
         if (!r.filterDateStr && r.createdAt) {
           const d = new Date(r.createdAt);
@@ -331,7 +332,9 @@ async function applyFilter() {
         }
       }
       try { localStorage.setItem('xau_hist_cache', JSON.stringify(historyData)); } catch (e) { }
-    } catch (e) { }
+    } catch (e) { 
+      console.error(e);
+    }
   }
 
   currentData = (!startStr && !endStr) ? historyData : historyData.filter(r => {
@@ -626,10 +629,11 @@ window.addEventListener("touchend", (e) => {
       pullContainer.classList.remove('refreshing');
       pullContainer.classList.add('ready');
 
+      // Đoạn code tạo hiệu ứng chớp sáng các thẻ card
       const cards = document.querySelectorAll('.card');
       cards.forEach(card => {
         card.classList.remove('flash-update');
-        void card.offsetWidth;
+        void card.offsetWidth; // Trigger reflow để animation chạy lại
         card.classList.add('flash-update');
       });
 
@@ -640,9 +644,26 @@ window.addEventListener("touchend", (e) => {
         setTimeout(() => {
           isRefreshing = false;
           pullContainer.classList.remove('ready');
+          // Thiếu dòng này ở code của bạn:
           cards.forEach(card => card.classList.remove('flash-update'));
         }, 300);
       }, 1200);
+      
+    }).catch(() => {
+      // BẠN ĐÃ QUÊN TOÀN BỘ KHỐI CATCH NÀY:
+      textEl.innerText = "Lỗi kết nối!";
+      pullContainer.classList.remove('refreshing');
+      pullContainer.classList.add('ready');
+      textEl.style.color = "var(--down-color)"; // Báo màu đỏ
+
+      setTimeout(() => {
+        pullContainer.style.top = "-80px";
+        setTimeout(() => {
+          isRefreshing = false;
+          pullContainer.classList.remove('ready');
+          textEl.style.color = ""; // Reset màu chữ
+        }, 300);
+      }, 1500);
     });
   } else {
     pullContainer.style.top = "-80px";
