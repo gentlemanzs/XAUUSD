@@ -484,19 +484,26 @@ try {
 load(); 
 initSSE();
 
-document.addEventListener("visibilitychange", () => { if (document.hidden) { if (evtSource) { evtSource.close(); evtSource = null; } } else { setTimeout(() => { if (!document.hidden) { load(); initSSE(); } }, 500); } });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    if (evtSource) { evtSource.close(); evtSource = null; }
+  } else {
+    setTimeout(() => {
+      if (!document.hidden) { load(); initSSE(); }
+    }, 500);
+  }
+});
 
-
-// ==========================================================================
-// PULL TO REFRESH: ORBITAL LASER STRIKE LOGIC
-// ==========================================================================
+// ──────────────────────────────────────
+// PULL TO REFRESH: RADAR SPINNER LOGIC
+// ──────────────────────────────────────
 let startY = 0; 
 let isPulling = false;
 let isRefreshing = false;
 const pullThreshold = 100;
 const pullContainer = document.getElementById("cyberPull");
 const textEl = document.getElementById("cyberText");
-const mainContainer = document.getElementById("mainContainer");
+const radarIcon = document.getElementById("ptrIcon");
 
 window.addEventListener("touchstart", (e) => { 
   if (window.scrollY <= 0 && !isRefreshing) { 
@@ -512,17 +519,19 @@ window.addEventListener("touchmove", (e) => {
   
   if (diff > 0 && window.scrollY <= 0) {
     if (e.cancelable) e.preventDefault();
+    const moveY = Math.min(diff * 0.4, 90); 
+    pullContainer.style.top = `${-80 + moveY}px`;
     
-    // Kéo bầu trời không gian xuống
-    const moveY = Math.min(diff * 1.2, window.innerHeight * 0.45); 
-    pullContainer.style.top = `calc(-45vh + ${moveY}px)`;
+    // Quay radar theo ngón tay người dùng
+    const pullRatio = Math.min(diff / pullThreshold, 1);
+    radarIcon.style.transform = `rotate(${pullRatio * 270}deg)`;
     
     if (diff > pullThreshold) {
       pullContainer.classList.add('ready');
-      textEl.innerText = "Thả tay để tải mới!";
+      textEl.innerText = "Thả tay để quét!";
     } else {
       pullContainer.classList.remove('ready');
-      textEl.innerText = "CALIBRATING ORBIT...";
+      textEl.innerText = "Kéo xuống để tải...";
     }
   }
 }, { passive: false });
@@ -532,60 +541,38 @@ window.addEventListener("touchend", (e) => {
   isPulling = false;
   const diff = e.changedTouches[0].clientY - startY;
   
-  // Dọn dẹp style inline để CSS Animation có thể chạy
-  bars.forEach(bar => bar.style.height = '');
-  
   if (diff > pullThreshold) {
     isRefreshing = true;
     pullContainer.classList.remove('ready');
-    pullContainer.classList.add('firing');
-    pullContainer.style.top = "0px"; 
-    textEl.innerText = "ORBITAL STRIKE INBOUND!!!";
+    pullContainer.classList.add('refreshing');
+    pullContainer.style.top = "20px"; 
+    radarIcon.style.transform = ''; // Reset để nhường CSS animation xoay tròn
+    textEl.innerText = "Đang quét dữ liệu...";
     
-    // Chờ 150ms để tia Laser cắm từ trên trời xuống chạm đất
-    setTimeout(() => {
-      // 1. Kích hoạt rung chuyển toàn màn hình (Mega Shake)
-      mainContainer.classList.add('orbital-impact');
+    load().then(() => {
+      textEl.innerText = "Cập nhật thành công!";
+      pullContainer.classList.remove('refreshing');
+      pullContainer.classList.add('ready');
       
-      // 2. Rung vật lý điện thoại cực mạnh
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
-      
-      // 3. Gọi API lấy số mới
-      load().then(() => {
-        // Chờ 800ms để hoạt ảnh bắn Laser trên CSS chạy xong
-        setTimeout(() => {
-          textEl.innerText = "DATA OVERWRITTEN!";
-          
-          // Gỡ hiệu ứng rung chấn
-          mainContainer.classList.remove('orbital-impact');
-          
-          // Render dữ liệu mới từ LocalStorage và chớp sáng Card
-          const cached = localStorage.getItem('xau_main_cache');
-          if(cached) renderMain(JSON.parse(cached));
-          
-          const cards = document.querySelectorAll('.card');
-          cards.forEach(card => {
-            card.classList.remove('flash-update'); 
-            void card.offsetWidth;                 
-            card.classList.add('flash-update');    
-          });
-          
-          // Kéo vệ tinh về vũ trụ
-          setTimeout(() => { 
-            pullContainer.style.top = "-45vh"; 
-            setTimeout(() => { 
-              isRefreshing = false;
-              pullContainer.classList.remove('firing');
-              document.querySelectorAll('.card').forEach(c => c.classList.remove('flash-update'));
-            }, 300);
-          }, 1500);
-          
-        }, 800); 
+      const cards = document.querySelectorAll('.card');
+      cards.forEach(card => {
+        card.classList.remove('flash-update'); 
+        void card.offsetWidth;                 
+        card.classList.add('flash-update');    
       });
-    }, 150); // Mất 150ms để tia Laser chạm đích
 
+      if (navigator.vibrate) navigator.vibrate(50);
+      
+      setTimeout(() => { 
+        pullContainer.style.top = "-80px"; 
+        setTimeout(() => { 
+          isRefreshing = false;
+          pullContainer.classList.remove('ready');
+          cards.forEach(card => card.classList.remove('flash-update'));
+        }, 300);
+      }, 1200);
+    });
   } else {
-    // Không đủ lực kéo -> Tụt về
-    pullContainer.style.top = "-45vh";
+    pullContainer.style.top = "-80px";
   }
 });

@@ -31,8 +31,28 @@ body {
   overscroll-behavior-y: auto; /* Đổi thành auto để bật lại Pull-to-refresh của trình duyệt */
 }
 
-header { padding: 1rem 2rem; background: var(--header-old); color: white; display: flex; justify-content: space-between; align-items: center; position: fixed; top: 0; left: 0; width: 100%; box-sizing: border-box; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-.brand { font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+header { 
+  padding: 1rem 2rem; 
+  background: var(--header-old); 
+  color: white; 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  position: fixed; 
+  top: 0; left: 0; width: 100%; 
+  box-sizing: border-box; 
+  z-index: 1000; 
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.brand { 
+  font-size: 1.25rem; 
+  font-weight: 700; 
+  color: white; 
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .brand span { color: var(--accent-color); }
 
 @media (max-width: 640px) {
@@ -81,9 +101,14 @@ header { padding: 1rem 2rem; background: var(--header-old); color: white; displa
   font-weight: 800; 
 }
 
-@media (hover: hover) { .card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); } }
-.xau-up { color: var(--teal-color); } .xau-down { color: var(--down-color); }
-.change-up { color: var(--up-color); } .change-down { color: var(--down-color); }
+@media (hover: hover) {
+  .card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+}
+
+.xau-up { color: var(--teal-color); } 
+.xau-down { color: var(--down-color); }
+.change-up { color: var(--up-color); } 
+.change-down { color: var(--down-color); }
 
 /* --- TABLE CẤU HÌNH --- */
 .table-wrapper { 
@@ -149,22 +174,159 @@ th:nth-child(4), td:nth-child(4) {
 td:nth-child(5) { padding-left: 16px !important; }
 th:nth-child(5) { padding-left: 24px !important; }
 
-/* FILTER BOX */
-.filter-box { position: absolute; left: 120px; display: flex; gap: 10px; align-items: center; opacity: 0; visibility: hidden; pointer-events: none; transition: all 0.2s ease; background: var(--bg-color); z-index: 20; }
-.filter-box.show { opacity: 1; visibility: visible; pointer-events: auto; }
-@media (max-width: 768px) { .filter-box { left: 0; top: 45px; width: 100%; max-width: none; background: var(--card-bg); padding: 15px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); flex-wrap: wrap; border: 1px solid var(--border-color); box-sizing: border-box; } }
-input[type="date"] { padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); outline: none; }
-.btn-filter, .btn-delete-multi, .btn-reset { padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem; background: rgba(255,255,255,0.1); border: 1px solid var(--border-color); color: rgb(74, 74, 74); transition: all 0.3s ease; }
-.btn-filter:hover, .btn-delete-multi:hover, .btn-reset:hover { background: rgba(0, 0, 0, 0.1); color: #000; }
-.badge { padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; display: inline-block; } .badge-up { background: rgba(251, 252, 251, 0.1); color: #000408; } .badge-down { background: rgba(255, 255, 255, 0.1); color: #000408; }
-.pagination { display: flex; justify-content: center; gap: 8px; padding: 15px; border-top: 1px solid var(--border-color); } .page-btn { padding: 6px 12px; border: 1px solid var(--border-color); background: var(--card-bg); border-radius: 6px; cursor: pointer; color: var(--primary-text); font-weight: 600; transition: 0.2s;} .page-btn.active { background: var(--accent-color); color: white; border-color: var(--accent-color); } .page-btn:hover:not(:disabled):not(.active) { background: #f1f5f9; } .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.chart-card { padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); } .chart-scroll-container { width: 100%; overflow-x: auto; margin-top: 1rem; }
-@media (max-width: 640px) { .usd-card { display: none; } #lastTime { margin-top: 5px; margin-bottom: 0.6rem; } .xau-wrapper { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; } .xau-wrapper .sjc-sub { margin-top: 0; } .table-wrapper { transition: margin-top 0.25s ease; } .table-wrapper.is-expanded { margin-top: 130px; } }
-.chart-inner-wrapper { height: 320px; position: relative; } .chart-scroll-container::-webkit-scrollbar { height: 8px; } .chart-scroll-container::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; } .chart-scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-.sync-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; padding: 0; outline: none; }
-.sync-btn:active { transform: scale(0.9); } .sync-dot { width: 10px; height: 10px; background-color: #64748b; border-radius: 50%; transition: background-color 0.3s, box-shadow 0.3s; } .sync-dot.loading { background-color: #fbbf24; animation: syncPulse 0.8s infinite; } .sync-dot.success { background-color: #10b981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.8); }
-@keyframes syncPulse { 0%, 100% { transform: scale(0.8); opacity: 0.6; } 50% { transform: scale(1.2); opacity: 1; } }
-.diff-sub { color: #595959 !important; }
+/* --- FILTER BOX GIAO DIỆN --- */
+.filter-box { 
+  position: absolute;
+  left: 120px; 
+  display: flex;
+  gap: 10px; 
+  align-items: center; 
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  background: var(--bg-color); 
+  z-index: 20; 
+}
+.filter-box.show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Ép thanh Filter thành Menu Dropdown Nổi trên Mobile để chống tràn */
+@media (max-width: 768px) {
+  .filter-box {
+    left: 0;
+    top: 45px; 
+    width: 100%;
+    max-width: none;
+    background: var(--card-bg); 
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
+    flex-wrap: wrap; 
+    border: 1px solid var(--border-color);
+    box-sizing: border-box; /* Đã thêm box-sizing để sửa lỗi tràn layout sinh ra khoảng trắng bên phải */
+  }
+}
+
+input[type="date"] { 
+  padding: 8px; 
+  border-radius: 8px; 
+  border: 1px solid var(--border-color); 
+  outline: none; 
+}
+
+/* Đoạn đã sửa cho các button */
+.btn-filter, .btn-delete-multi, .btn-reset { 
+  padding: 6px 12px; 
+  border-radius: 6px; 
+  cursor: pointer; 
+  font-weight: 600; 
+  font-size: 0.8rem; 
+  
+  /* Màu nền trong suốt */
+  background:  rgba(255,255,255,0.1); 
+  /* Viền màu đen */
+  border: 1px solid var(--border-color); 
+  /* Màu chữ (nên để đen để dễ nhìn trên nền trong suốt) */
+  color: rgb(74, 74, 74);
+  transition: all 0.3s ease; /* Thêm hiệu ứng mượt mà khi hover */
+}
+
+/* Hiệu ứng khi di chuột qua (hover) */
+.btn-filter:hover, .btn-delete-multi:hover, .btn-reset:hover { 
+  /* Bạn có thể cho nền tối nhẹ hoặc đổi màu chữ để người dùng biết là đã chạm vào nút */
+  background: rgba(0, 0, 0, 0.1); 
+  color: #000;
+}
+
+.badge { padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; display: inline-block; }
+.badge-up { background: rgba(251, 252, 251, 0.1); color: #000408; }
+.badge-down { background: rgba(255, 255, 255, 0.1); color: #000408; }
+
+.pagination { display: flex; justify-content: center; gap: 8px; padding: 15px; border-top: 1px solid var(--border-color); }
+.page-btn { padding: 6px 12px; border: 1px solid var(--border-color); background: var(--card-bg); border-radius: 6px; cursor: pointer; color: var(--primary-text); font-weight: 600; transition: 0.2s;}
+.page-btn.active { background: var(--accent-color); color: white; border-color: var(--accent-color); }
+.page-btn:hover:not(:disabled):not(.active) { background: #f1f5f9; }
+.page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.chart-card { 
+  padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); 
+}
+.chart-scroll-container { width: 100%; overflow-x: auto; margin-top: 1rem; }
+
+@media (max-width: 640px) {
+  .usd-card { display: none; }
+  .container { padding-top: 85px !important; }
+  #lastTime { margin-top: 5px; margin-bottom: 0.6rem; }
+  .grid { grid-template-columns: 1fr; gap: 0.8rem; } 
+  .card-value { font-size: 1.5rem; } 
+  .xau-wrapper { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .xau-wrapper .sjc-sub { margin-top: 0; }
+  .table-wrapper {
+    transition: margin-top 0.25s ease;
+  }
+  .table-wrapper.is-expanded {
+    margin-top: 130px; 
+  }
+}
+
+.chart-inner-wrapper { height: 320px; position: relative; }
+.chart-scroll-container::-webkit-scrollbar { height: 8px; }
+.chart-scroll-container::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+.chart-scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.chart-scroll-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* --- NÚT FORCE SYNC --- */
+.sync-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  outline: none;
+}
+
+.sync-btn:hover { background: rgba(255, 255, 255, 0.15); border-color: rgba(255, 255, 255, 0.3); }
+.sync-btn:active { transform: scale(0.9); } /* Hơi lún xuống khi bấm */
+
+/* Chấm xám mặc định */
+.sync-dot {
+  width: 10px;
+  height: 10px;
+  background-color: #64748b; 
+  border-radius: 50%;
+  transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+/* Chấm vàng nhấp nháy khi đang tải */
+.sync-dot.loading {
+  background-color: #fbbf24; 
+  animation: syncPulse 0.8s infinite;
+}
+
+/* Chấm xanh phát sáng khi thành công */
+.sync-dot.success {
+  background-color: #10b981; 
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.8);
+}
+
+@keyframes syncPulse {
+  0% { transform: scale(0.8); opacity: 0.6; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.8); opacity: 0.6; }
+}
+.diff-sub {
+  color: #595959 !important;
+}
 
 /* --- HIỆU ỨNG CHỚP NHÁY KHI CẬP NHẬT DỮ LIỆU --- */
 @keyframes flashCard {
@@ -172,12 +334,12 @@ input[type="date"] { padding: 8px; border-radius: 8px; border: 1px solid var(--b
   30% { background-color: rgba(16, 185, 129, 0.15); border-color: var(--up-color); box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
   100% { background-color: var(--card-bg); border-color: var(--border-color); box-shadow: none; }
 }
-.flash-update { animation: flashCardLaser 0.8s ease-out forwards; }
 
+.flash-update {
+  animation: flashCard 0.8s ease-out forwards;
+}
 
-/* ==========================================================================
-   PULL TO REFRESH: ORBITAL LASER STRIKE
-   ========================================================================== */
+/* ===== PULL TO REFRESH: RADAR SPINNER THEME ===== */
 .cyber-pull-container {
   position: fixed; top: -80px; left: 50%; transform: translateX(-50%);
   display: flex; align-items: center; gap: 15px;
