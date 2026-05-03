@@ -453,13 +453,14 @@ function updateChart(fullData) {
     }
   }
 
-  // Tự động scale trục tung (Y) dựa trên min/max thực tế
+ // Tự động scale trục tung (Y), ép min = 0 theo yêu cầu
   const validGaps = gaps.filter(g => g !== null);
-  let yMin = 0; let yMax = 0;
   if (validGaps.length === 0) return;
-  const minVal = Math.min(...validGaps); const maxVal = Math.max(...validGaps);
-  const padding = Math.max((maxVal - minVal) * 0.2, 0.5);
-  yMin = minVal - padding; yMax = maxVal + padding;
+  const maxVal = Math.max(...validGaps);
+  const padding = Math.max(maxVal * 0.1, 0.5);
+  
+  const yMin = 0; // Bắt buộc trục Y bắt đầu từ 0
+  const yMax = maxVal + padding;
 
   const calculatedWidth = totalPoints * minSpacing;
 
@@ -474,10 +475,11 @@ function updateChart(fullData) {
     }
   }
 
-  // Khởi tạo mới hoặc cập nhật Chart
+  // Khởi tạo mới hoặc cập nhật Chart CHÍNH
   if (myChart) {
     myChart.data.labels = labels; myChart.data.datasets[0].data = gaps;
-    myChart.options.scales.y.suggestedMin = yMin; myChart.options.scales.y.suggestedMax = yMax;
+    myChart.options.scales.y.min = yMin; 
+    myChart.options.scales.y.max = yMax;
     if (isChartVisible) myChart.update('none');
   } else {
     myChart = new Chart(ctx, {
@@ -494,45 +496,55 @@ function updateChart(fullData) {
         plugins: { legend: { display: false } },
         scales: {
           y: {
-            suggestedMin: yMin, suggestedMax: yMax, beginAtZero: false,
-            ticks: { display: false }, // <--- THÊM DÒNG NÀY ĐỂ ẨN SỐ KHI CUỘN
-            grid: { color: 'rgba(226, 232, 240, 0.6)' }
+            min: yMin, max: yMax, beginAtZero: true,
+            ticks: { display: false }, 
+            grid: { color: 'rgba(226, 232, 240, 0.6)' },
+            border: { display: false }
           },
-          x: { offset: true, ticks: { autoSkip: true, minRotation: 45, maxRotation: 45, maxRotation: 0, color: '#64748b', font: { size: 10 } }, grid: { display: false } }
+          x: { 
+            offset: true, 
+            ticks: { autoSkip: true, minRotation: 45, maxRotation: 45, color: '#64748b', font: { size: 10 } }, 
+            grid: { display: false } 
+          }
         }
       }
     });
   }
- // ====== THÊM MỚI: VẼ TRỤC Y CỐ ĐỊNH ======
+
+  // ====== VẼ TRỤC Y CỐ ĐỊNH ======
   const yCanvas = document.getElementById('yAxisChart');
   if (!yCanvas || typeof Chart === 'undefined') return;
 
   const yCtx = yCanvas.getContext('2d');
   if (window.yChartFixed) {
-    window.yChartFixed.options.scales.y.suggestedMin = yMin;
-    window.yChartFixed.options.scales.y.suggestedMax = yMax;
+    window.yChartFixed.options.scales.y.max = yMax;
     window.yChartFixed.update('none');
   } else {
     window.yChartFixed = new Chart(yCtx, {
       type: 'line',
-      // VÁ LỖI CHẤM MÀU: Thêm pointRadius: 0 và pointHoverRadius: 0
-      data: { labels: [''], datasets: [{ data: [yMin], borderWidth: 0, pointRadius: 0, pointHoverRadius: 0 }] }, 
+      // Dữ liệu rỗng để tàng hình
+      data: { labels: ['00/00'], datasets: [{ data: [0], borderWidth: 0, pointRadius: 0, pointHoverRadius: 0 }] }, 
       options: {
         responsive: true, maintainAspectRatio: false, animation: false,
         plugins: { legend: { display: false }, tooltip: { enabled: false } },
-        layout: { padding: { top: 0, bottom: 0, left: 0, right: 0 } }, 
+        layout: { padding: 0 }, 
         scales: {
           x: { 
-            display: false,
-            border: { display: false }, // VÁ LỖI KẺ DỌC
-            grid: { display: false }
+            display: true, 
+            // Trục X tàng hình nhưng có cùng góc xoay để ép chiều cao khớp với chart chính
+            ticks: { color: 'transparent', minRotation: 45, maxRotation: 45, font: { size: 10 } },
+            grid: { display: false }, border: { display: false }
           },
           y: {
-            position: 'left', // VÁ LỖI CẮT CHỮ: Căn trái để chữ không tràn ra ngoài
-            suggestedMin: yMin, suggestedMax: yMax, beginAtZero: false,
-            ticks: { maxTicksLimit: 6, callback: (val) => val.toFixed(1) + 'M', color: '#64748b', font: { size: 11 } },
-            border: { display: false }, // VÁ LỖI KẺ DỌC
-            grid: { display: false } 
+            position: 'right',
+            min: yMin, max: yMax, beginAtZero: true,
+            ticks: { 
+              mirror: true, // QUAN TRỌNG: Đẩy text vào trong canvas để không bị cắt
+              padding: 5, maxTicksLimit: 6, 
+              callback: (val) => val === 0 ? '' : val.toFixed(1) + 'M', // Ẩn số 0
+              color: '#64748b', font: { size: 11, weight: '600' } 
+            },
+            border: { display: false }, grid: { display: false } 
           }
         }
       }
