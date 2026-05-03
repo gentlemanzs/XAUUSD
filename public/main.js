@@ -21,6 +21,7 @@ const elements = {
 const fmtVND = new Intl.NumberFormat('vi-VN');
 const fmtXAU = new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
+
 let isFullHistoryLoaded = false; // Thêm cờ đánh dấu đã tải full data chưa
 // Biến lưu trữ trạng thái RAM của Frontend
 let historyData = [];       // Lưu toàn bộ lịch sử (tối đa 1000 dòng)
@@ -29,6 +30,7 @@ let lastSJCValue = null;    // Lưu giá SJC lần cuối để so sánh
 let myChart = null;         // Đối tượng Chart.js
 let lastChartSignature = "";// Chữ ký biểu đồ để tránh render lại biểu đồ giống nhau
 let isExpanded = false;     // Trạng thái mở rộng bảng History
+let isSelectMode = false;   // Trạng thái hiển thị checkbox
 let currentPage = 1;        // Trang hiện tại của Pagination
 
 let evtSource = null;       // Đối tượng Server-Sent Events (SSE)
@@ -298,7 +300,15 @@ function toggleFilterBox() {
   isExpanded = !isExpanded;
 
   if (isExpanded) { elements.filterBox.classList.add('show'); }
-  else { elements.filterBox.classList.remove('show'); }
+  else { 
+    elements.filterBox.classList.remove('show'); 
+    
+    // Tự động tắt chế độ Select khi đóng bảng
+    isSelectMode = false;
+    document.querySelector('.table-wrapper').classList.remove('select-mode');
+    const btnSelect = document.querySelector('.btn-select');
+    if (btnSelect) btnSelect.innerText = "Select";
+  }
 
   elements.toggleBtn.innerText = isExpanded ? "−" : "+";
 
@@ -391,6 +401,25 @@ async function deleteSelected() {
   } catch (e) { alert("Lỗi mạng!"); }
 }
 
+// Bật/tắt chế độ chọn nhiều dòng (hiển thị checkbox)
+function toggleSelectMode() {
+  isSelectMode = !isSelectMode;
+  const wrapper = document.querySelector('.table-wrapper');
+  const btnSelect = document.querySelector('.btn-select');
+
+  if (isSelectMode) {
+    wrapper.classList.add('select-mode');
+    btnSelect.innerText = "Cancel"; // Đổi chữ để người dùng biết cách tắt
+  } else {
+    wrapper.classList.remove('select-mode');
+    btnSelect.innerText = "Select";
+    
+    // Khi tắt chế độ Select, tự động bỏ chọn tất cả các checkbox
+    const selectAllBtn = document.getElementById('selectAll');
+    if (selectAllBtn) selectAllBtn.checked = false;
+    toggleSelectAll({ checked: false });
+  }
+}
 // ============================================================================
 // PHẦN 6: VẼ BIỂU ĐỒ (CHART.JS) - BẢN FIX CUỘN NGANG & KHOẢNG ĐỆM HOÀN HẢO
 // ============================================================================

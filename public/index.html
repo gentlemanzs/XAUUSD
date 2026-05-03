@@ -10,8 +10,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js" defer></script>
 
   <!-- ÉP ĐIỆN THOẠI TẢI LẠI GIAO DIỆN BẰNG VERSION 23.0 -->
-  <link rel="stylesheet" href="style.css?v=34.0">
-  <script src="main.js?v=34.0" defer></script>
+  <link rel="stylesheet" href="style.css?v=334.0">
+  <script src="main.js?v=334.0" defer></script>
 
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
   <link rel="apple-touch-icon" href="/icon-180.png">
@@ -89,6 +89,7 @@
         <input type="date" id="endDate" title="Đến ngày">
         <button class="btn-filter" onclick="applyFilter()">Filter</button>
         <button class="btn-reset" onclick="resetFilter()">Clear</button>
+        <button class="btn-select" onclick="toggleSelectMode()">Select</button>
         <button class="btn-delete-multi" onclick="deleteSelected()">Delete</button>
       </div>
 
@@ -121,7 +122,7 @@
       <div style="font-size: 1.2rem; font-weight: 700;">📈 XAU-SJC Gap</div>
     </div>
 
-<!-- CẤU TRÚC MỚI: Chỉ dùng 1 khối bao quanh duy nhất -->
+    <!-- CẤU TRÚC MỚI: Chỉ dùng 1 khối bao quanh duy nhất -->
     <div class="chart-card">
       <div class="chart-scroll-container">
         <div class="chart-inner-wrapper">
@@ -131,4 +132,5 @@
     </div>
   </div>
 </body>
+
 </html>
