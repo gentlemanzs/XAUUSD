@@ -392,7 +392,7 @@ async function deleteSelected() {
 }
 
 // ============================================================================
-// PHẦN 6: VẼ BIỂU ĐỒ (CHART.JS) - BẢN FIX CUỘN NGANG HOÀN HẢO
+// PHẦN 6: VẼ BIỂU ĐỒ (CHART.JS) - BẢN FIX CUỘN NGANG & KHOẢNG ĐỆM HOÀN HẢO
 // ============================================================================
 function updateChart(fullData) {
   if (!fullData || fullData.length < 2) {
@@ -447,17 +447,24 @@ function updateChart(fullData) {
     }
   }
 
-  // --- TÍNH TOÁN Y ĐỘNG ---
+  // --- TÍNH TOÁN Y ĐỘNG & TẠO KHOẢNG ĐỆM CHUẨN TÀI CHÍNH ---
   const validGaps = gaps.filter(g => g !== null);
   if (validGaps.length === 0) return;
   const minVal = Math.min(...validGaps);
   const maxVal = Math.max(...validGaps);
   
-  let yMin = Math.floor(minVal);
-  if (yMin % 2 !== 0) yMin -= 1;
+  // 1. Tìm mốc chẵn ngay dưới giá trị thấp nhất
+  let firstEvenLabel = Math.floor(minVal);
+  if (firstEvenLabel % 2 !== 0) firstEvenLabel -= 1;
 
-  let yMax = Math.ceil(maxVal);
-  if (yMax % 2 !== 0) yMax += 1;
+  // 2. Tìm mốc chẵn ngay trên giá trị cao nhất
+  let lastEvenLabel = Math.ceil(maxVal);
+  if (lastEvenLabel % 2 !== 0) lastEvenLabel += 1;
+
+  // 3. Mở rộng đáy và đỉnh thêm 1 đơn vị (tạo thành số lẻ) để làm đệm trống
+  // Điều này đảm bảo nhãn chẵn (firstEvenLabel) luôn bắt đầu từ hàng kẻ thứ 2
+  let yMin = firstEvenLabel - 1;
+  let yMax = lastEvenLabel + 1;
 
   if (yMin >= yMax) { yMin -= 2; yMax += 2; }
 
@@ -506,7 +513,7 @@ function updateChart(fullData) {
                 return ''; 
               },
               color: '#64748b', font: { size: 11, weight: '600' },
-              // Tính năng siêu đẳng: Luôn giữ trục Y cố định bên trái khi cuộn
+              // Nền trắng che đi đường kẻ ngang xuyên qua số, tạo hiệu ứng mượt mà
               z: 10, backdropColor: 'white', showLabelBackdrop: true, padding: 10
             }, 
             grid: { color: 'rgba(226, 232, 240, 0.6)', drawTicks: false },
@@ -522,7 +529,7 @@ function updateChart(fullData) {
     });
   }
 
-  // CSS HACK: Dùng position: sticky để khóa trục Y của thẻ canvas khi thẻ cha cuộn ngang
+  // CSS HACK: Khóa trục Y khi cuộn ngang
   const yAxisWidth = myChart.scales.y.width;
   ctx.canvas.style.position = 'sticky';
   ctx.canvas.style.left = `-${yAxisWidth}px`; 
