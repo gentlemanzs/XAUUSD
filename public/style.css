@@ -257,6 +257,31 @@ input[type="date"] {
   padding: 1.5rem; background: white; border-radius: 12px; border: 1px solid var(--border-color); 
 }
 .chart-scroll-container { width: 100%; overflow-x: auto; margin-top: 1rem; }
+/* 1. Mặc định ẩn thẻ ngắt dòng ở màn hình máy tính để các thành phần nằm trên 1 hàng ngang */
+.mobile-break {
+  display: none;
+}
+
+/* 2. Xử lý hiển thị trên điện thoại */
+@media (max-width: 768px) {
+  .mobile-break {
+    display: block;
+    flex-basis: 100%; /* Chiếm trọn 100% chiều ngang Flexbox, buộc các thành phần phía sau phải xuống dòng */
+    height: 0;
+    margin: 0;
+  }
+  
+  /* Căn chỉnh 2 ô chọn ngày kéo giãn đều nhau để lấp đầy dòng đầu tiên, mang lại cảm giác cân đối */
+  #filterBox input[type="date"] {
+    flex: 1;
+  }
+  
+  /* (Tùy chọn) Cho phép 4 nút bấm kéo giãn dàn đều nhau ở dòng thứ hai */
+  #filterBox button {
+    flex: 1;
+    padding: 8px 4px; /* Chỉnh lại đệm mỏng hơn một chút để các nút không bị chèn ép trên màn hình nhỏ */
+  }
+}
 
 @media (max-width: 640px) {
   .usd-card { display: none; }
