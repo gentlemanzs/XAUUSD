@@ -4,7 +4,6 @@
 const API = "/api/gold";
 const HIST_API = "/api/history";
 
-// Gom nhóm tất cả các phần tử DOM để tránh gọi document.getElementById nhiều lần
 const elements = {
   usd: document.getElementById("usd"),
   xauValue: document.getElementById("xauValue"), xauChange: document.getElementById("xauChange"),
@@ -17,27 +16,23 @@ const elements = {
   pagination: document.getElementById("pagination")
 };
 
-// Cấu hình định dạng tiền tệ (VND) và số thập phân (USD/XAU)
 const fmtVND = new Intl.NumberFormat('vi-VN');
 const fmtXAU = new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-// Biến lưu trữ trạng thái RAM của Frontend
-let historyData = [];       // Lưu toàn bộ lịch sử (tối đa 1000 dòng)
-let currentData = [];       // Lưu dữ liệu đang hiển thị (sau khi filter)
-let lastSJCValue = null;    // Lưu giá SJC lần cuối để so sánh
-let myChart = null;         // Đối tượng Chart.js
-let lastChartSignature = "";// Chữ ký biểu đồ để tránh render lại biểu đồ giống nhau
-let isExpanded = false;     // Trạng thái mở rộng bảng History
-let currentPage = 1;        // Trang hiện tại của Pagination
+let historyData = [];       
+let currentData = [];       
+let lastSJCValue = null;    
+let myChart = null;         
+let lastChartSignature = "";
+let isExpanded = false;     
+let currentPage = 1;        
 
-let evtSource = null;       // Đối tượng Server-Sent Events (SSE)
-let lastFetchTime = 0;      // Chống spam gọi API liên tục
+let evtSource = null;       
+let lastFetchTime = 0;      
 
 // ============================================================================
 // PHẦN 2: QUẢN LÝ OBSERVER & ĐỒNG BỘ DỮ LIỆU CƠ BẢN
 // ============================================================================
-
-// Chỉ render/update biểu đồ khi người dùng cuộn tới nó (Tối ưu hiệu năng GPU)
 let isChartVisible = true;
 const chartObserver = new IntersectionObserver((entries) => {
   isChartVisible = entries[0].isIntersecting;
@@ -49,7 +44,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (chartEl) chartObserver.observe(chartEl);
 });
 
-// Hàm gọi API lịch sử an toàn, có throttle (tối thiểu 5 giây mỗi lần gọi)
 function safeFetchHistory(isInit = false) {
   const now = Date.now();
   if (!isInit && now - lastFetchTime < 5000) return;
@@ -58,10 +52,9 @@ function safeFetchHistory(isInit = false) {
 }
 
 // ============================================================================
-// PHẦN 3: KẾT NỐI REALTIME (SERVER-SENT EVENTS)
+// PHẦN 3: KẾT NỐI REALTIME (SERVER-SENT EVENTS) - ĐÃ VÁ LỖI
 // ============================================================================
 function initSSE() {
-  // Fix rò rỉ SSE: Đóng hẳn luồng cũ nếu nó đang ở trạng thái lấp lửng
   if (evtSource) {
     if (evtSource.readyState === EventSource.OPEN) return;
     evtSource.close();
@@ -78,20 +71,17 @@ function initSSE() {
     }
     if (!d?.updatedAt) return;
 
-    // Hiệu ứng chớp xanh chữ "Đang kết nối..." báo hiệu có data mới
     elements.lastTime.style.color = "#10b981";
     setTimeout(() => elements.lastTime.style.color = "#64748b", 2000);
 
-    // Xử lý cảnh báo nếu cào lỗi
     if (d.failedAPIs && d.failedAPIs.length > 0) {
       console.warn(`[XAU] ⚠️ API lỗi lúc ${d.timeStr}:`, d.failedAPIs.join(", "), "→ Đang dùng data cũ");
     } else {
       console.log(`Updated at ${new Date().toLocaleTimeString('vi-VN')}`);
     }
 
-    renderMain(d); // Vẽ lại các thẻ Card
+    renderMain(d); 
 
-    // NẾU GIÁ SJC THAY ĐỔI -> Tự động kéo lịch sử mới về
     if (lastSJCValue === null || d.sjc !== lastSJCValue) {
       const isFirstLoad = lastSJCValue === null;
       lastSJCValue = d.sjc;
@@ -105,7 +95,6 @@ function initSSE() {
   };
 }
 
-// Hàm tải dữ liệu thủ công (Fallback khi mới vào web hoặc mất SSE)
 async function load() {
   try {
     const res = await fetch(`${API}?t=${Date.now()}`);
@@ -123,13 +112,11 @@ async function load() {
 }
 
 // ============================================================================
-// PHẦN 4: RENDER GIAO DIỆN (CÁC THẺ CARD DỮ LIỆU)
+// PHẦN 4: RENDER GIAO DIỆN (CÁC THẺ CARD DỮ LIỆU) - ĐÃ VÁ LỖI CSS
 // ============================================================================
 function renderMain(d) {
-  // Lưu cache để mở app lần sau hiển thị ngay (Offline First)
   try { localStorage.setItem('xau_main_cache', JSON.stringify(d)); } catch (e) { }
 
-  // Chỉ cập nhật DOM nếu giá trị thực sự thay đổi (Tối ưu Repaint/Reflow)
   const usdText = fmtVND.format(d.usd);
   if (elements.usd.textContent !== usdText) elements.usd.textContent = usdText;
 
@@ -137,7 +124,6 @@ function renderMain(d) {
   if (elements.diff.textContent !== diffText) elements.diff.textContent = diffText;
   if (elements.percent.textContent !== d.percent) elements.percent.textContent = d.percent;
 
-  // Tính toán và bôi màu giá Vàng Thế Giới (XAU)
   const xChange = d.xauChange || 0;
   const isXUp = xChange >= 0;
   const xauValueStr = fmtXAU.format(d.xau);
@@ -150,7 +136,6 @@ function renderMain(d) {
     elements.xauChange.classList.add(isXUp ? 'xau-up' : 'xau-down');
   }
 
-  // Khối: Sự thay đổi của Market Gap
   if (elements.gapChange && d.gapChange !== undefined) {
     const gVal = d.gapChange;
     const newGapText = (gVal > 0 ? "+" : "") + fmtVND.format(gVal);
@@ -162,7 +147,6 @@ function renderMain(d) {
 
   if (!d.sjc) return;
 
-  // Tính toán và bôi màu giá SJC
   const change = d.sjcChange || 0;
   const isUp = change >= 0;
   const sjcValueStr = fmtVND.format(d.sjc);
@@ -175,14 +159,13 @@ function renderMain(d) {
     elements.sjcChange.classList.add(isUp ? 'change-up' : 'change-down');
   }
 
-  // Cập nhật dòng trạng thái cuối cùng
   const timeStr = d.timeStr || new Date().toLocaleTimeString('vi-VN');
   const newStatusText = `${d.status === "Live" ? "🟢 Live" : "🟡 " + d.status} - Cập nhật: ${timeStr}`;
   if (elements.lastTime.textContent !== newStatusText) elements.lastTime.textContent = newStatusText;
 }
 
 // ============================================================================
-// PHẦN 5: XỬ LÝ LỊCH SỬ (BẢNG, PHÂN TRANG VÀ BỘ LỌC)
+// PHẦN 5: XỬ LÝ LỊCH SỬ - ĐÃ VÁ LỖI FETCH 500
 // ============================================================================
 async function fetchHistory() {
   try {
@@ -214,7 +197,6 @@ async function fetchHistory() {
   }
 }
 
-// Render dữ liệu ra bảng HTML (Có phân trang)
 function renderTable() {
   const pageSize = isExpanded ? 50 : 10;
   const startIdx = isExpanded ? (currentPage - 1) * pageSize : 0;
@@ -530,19 +512,20 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-// LOGIC: Kéo thả màn hình (The Gold Digger Theme)
+// ============================================================================
+// LOGIC: THẠCH SANH CHÉM CHẰN TINH (CỔ TÍCH 4.0 THEME)
+// ============================================================================
 let startY = 0;
 let isPulling = false;
 let isRefreshing = false;
-const pullThreshold = 130; 
-const pullContainer = document.getElementById("minerPull");
-const rope = document.getElementById("rope");
-const miner = document.getElementById("miner");
-const rock = document.getElementById("rock");
-const tnt = document.getElementById("tnt");
-const explosion = document.getElementById("explosion");
-const goldLoot = document.getElementById("gold-loot");
-const textEl = document.getElementById("pullText");
+const pullThreshold = 140; 
+const tsPull = document.getElementById("tsPull");
+const tsScene = document.getElementById("tsScene");
+const tsWeapon = document.getElementById("tsWeapon");
+const pullText = document.getElementById("pullText");
+const tsHero = document.getElementById("tsHero");
+const tsMonster = document.getElementById("tsMonster");
+const tsGold = document.getElementById("tsGold");
 
 window.addEventListener("touchstart", (e) => {
   if (window.scrollY <= 0 && !isRefreshing) {
@@ -550,18 +533,14 @@ window.addEventListener("touchstart", (e) => {
     startY = e.touches[0].clientY;
     isPulling = true;
     
-    // Reset rạp xiếc về trạng thái ban đầu
-    rock.style.display = "block";
-    tnt.style.display = "none";
-    explosion.style.display = "none";
-    goldLoot.style.display = "none";
-    miner.style.display = "flex";
-    explosion.classList.remove('boom');
-    goldLoot.classList.remove('show');
-    
-    pullContainer.style.transition = 'none';
-    miner.style.transform = `translateY(0px)`;
-    rope.style.height = "0px";
+    // Reset sân khấu
+    tsPull.style.transition = 'none';
+    tsScene.classList.remove('fighting', 'win');
+    tsHero.style.display = "block";
+    tsMonster.style.display = "block";
+    tsGold.style.display = "none";
+    tsHero.style.transform = "translateX(0)";
+    tsMonster.style.transform = "scale(1)";
   }
 }, { passive: false });
 
@@ -576,21 +555,23 @@ window.addEventListener("touchmove", (e) => {
   const diff = currentY - startY;
 
   if (diff > 0 && window.scrollY <= 0) {
+    // Rèm sân khấu kéo xuống
     const slideDown = Math.min(diff * 0.5, 180); 
-    pullContainer.style.transform = `translateY(${slideDown - 180}px)`;
+    tsPull.style.transform = `translateY(${slideDown - 180}px)`;
 
-    const drop = Math.min(diff * 0.45, 80);
-    miner.style.transform = `translateY(${drop}px)`;
-    rope.style.height = `${drop + 40}px`;
+    // Thạch Sanh giơ búa, Chằn Tinh há mồm to dần
+    const cockWeapon = Math.min(diff * 0.4, 45); // Xoay búa max 45 độ
+    const growMonster = 1 + Math.min(diff / 500, 0.4); 
+    
+    tsWeapon.style.transform = `rotate(-${cockWeapon}deg)`;
+    tsMonster.style.transform = `scale(${growMonster})`;
 
     if (diff > pullThreshold) {
-      miner.classList.add('digging');
-      textEl.innerText = "Thả tay để châm mìn!";
-      textEl.style.color = "#fbbf24"; 
+      pullText.innerText = "THẢ TAY ĐỂ CHÉM YÊU QUÁI!";
+      pullText.style.color = "#ef4444"; 
     } else {
-      miner.classList.remove('digging');
-      textEl.innerText = "Kéo xuống để gọi thợ mỏ...";
-      textEl.style.color = "#94a3b8";
+      pullText.innerText = "Kéo xuống gọi Thạch Sanh...";
+      pullText.style.color = "#94a3b8";
     }
   }
 }, { passive: false });
@@ -600,31 +581,28 @@ window.addEventListener("touchend", (e) => {
   isPulling = false;
   const diff = e.changedTouches[0].clientY - startY;
 
-  pullContainer.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+  tsPull.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
 
   if (diff > pullThreshold) {
     isRefreshing = true;
-    pullContainer.style.transform = `translateY(0px)`; 
+    tsPull.style.transform = `translateY(0px)`; 
     
-    miner.classList.remove('digging');
-    miner.style.display = "none"; 
-    rope.style.height = "0px";    
-    tnt.style.display = "block";  
-    textEl.innerText = "Đang châm ngòi...";
-    textEl.style.color = "#ef4444"; 
+    // Vô set: Kích hoạt CSS Animation chiến đấu
+    tsScene.classList.add('fighting');
+    pullText.innerText = "ĐANG CHÉM CHẰN TINH...";
+    pullText.style.color = "#fbbf24";
 
     load().then(() => {
-      // 🧨 BOOM!
-      tnt.style.display = "none";
-      rock.style.display = "none";
-      explosion.style.display = "block";
-      goldLoot.style.display = "block";
+      // Dọn dẹp chiến trường
+      tsScene.classList.remove('fighting');
+      tsHero.style.display = "none"; 
+      tsMonster.style.display = "none";
+      tsGold.style.display = "block";
       
-      explosion.classList.add('boom');
-      goldLoot.classList.add('show');
-      
-      textEl.innerText = "BÙM! VÀNG RƠI!!!";
-      textEl.style.color = "#10b981"; 
+      // Mở rương vàng
+      tsScene.classList.add('win');
+      pullText.innerText = "LỤM VÀNG SJC!!!";
+      pullText.style.color = "#10b981"; 
 
       document.body.classList.add("shake-active");
       if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
@@ -636,9 +614,10 @@ window.addEventListener("touchend", (e) => {
         card.classList.add('flash-update');
       });
 
+      // Tận hưởng vinh quang 1.5 giây
       setTimeout(() => {
         document.body.classList.remove("shake-active");
-        pullContainer.style.transform = `translateY(-100%)`; 
+        tsPull.style.transform = `translateY(-100%)`; 
         
         setTimeout(() => {
           isRefreshing = false;
@@ -647,6 +626,6 @@ window.addEventListener("touchend", (e) => {
       }, 1500); 
     });
   } else {
-    pullContainer.style.transform = `translateY(-100%)`;
+    tsPull.style.transform = `translateY(-100%)`;
   }
 });

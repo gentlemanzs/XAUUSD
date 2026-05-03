@@ -9,9 +9,9 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0" defer></script>
 
-  <!-- ÉP ĐIỆN THOẠI TẢI LẠI GIAO DIỆN BẰNG VERSION -->
-  <link rel="stylesheet" href="style.css?v=26.0">
-  <script src="main.js?v=26.0" defer></script>
+  <!-- Phiên bản "Cổ Tích 4.0" -->
+  <link rel="stylesheet" href="style.css?v=30.0">
+  <script src="main.js?v=30.0" defer></script>
   
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
   <link rel="apple-touch-icon" href="/icon-180.png">
@@ -26,22 +26,18 @@
 
 <body>
 
-  <!-- Pull-to-Refresh: The Gold Digger Theme -->
-  <div id="minerPull" class="miner-pull-container">
-    <div class="rope" id="rope"></div>
-    <div class="miner-scene">
-      <div class="miner" id="miner">
-        <span class="miner-emoji">👷</span>
-        <span class="pickaxe" id="pickaxe">⛏️</span>
+  <!-- Pull-to-Refresh: Thạch Sanh Theme -->
+  <div id="tsPull" class="ts-pull-container">
+    <div class="ts-scene" id="tsScene">
+      <div id="tsHero" class="ts-hero">
+        <span class="emoji">👦🏻</span>
+        <span class="weapon" id="tsWeapon">🪓</span>
       </div>
-      <div class="rock-area">
-        <span class="rock" id="rock">🪨</span>
-        <span class="tnt" id="tnt" style="display:none;">🧨</span>
-        <span class="explosion" id="explosion" style="display:none;">💥</span>
-        <span class="gold-loot" id="gold-loot" style="display:none;">🧈 SJC ✨</span>
-      </div>
+      <div id="tsDust" class="ts-dust">💨💥💨</div>
+      <div id="tsMonster" class="ts-monster">👹</div>
+      <div id="tsGold" class="ts-gold">🧈 LỘC LÁ SJC ✨</div>
     </div>
-    <div class="cyber-text" id="pullText" style="margin-top: 5px;">Kéo xuống để gọi thợ mỏ...</div>
+    <div id="pullText" class="cyber-text" style="margin-top: 15px;">Kéo xuống gọi Thạch Sanh...</div>
   </div>
 
   <header>
