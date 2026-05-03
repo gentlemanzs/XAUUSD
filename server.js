@@ -287,22 +287,30 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
     if (isTrading && !isUsdLive) sendTelegram(`⚠️ *API tỷ giá USD thất bại*\nKhông lấy được tỷ giá từ Vietcombank`, 'api_usd');
     if (isTrading && !isSjcLive) sendTelegram(`⚠️ *API giá SJC thất bại*\nCả DOJI lẫn BTMC đều không trả được giá`, 'api_sjc');
 
+    // Loại bỏ hoàn toàn các con số hardcode ảo
     let sjc = isSjcLive ? sjcPrice : (lastRecord ? lastRecord.sjc : 0);
-    let xau = isXauLive ? dataXAU.price : (lastRecord ? lastRecord.xau : 2350);
-    let usd = isUsdLive ? usdRate : (lastRecord ? lastRecord.usd : 25400);
+    let xau = isXauLive ? dataXAU.price : (lastRecord ? lastRecord.xau : 0); 
+    let usd = isUsdLive ? usdRate : (lastRecord ? lastRecord.usd : 0); 
 
-    // Fallback: Nếu không có cả giá cũ lẫn giá mới thì báo bảo trì
-    if (sjc <= 0 || xau <= 0) {
+    // Fallback: CHẶN ĐỨNG tính toán nếu thiếu bất kỳ dữ liệu cốt lõi nào
+    if (sjc <= 0 || xau <= 0 || usd <= 0) {
       if (latestData) {
-        latestData.status = "Delayed (Lỗi hệ thống)";
-        latestData.failedAPIs = ["SYSTEM"];
+        latestData.status = "Delayed (Lỗi hệ thống - Thiếu dữ liệu)";
+        latestData.failedAPIs = ["SYSTEM_DATA_MISSING"];
         const fallbackPayload = `data: ${JSON.stringify(latestData)}\n\n`;
-        for (const c of [...clients]) { try { c.write(fallbackPayload); if (typeof c.flush === "function") c.flush(); } catch (err) { clients.delete(c); } }
+        for (const c of [...clients]) { 
+          try { 
+            c.write(fallbackPayload); 
+            if (typeof c.flush === "function") c.flush(); 
+          } catch (err) { 
+            clients.delete(c); 
+          } 
+        }
       }
-      return;
+      return; // ⛔ THOÁT NGAY LẬP TỨC: Không tính toán gap ảo, không lưu DB rác
     }
 
-    // TÍNH TOÁN MARKET GAP
+    // TÍNH TOÁN MARKET GAP (Chỉ chạy đến đây khi SJC, XAU, USD đều hợp lệ)
     const worldVND = xau * usd * (37.5 / 31.1035);
     const diff = sjc - worldVND; 
     const currentGap = Math.round(diff);
