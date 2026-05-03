@@ -52,7 +52,7 @@ function safeFetchHistory(isInit = false) {
 }
 
 // ============================================================================
-// PHẦN 3: KẾT NỐI REALTIME (SERVER-SENT EVENTS) - ĐÃ VÁ LỖI
+// PHẦN 3: KẾT NỐI REALTIME (SERVER-SENT EVENTS)
 // ============================================================================
 function initSSE() {
   if (evtSource) {
@@ -76,8 +76,6 @@ function initSSE() {
 
     if (d.failedAPIs && d.failedAPIs.length > 0) {
       console.warn(`[XAU] ⚠️ API lỗi lúc ${d.timeStr}:`, d.failedAPIs.join(", "), "→ Đang dùng data cũ");
-    } else {
-      console.log(`Updated at ${new Date().toLocaleTimeString('vi-VN')}`);
     }
 
     renderMain(d); 
@@ -112,7 +110,7 @@ async function load() {
 }
 
 // ============================================================================
-// PHẦN 4: RENDER GIAO DIỆN (CÁC THẺ CARD DỮ LIỆU) - ĐÃ VÁ LỖI CSS
+// PHẦN 4: RENDER GIAO DIỆN (CÁC THẺ CARD DỮ LIỆU)
 // ============================================================================
 function renderMain(d) {
   try { localStorage.setItem('xau_main_cache', JSON.stringify(d)); } catch (e) { }
@@ -165,7 +163,7 @@ function renderMain(d) {
 }
 
 // ============================================================================
-// PHẦN 5: XỬ LÝ LỊCH SỬ - ĐÃ VÁ LỖI FETCH 500
+// PHẦN 5: XỬ LÝ LỊCH SỬ (BẢNG, PHÂN TRANG VÀ BỘ LỌC)
 // ============================================================================
 async function fetchHistory() {
   try {
@@ -203,7 +201,7 @@ function renderTable() {
   const endIdx = startIdx + pageSize;
   const displayData = currentData.slice(startIdx, endIdx);
 
-  document.getElementById('selectAll').checked = false;
+  document.getElementById('selectAll').checked = false; 
 
   const fragment = document.createDocumentFragment();
 
@@ -512,20 +510,18 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
+
 // ============================================================================
-// LOGIC: THẠCH SANH CHÉM CHẰN TINH (CỔ TÍCH 4.0 THEME)
+// LOGIC: PULL TO REFRESH - CINEMATIC ROCKET
 // ============================================================================
 let startY = 0;
 let isPulling = false;
 let isRefreshing = false;
-const pullThreshold = 140; 
-const tsPull = document.getElementById("tsPull");
-const tsScene = document.getElementById("tsScene");
-const tsWeapon = document.getElementById("tsWeapon");
-const pullText = document.getElementById("pullText");
-const tsHero = document.getElementById("tsHero");
-const tsMonster = document.getElementById("tsMonster");
-const tsGold = document.getElementById("tsGold");
+const pullThreshold = 150; 
+const overlay = document.getElementById("rocketOverlay");
+const rocket = document.getElementById("rocket");
+const explosion = document.getElementById("explosion");
+const textEl = document.getElementById("pullText");
 
 window.addEventListener("touchstart", (e) => {
   if (window.scrollY <= 0 && !isRefreshing) {
@@ -533,14 +529,16 @@ window.addEventListener("touchstart", (e) => {
     startY = e.touches[0].clientY;
     isPulling = true;
     
-    // Reset sân khấu
-    tsPull.style.transition = 'none';
-    tsScene.classList.remove('fighting', 'win');
-    tsHero.style.display = "block";
-    tsMonster.style.display = "block";
-    tsGold.style.display = "none";
-    tsHero.style.transform = "translateX(0)";
-    tsMonster.style.transform = "scale(1)";
+    // Khôi phục hiện trường
+    overlay.classList.add('active');
+    overlay.classList.remove('dark-sky');
+    rocket.style.display = "flex";
+    rocket.classList.remove('ignite', 'launch');
+    rocket.style.transform = `translateY(0px)`;
+    explosion.classList.remove('boom');
+    textEl.innerText = "KÉO XUỐNG ĐỂ CHUẨN BỊ...";
+    textEl.style.color = "#94a3b8";
+    textEl.style.opacity = 1;
   }
 }, { passive: false });
 
@@ -555,23 +553,28 @@ window.addEventListener("touchmove", (e) => {
   const diff = currentY - startY;
 
   if (diff > 0 && window.scrollY <= 0) {
-    // Rèm sân khấu kéo xuống
-    const slideDown = Math.min(diff * 0.5, 180); 
-    tsPull.style.transform = `translateY(${slideDown - 180}px)`;
+    // Làm bầu trời tối sầm lại
+    if(diff > 50) overlay.classList.add('dark-sky');
+    else overlay.classList.remove('dark-sky');
 
-    // Thạch Sanh giơ búa, Chằn Tinh há mồm to dần
-    const cockWeapon = Math.min(diff * 0.4, 45); // Xoay búa max 45 độ
-    const growMonster = 1 + Math.min(diff / 500, 0.4); 
-    
-    tsWeapon.style.transform = `rotate(-${cockWeapon}deg)`;
-    tsMonster.style.transform = `scale(${growMonster})`;
+    // Tên lửa lú đầu lên từ dưới đáy (MAX kéo lên 120px)
+    const lift = Math.min(diff * 0.6, 120); 
+    rocket.style.transform = `translateY(-${lift}px)`;
 
-    if (diff > pullThreshold) {
-      pullText.innerText = "THẢ TAY ĐỂ CHÉM YÊU QUÁI!";
-      pullText.style.color = "#ef4444"; 
+    // Khai hỏa mạnh khi kéo đủ sâu
+    if (diff > pullThreshold * 0.5) {
+        rocket.classList.add('ignite');
     } else {
-      pullText.innerText = "Kéo xuống gọi Thạch Sanh...";
-      pullText.style.color = "#94a3b8";
+        rocket.classList.remove('ignite');
+    }
+
+    // Đạt mốc phóng
+    if (diff > pullThreshold) {
+      textEl.innerText = "THẢ TAY ĐỂ PHÓNG!";
+      textEl.style.color = "#ef4444"; 
+    } else {
+      textEl.innerText = "KÉO XUỐNG ĐỂ CHUẨN BỊ...";
+      textEl.style.color = "#94a3b8";
     }
   }
 }, { passive: false });
@@ -581,51 +584,46 @@ window.addEventListener("touchend", (e) => {
   isPulling = false;
   const diff = e.changedTouches[0].clientY - startY;
 
-  tsPull.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-
   if (diff > pullThreshold) {
     isRefreshing = true;
-    tsPull.style.transform = `translateY(0px)`; 
     
-    // Vô set: Kích hoạt CSS Animation chiến đấu
-    tsScene.classList.add('fighting');
-    pullText.innerText = "ĐANG CHÉM CHẰN TINH...";
-    pullText.style.color = "#fbbf24";
+    // 1. Phóng tên lửa vút lên trời
+    textEl.innerText = "ĐANG LẤY DATA TỪ KHÔNG GIAN...";
+    textEl.style.color = "#fbbf24";
+    rocket.classList.add('launch');
 
-    load().then(() => {
-      // Dọn dẹp chiến trường
-      tsScene.classList.remove('fighting');
-      tsHero.style.display = "none"; 
-      tsMonster.style.display = "none";
-      tsGold.style.display = "block";
-      
-      // Mở rương vàng
-      tsScene.classList.add('win');
-      pullText.innerText = "LỤM VÀNG SJC!!!";
-      pullText.style.color = "#10b981"; 
-
-      document.body.classList.add("shake-active");
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
-
-      const cards = document.querySelectorAll('.card');
-      cards.forEach(card => {
-        card.classList.remove('flash-update');
-        void card.offsetWidth;
-        card.classList.add('flash-update');
-      });
-
-      // Tận hưởng vinh quang 1.5 giây
-      setTimeout(() => {
-        document.body.classList.remove("shake-active");
-        tsPull.style.transform = `translateY(-100%)`; 
+    // 2. Chờ 900ms cho tên lửa bay lên gần Top, sau đó kích nổ
+    setTimeout(() => {
+        rocket.style.display = "none"; // Xóa xác tên lửa
+        explosion.classList.add('boom'); // Hiện vụ nổ chói lóa & văng mảnh vụn
+        textEl.style.opacity = 0; // Tắt chữ
         
-        setTimeout(() => {
-          isRefreshing = false;
-          cards.forEach(card => card.classList.remove('flash-update'));
-        }, 300);
-      }, 1500); 
-    });
+        // Rung thiết bị và giật lắc màn hình
+        document.body.classList.add("cinematic-shake");
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+
+        // 3. Tiến hành gọi API load dữ liệu
+        load().then(() => {
+            // Hiệu ứng chớp giật các ô thẻ card báo hiệu thành công
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                card.classList.remove('flash-update');
+                void card.offsetWidth;
+                card.classList.add('flash-update');
+            });
+
+            // 4. Đợi mưa thiên thạch rơi xong thì dọn màn hình
+            setTimeout(() => {
+                document.body.classList.remove("cinematic-shake");
+                overlay.classList.remove('active', 'dark-sky');
+                isRefreshing = false;
+            }, 1000); 
+        });
+    }, 900); 
+    
   } else {
-    tsPull.style.transform = `translateY(-100%)`;
+    // Kéo chưa đủ lực -> Hủy bỏ
+    overlay.classList.remove('active', 'dark-sky');
+    rocket.classList.remove('ignite');
   }
 });
