@@ -61,7 +61,15 @@ function safeFetchHistory(isInit = false) {
 // PHẦN 3: KẾT NỐI REALTIME (SERVER-SENT EVENTS)
 // ============================================================================
 function initSSE() {
-  if (evtSource && evtSource.readyState !== EventSource.CLOSED) return;
+  // Fix rò rỉ SSE: Đóng hẳn luồng cũ nếu nó đang ở trạng thái lấp lửng (CONNECTING)
+  if (evtSource) {
+    // Nếu kết nối đang mở và hoạt động tốt thì giữ nguyên
+    if (evtSource.readyState === EventSource.OPEN) return; 
+    
+    // Nếu không, đóng hẳn để dọn dẹp trước khi tạo mới
+    evtSource.close(); 
+  }
+  
   evtSource = new EventSource("/api/stream");
   
   evtSource.onmessage = (event) => {
@@ -135,14 +143,15 @@ function renderMain(d) {
   // Tính toán và bôi màu giá Vàng Thế Giới (XAU)
   const xChange = d.xauChange || 0;
   const isXUp = xChange >= 0;
-  const xColorClass = isXUp ? 'sjc-sub xau-up' : 'sjc-sub xau-down';
   const xauValueStr = fmtXAU.format(d.xau);
   const xauChangeStr = `${isXUp ? '▲' : '▼'} ${fmtXAU.format(Math.abs(xChange))}`;
 
   if (elements.xauValue.textContent !== xauValueStr) elements.xauValue.textContent = xauValueStr;
   if (elements.xauChange.textContent !== xauChangeStr) {
     elements.xauChange.textContent = xauChangeStr;
-    elements.xauChange.className = xColorClass;
+    // Fix classList: Xóa class cũ, thêm class mới thay vì ghi đè toàn bộ
+    elements.xauChange.classList.remove('xau-up', 'xau-down');
+    elements.xauChange.classList.add(isXUp ? 'xau-up' : 'xau-down');
   }
 
   // Khối: Sự thay đổi của Market Gap
@@ -160,14 +169,15 @@ function renderMain(d) {
   // Tính toán và bôi màu giá SJC
   const change = d.sjcChange || 0;
   const isUp = change >= 0;
-  const sjcColorClass = isUp ? 'sjc-sub change-up' : 'sjc-sub change-down';
   const sjcValueStr = fmtVND.format(d.sjc);
   const sjcChangeStr = `${isUp ? '▲' : '▼'} ${fmtVND.format(Math.abs(change))}`;
 
   if (elements.sjcValue.textContent !== sjcValueStr) elements.sjcValue.textContent = sjcValueStr;
   if (elements.sjcChange.textContent !== sjcChangeStr) {
     elements.sjcChange.textContent = sjcChangeStr;
-    elements.sjcChange.className = sjcColorClass;
+    // Fix classList: Xóa class cũ, thêm class mới
+    elements.sjcChange.classList.remove('change-up', 'change-down');
+    elements.sjcChange.classList.add(isUp ? 'change-up' : 'change-down');
   }
 
   // Cập nhật dòng trạng thái cuối cùng
