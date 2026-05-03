@@ -3,15 +3,14 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>Gold Dashboard</title>
 
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js" defer></script>
 
-  <!-- ÉP ĐIỆN THOẠI TẢI LẠI GIAO DIỆN BẰNG VERSION 23.0 -->
-  <link rel="stylesheet" href="style.css?v=2.0">
-  <script src="main.js?v=1.0" defer></script>
+  <link rel="stylesheet" href="style.css?v=2.1">
+  <script src="main.js?v=1.1" defer></script>
 
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
   <link rel="apple-touch-icon" href="/icon-180.png">
@@ -26,7 +25,6 @@
 
 <body>
 
-  <!-- Pull-to-Refresh: Radar Spinner Theme -->
   <div id="cyberPull" class="cyber-pull-container">
     <div class="radar-spinner" id="ptrIcon"></div>
     <div class="cyber-text" id="cyberText">Đồng bộ dữ liệu...</div>
@@ -34,15 +32,13 @@
 
   <header>
     <div class="brand"><span>📊</span> XAU DASHBOARD</div>
-    <!-- Thêm nút Force Sync ở đây -->
     <button id="forceSyncBtn" class="sync-btn" onclick="forceSync()" title="Ép cào dữ liệu ngay lập tức">
       <span id="syncDot" class="sync-dot"></span>
     </button>
   </header>
 
   <div class="container">
-    <div id="lastTime" style="margin-bottom:1rem; font-size:0.875rem; color:#64748b; font-weight: 500;">Đang kết nối...
-    </div>
+    <div id="lastTime" class="status-text">Đang kết nối...</div>
 
     <div class="grid">
       <div class="card usd-card">
@@ -79,21 +75,19 @@
       </div>
     </div>
 
-    <div
-      style="position: relative; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; height: 40px;">
-      <div style="font-size: 1.2rem; font-weight: 700; white-space: nowrap;">📑 History</div>
+    <div class="history-header-container">
+      <div class="history-title">📑 History</div>
 
       <div id="filterBox" class="filter-box">
         <input type="date" id="startDate" title="Từ ngày">
-        <span style="color: var(--secondary-text); font-weight: bold;">-</span>
+        <span class="filter-separator">-</span>
         <input type="date" id="endDate" title="Đến ngày">
         <button class="btn-filter" onclick="applyFilter()">Filter</button>
         <button class="btn-reset" onclick="resetFilter()">Clear</button>
         <button class="btn-delete-multi" onclick="deleteSelected()">Delete</button>
       </div>
 
-      <button onclick="toggleFilterBox()" id="toggleBtn"
-        style="background:transparent; border:none; font-size:1.8rem; cursor:pointer; color:#64748b; line-height: 1; z-index: 2;">+</button>
+      <button onclick="toggleFilterBox()" id="toggleBtn" class="btn-toggle-filter">+</button>
     </div>
 
     <div class="table-wrapper">
@@ -102,8 +96,7 @@
           <tr>
             <th class="col-time">
               Time
-              <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)" title="Chọn tất cả"
-                class="check-action">
+              <input type="checkbox" id="selectAll" onclick="toggleSelectAll(this)" title="Chọn tất cả" class="check-action">
             </th>
             <th>XAU</th>
             <th>SJC</th>
@@ -116,9 +109,8 @@
       <div id="pagination" class="pagination" style="display: none;"></div>
     </div>
 
-    <div
-      style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; margin-top: 2rem;">
-      <div style="font-size: 1.2rem; font-weight: 700;">📈 XAU-SJC Gap</div>
+    <div class="chart-header-container">
+      <div class="chart-title">📈 XAU-SJC Gap</div>
     </div>
 
     <div class="chart-card">
