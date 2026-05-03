@@ -453,14 +453,22 @@ function updateChart(fullData) {
     }
   }
 
- // Tự động scale trục tung (Y), ép min = 0 theo yêu cầu
+ // --- TÍNH TOÁN Y ĐỘNG & LÀM TRÒN SỐ CHẴN ---
   const validGaps = gaps.filter(g => g !== null);
   if (validGaps.length === 0) return;
+  const minVal = Math.min(...validGaps);
   const maxVal = Math.max(...validGaps);
-  const padding = Math.max(maxVal * 0.1, 0.5);
   
-  const yMin = 0; // Bắt buộc trục Y bắt đầu từ 0
-  const yMax = maxVal + padding;
+  // Ép đáy (yMin) về số chẵn thấp hơn giá trị nhỏ nhất
+  let yMin = Math.floor(minVal);
+  if (yMin % 2 !== 0) yMin -= 1;
+
+  // Ép đỉnh (yMax) lên số chẵn cao hơn giá trị lớn nhất
+  let yMax = Math.ceil(maxVal);
+  if (yMax % 2 !== 0) yMax += 1;
+
+  // Xử lý an toàn nếu dữ liệu phẳng lỳ (min = max)
+  if (yMin >= yMax) { yMin -= 2; yMax += 2; }
 
   const calculatedWidth = totalPoints * minSpacing;
 
@@ -475,7 +483,7 @@ function updateChart(fullData) {
     }
   }
 
-  // Khởi tạo mới hoặc cập nhật Chart CHÍNH
+  // ====== 1. BIỂU ĐỒ CHÍNH (CÓ THỂ CUỘN) ======
   if (myChart) {
     myChart.data.labels = labels; myChart.data.datasets[0].data = gaps;
     myChart.options.scales.y.min = yMin; 
@@ -496,8 +504,8 @@ function updateChart(fullData) {
         plugins: { legend: { display: false } },
         scales: {
           y: {
-            min: yMin, max: yMax, beginAtZero: true,
-            ticks: { display: false }, 
+            min: yMin, max: yMax, beginAtZero: false,
+            ticks: { display: false, stepSize: 2 }, // Đặt bước nhảy cố định là 2
             grid: { color: 'rgba(226, 232, 240, 0.6)' },
             border: { display: false }
           },
@@ -511,18 +519,18 @@ function updateChart(fullData) {
     });
   }
 
-  // ====== VẼ TRỤC Y CỐ ĐỊNH ======
+  // ====== 2. TRỤC Y CỐ ĐỊNH BÊN TRÁI ======
   const yCanvas = document.getElementById('yAxisChart');
   if (!yCanvas || typeof Chart === 'undefined') return;
 
   const yCtx = yCanvas.getContext('2d');
   if (window.yChartFixed) {
+    window.yChartFixed.options.scales.y.min = yMin;
     window.yChartFixed.options.scales.y.max = yMax;
     window.yChartFixed.update('none');
   } else {
     window.yChartFixed = new Chart(yCtx, {
       type: 'line',
-      // Dữ liệu rỗng để tàng hình
       data: { labels: ['00/00'], datasets: [{ data: [0], borderWidth: 0, pointRadius: 0, pointHoverRadius: 0 }] }, 
       options: {
         responsive: true, maintainAspectRatio: false, animation: false,
@@ -531,17 +539,17 @@ function updateChart(fullData) {
         scales: {
           x: { 
             display: true, 
-            // Trục X tàng hình nhưng có cùng góc xoay để ép chiều cao khớp với chart chính
             ticks: { color: 'transparent', minRotation: 45, maxRotation: 45, font: { size: 10 } },
             grid: { display: false }, border: { display: false }
           },
           y: {
             position: 'right',
-            min: yMin, max: yMax, beginAtZero: true,
+            min: yMin, max: yMax, beginAtZero: false,
             ticks: { 
-              mirror: true, // QUAN TRỌNG: Đẩy text vào trong canvas để không bị cắt
-              padding: 5, maxTicksLimit: 6, 
-              callback: (val) => val === 0 ? '' : val.toFixed(1) + 'M', // Ẩn số 0
+              mirror: true, 
+              stepSize: 2, // Đảm bảo số nhảy cách đều nhau (vd: 12, 14, 16...)
+              padding: 5, 
+              callback: (val) => val + 'M', // Đã là số chẵn nên hiển thị thẳng số nguyên
               color: '#64748b', font: { size: 11, weight: '600' } 
             },
             border: { display: false }, grid: { display: false } 
@@ -551,7 +559,7 @@ function updateChart(fullData) {
     });
   }
 
-  // Tự động cuộn đến điểm dữ liệu mới nhất (nằm bên phải)
+  // Tự động cuộn đến điểm dữ liệu mới nhất
   const isAtRightEdge = scrollContainer.scrollWidth - scrollContainer.clientWidth <= scrollContainer.scrollLeft + 50;
   requestAnimationFrame(() => {
     if (isAtRightEdge || data.length <= 10) {
