@@ -442,7 +442,7 @@ function updateChart(fullData) {
   const containerWidth = scrollContainer.clientWidth || window.innerWidth;
 
   const maxSpacing = 55; let minSpacing = 35;
-  if (totalPoints * minSpacing > 30000) minSpacing = Math.floor(30000 / totalPoints);[cite: 2]
+  if (totalPoints * minSpacing > 30000) minSpacing = Math.floor(30000 / totalPoints);
 
   // Đệm thêm null vào đầu mảng nếu dữ liệu quá ít (để biểu đồ luôn căn lề phải)
   const minPointsToFill = Math.ceil(containerWidth / maxSpacing);
