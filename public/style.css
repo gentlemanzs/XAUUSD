@@ -160,7 +160,7 @@ td { padding: 8px 16px; border-bottom: 1px solid var(--border-color); text-align
   box-sizing: border-box !important;
 }
 
-.table-wrapper.is-expanded .check-action {
+.table-wrapper.select-mode .check-action {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
@@ -220,7 +220,7 @@ input[type="date"] {
 }
 
 /* Đoạn đã sửa cho các button */
-.btn-filter, .btn-delete-multi, .btn-reset { 
+.btn-filter, .btn-delete-multi, .btn-reset, .btn-select {
   padding: 6px 12px; 
   border-radius: 6px; 
   cursor: pointer; 
@@ -237,7 +237,7 @@ input[type="date"] {
 }
 
 /* Hiệu ứng khi di chuột qua (hover) */
-.btn-filter:hover, .btn-delete-multi:hover, .btn-reset:hover { 
+.btn-filter:hover, .btn-delete-multi:hover, .btn-reset:hover, .btn-select:hover {
   /* Bạn có thể cho nền tối nhẹ hoặc đổi màu chữ để người dùng biết là đã chạm vào nút */
   background: rgba(0, 0, 0, 0.1); 
   color: #000;
@@ -379,4 +379,14 @@ input[type="date"] {
 @keyframes radarSpin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+.col-time {
+  white-space: nowrap;      /* Ép chữ không được rớt dòng */
+  min-width: 85px;          /* Cấp đủ không gian cho giờ + checkbox */
+}
+
+.col-time span, 
+.col-time input[type="checkbox"] {
+  display: inline-block;
+  vertical-align: middle;   /* Căn giữa theo chiều dọc cho đẹp mắt */
 }
