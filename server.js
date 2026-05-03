@@ -13,7 +13,15 @@ const rateLimit = require("express-rate-limit");
 const app = express();
 
 // Bật Helmet bảo vệ Header
-app.use(helmet()); 
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      "script-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+      "script-src-attr": ["'unsafe-inline'"]
+    }
+  }
+}));
 
 // Cấu hình Rate Limit
 const syncLimiter = rateLimit({
