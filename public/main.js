@@ -524,9 +524,6 @@ function updateChart(fullData) {
   const yCanvas = document.getElementById('yAxisChart');
   if (!yCanvas || typeof Chart === 'undefined') return;
 
-  // VÁ LỖI LỆCH PIXEL DO THANH CUỘN: Ép thẻ chứa Y bằng đúng 320px như biểu đồ chính
-  yCanvas.parentElement.style.height = '320px';
-
   const yCtx = yCanvas.getContext('2d');
   if (window.yChartFixed) {
     window.yChartFixed.data.labels = labels;
@@ -539,32 +536,30 @@ function updateChart(fullData) {
       type: 'line',
       data: { 
         labels: labels, 
-        // Data ẩn đi nhưng phải giống chart chính để tính toán layout khớp 100%
         datasets: [{ data: gaps, borderColor: 'transparent', backgroundColor: 'transparent', borderWidth: 0, pointRadius: 0, pointHoverRadius: 0 }] 
       }, 
       options: {
         responsive: true, maintainAspectRatio: false, animation: false,
-        layout: { padding: 0 }, 
+        // VÁ LỖI KHUẤT CHỮ M: Thêm padding right 5px để tạo khoảng thở an toàn
+        layout: { padding: { right: 5, left: 0, top: 0, bottom: 0 } }, 
         plugins: { legend: { display: false }, tooltip: { enabled: false } },
         scales: {
           x: { 
             offset: true,
-            // Xoay 45 độ vô hình để chiếm diện tích Y bằng đúng với chart chính
             ticks: { color: 'transparent', minRotation: 45, maxRotation: 45, font: { size: 10 } },
             grid: { display: false }, border: { display: false }
           },
           y: {
-            position: 'right', // Áp trục sát bên phải để nối viền với chart bên cạnh
+            position: 'right', 
             min: yMin, max: yMax, beginAtZero: false,
             ticks: { 
               mirror: false, 
-              stepSize: 1, // Kẻ mỗi 1M giống hệt chart chính
-              padding: 5, 
+              stepSize: 1, 
+              padding: 2, 
               callback: (val) => {
-                if (val === 0) return ''; // Ẩn hoàn toàn số 0M
-                // Nếu là chẵn (18, 20, 22...) thì in ra. Số lẻ (19, 21...) thì in rỗng
-                if (val % 2 === 0) return val + 'M';
-                return ''; 
+                if (val === 0) return ''; // Ẩn số 0
+                if (val % 2 === 0) return val + 'M'; // In số chẵn (18, 20...)
+                return ''; // Số lẻ bỏ trống
               },
               color: '#64748b', font: { size: 11, weight: '600' } 
             },
