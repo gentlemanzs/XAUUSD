@@ -380,3 +380,14 @@ input[type="date"] {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+.col-time {
+  white-space: nowrap;      /* Ép chữ không được rớt dòng */
+  min-width: 85px;          /* Cấp đủ không gian cho giờ + checkbox */
+}
+
+.col-time span, 
+.col-time input[type="checkbox"] {
+  display: inline-block;
+  vertical-align: middle;   /* Căn giữa theo chiều dọc cho đẹp mắt */
+}

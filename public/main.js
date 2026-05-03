@@ -324,7 +324,7 @@ async function applyFilter() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       historyData = await res.json();
       isFullHistoryLoaded = true; // Bật cờ đánh dấu đã tải xong 1000 dòng
-      
+
       for (const r of historyData) {
         if (!r.filterDateStr && r.createdAt) {
           const d = new Date(r.createdAt);
@@ -332,7 +332,7 @@ async function applyFilter() {
         }
       }
       try { localStorage.setItem('xau_hist_cache', JSON.stringify(historyData)); } catch (e) { }
-    } catch (e) { 
+    } catch (e) {
       console.error(e);
     }
   }
@@ -441,8 +441,8 @@ function updateChart(fullData) {
   const scrollContainer = document.querySelector('.chart-scroll-container');
   const containerWidth = scrollContainer.clientWidth || window.innerWidth;
 
-  const maxSpacing = 110; let minSpacing = 75;
-  if (totalPoints * minSpacing > 30000) minSpacing = Math.floor(30000 / totalPoints);
+  const maxSpacing = 55; let minSpacing = 35;
+  if (totalPoints * minSpacing > 30000) minSpacing = Math.floor(30000 / totalPoints);[cite: 2]
 
   // Đệm thêm null vào đầu mảng nếu dữ liệu quá ít (để biểu đồ luôn căn lề phải)
   const minPointsToFill = Math.ceil(containerWidth / maxSpacing);
@@ -478,7 +478,7 @@ function updateChart(fullData) {
   if (myChart) {
     myChart.data.labels = labels; myChart.data.datasets[0].data = gaps;
     myChart.options.scales.y.suggestedMin = yMin; myChart.options.scales.y.suggestedMax = yMax;
-    if (isChartVisible) myChart.update('none'); // Update không có animation (mượt hơn)
+    if (isChartVisible) myChart.update('none');
   } else {
     myChart = new Chart(ctx, {
       type: 'line',
@@ -495,7 +495,7 @@ function updateChart(fullData) {
         scales: {
           y: {
             suggestedMin: yMin, suggestedMax: yMax, beginAtZero: false,
-            ticks: { maxTicksLimit: 6, callback: (val) => val.toFixed(1) + 'M', color: '#64748b', font: { size: 11 } },
+            ticks: { display: false }, // <--- THÊM DÒNG NÀY ĐỂ ẨN SỐ KHI CUỘN
             grid: { color: 'rgba(226, 232, 240, 0.6)' }
           },
           x: { offset: true, ticks: { autoSkip: true, maxRotation: 0, color: '#64748b', font: { size: 10 } }, grid: { display: false } }
@@ -503,6 +503,32 @@ function updateChart(fullData) {
       }
     });
   }
+  // ====== THÊM MỚI: VẼ TRỤC Y CỐ ĐỊNH ======
+const yCtx = document.getElementById('yAxisChart').getContext('2d');
+if (window.yChartFixed) {
+  window.yChartFixed.options.scales.y.suggestedMin = yMin;
+  window.yChartFixed.options.scales.y.suggestedMax = yMax;
+  window.yChartFixed.update('none');
+} else {
+  window.yChartFixed = new Chart(yCtx, {
+    type: 'line',
+    data: { labels: [''], datasets: [{ data: [yMin], borderWidth: 0 }] }, // Data tàng hình
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      layout: { padding: { top: 0, bottom: 0 } }, 
+      scales: {
+        x: { display: false },
+        y: {
+          position: 'right', // Áp sát mép phải để liền mạch với biểu đồ cuộn
+          suggestedMin: yMin, suggestedMax: yMax, beginAtZero: false,
+          ticks: { maxTicksLimit: 6, callback: (val) => val.toFixed(1) + 'M', color: '#64748b', font: { size: 11 } },
+          grid: { display: false, drawBorder: false } 
+        }
+      }
+    }
+  });
+}
 
   // Tự động cuộn đến điểm dữ liệu mới nhất (nằm bên phải)
   const isAtRightEdge = scrollContainer.scrollWidth - scrollContainer.clientWidth <= scrollContainer.scrollLeft + 50;
@@ -648,7 +674,7 @@ window.addEventListener("touchend", (e) => {
           cards.forEach(card => card.classList.remove('flash-update'));
         }, 300);
       }, 1200);
-      
+
     }).catch(() => {
       // BẠN ĐÃ QUÊN TOÀN BỘ KHỐI CATCH NÀY:
       textEl.innerText = "Lỗi kết nối!";

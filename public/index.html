@@ -121,8 +121,14 @@
       <div style="font-size: 1.2rem; font-weight: 700;">📈 XAU-SJC Gap</div>
     </div>
 
-    <div class="chart-card">
-      <div class="chart-scroll-container">
+    <div class="chart-card" style="display: flex; position: relative; padding-left: 0;">
+      <!-- KHỐI 1: Trục Y cố định -->
+      <div style="width: 45px; flex-shrink: 0; z-index: 10; background: var(--theme-color, #0f172a);">
+        <canvas id="yAxisChart"></canvas>
+      </div>
+
+      <!-- KHỐI 2: Biểu đồ chính (Có thể cuộn) -->
+      <div class="chart-scroll-container" style="flex-grow: 1; overflow-x: auto; overflow-y: hidden;">
         <div class="chart-inner-wrapper">
           <canvas id="gapChart"></canvas>
         </div>
