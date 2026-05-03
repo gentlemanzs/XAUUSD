@@ -467,8 +467,7 @@ function updateChart(fullData) {
   let yMax = Math.ceil(maxVal);
   if (yMax % 2 !== 0) yMax += 1;
 
-  // Xử lý an toàn nếu dữ liệu phẳng lỳ (min = max)
-  if (yMin >= yMax) { yMin -= 2; yMax += 2; }
+  if (yMin >= yMax) { yMin -= 2; yMax += 2; } // Chống lỗi biểu đồ phẳng lỳ
 
   const calculatedWidth = totalPoints * minSpacing;
 
@@ -483,7 +482,7 @@ function updateChart(fullData) {
     }
   }
 
-  // ====== 1. BIỂU ĐỒ CHÍNH (CÓ THỂ CUỘN) ======
+  // ====== 1. BIỂU ĐỒ CHÍNH (BÊN PHẢI) ======
   if (myChart) {
     myChart.data.labels = labels; myChart.data.datasets[0].data = gaps;
     myChart.options.scales.y.min = yMin; 
@@ -505,7 +504,8 @@ function updateChart(fullData) {
         scales: {
           y: {
             min: yMin, max: yMax, beginAtZero: false,
-            ticks: { display: false, stepSize: 2 }, // Đặt bước nhảy cố định là 2
+            // stepSize: 1 vẽ đường kẻ ngang mỗi 1M (VD: 18, 19, 20...)
+            ticks: { display: false, stepSize: 1 }, 
             grid: { color: 'rgba(226, 232, 240, 0.6)' },
             border: { display: false }
           },
@@ -519,26 +519,34 @@ function updateChart(fullData) {
     });
   }
 
-  // ====== 2. TRỤC Y CỐ ĐỊNH BÊN TRÁI ======
+  // ====== 2. TRỤC Y CỐ ĐỊNH (BÊN TRÁI) ======
   const yCanvas = document.getElementById('yAxisChart');
   if (!yCanvas || typeof Chart === 'undefined') return;
 
   const yCtx = yCanvas.getContext('2d');
   if (window.yChartFixed) {
+    // Truyền y hệt data và range để giữ đồng bộ tỷ lệ
+    window.yChartFixed.data.labels = labels;
+    window.yChartFixed.data.datasets[0].data = gaps;
     window.yChartFixed.options.scales.y.min = yMin;
     window.yChartFixed.options.scales.y.max = yMax;
     window.yChartFixed.update('none');
   } else {
     window.yChartFixed = new Chart(yCtx, {
       type: 'line',
-      data: { labels: ['00/00'], datasets: [{ data: [0], borderWidth: 0, pointRadius: 0, pointHoverRadius: 0 }] }, 
+      data: { 
+        labels: labels, // Phải có dải label của X để độ cao trục X 2 bên bằng nhau
+        // Dữ liệu y hệt như biểu đồ chính nhưng cho tàng hình hết
+        datasets: [{ data: gaps, borderColor: 'transparent', backgroundColor: 'transparent', borderWidth: 0, pointRadius: 0, pointHoverRadius: 0 }] 
+      }, 
       options: {
         responsive: true, maintainAspectRatio: false, animation: false,
         plugins: { legend: { display: false }, tooltip: { enabled: false } },
         layout: { padding: 0 }, 
         scales: {
           x: { 
-            display: true, 
+            offset: true,
+            // Giữ lại text nghiêng 45 độ nhưng đổi màu trong suốt để chiếm đúng diện tích
             ticks: { color: 'transparent', minRotation: 45, maxRotation: 45, font: { size: 10 } },
             grid: { display: false }, border: { display: false }
           },
@@ -547,9 +555,16 @@ function updateChart(fullData) {
             min: yMin, max: yMax, beginAtZero: false,
             ticks: { 
               mirror: true, 
-              stepSize: 2, // Đảm bảo số nhảy cách đều nhau (vd: 12, 14, 16...)
+              stepSize: 1, // Khớp tuyệt đối với đường kẻ của biểu đồ chính
               padding: 5, 
-              callback: (val) => val + 'M', // Đã là số chẵn nên hiển thị thẳng số nguyên
+              callback: (val) => {
+                if (val === 0) return ''; // Ẩn hoàn toàn nếu giá trị là 0
+                
+                // Chỉ in số nếu giá trị là số chẵn (18, 20, 22) -> Tự động cách 1 kẻ ngang
+                if (val % 2 === 0) return val + 'M';
+                
+                return ''; // Số lẻ (19, 21) để chuỗi rỗng
+              },
               color: '#64748b', font: { size: 11, weight: '600' } 
             },
             border: { display: false }, grid: { display: false } 
