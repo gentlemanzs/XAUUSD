@@ -7,15 +7,33 @@ const cron = require("node-cron");
 const mongoose = require("mongoose");
 const cheerio = require("cheerio");
 const compression = require("compression");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+
 const app = express();
 
+// Bật Helmet bảo vệ Header
+app.use(helmet()); 
+
+// Cấu hình Rate Limit (Chỉ khai báo biến, tí nữa gắn sau)
+const syncLimiter = rateLimit({
+  windowMs: 60 * 1000, 
+  max: 5,
+  message: { error: "Bạn thao tác quá nhanh, vui lòng đợi 1 phút!" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const deleteLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // Khóa 5 phút
+  max: 5, // Tối đa 5 lần thử sai
+  message: { error: "Thử sai mật khẩu quá nhiều lần. Tạm khóa 5 phút." },
+});
+
 app.set('trust proxy', 1);
-// Nén Gzip để truyền tải JSON nhẹ hơn
 app.use(compression({ level: 6, threshold: 1024 }));
-// Giới hạn Payload phòng chống DDOS/Bom payload
 app.use(express.json({ limit: "10kb" })); 
 
-// Phục vụ các file tĩnh (Frontend)
 app.use(express.static(path.join(__dirname, "public"), {
   maxAge: "1d",
   etag: true
@@ -26,17 +44,15 @@ const PORT = process.env.PORT || 3000;
 // ============================================================================
 // PHẦN 2: HỆ THỐNG CACHE IN-MEMORY (LƯU TRÊN RAM)
 // ============================================================================
-let latestData = null;      // Lưu snapshot giá vàng gần nhất
-let clients = new Set();    // Tập hợp chứa các User đang kết nối SSE
-let isUpdating = false;     // Khóa lock chống chạy đè cronjob
-let lastForceSync = 0;      // Chống bấm nút đồng bộ liên tục
-let lastDifferentSjc = null;// Cache khoảng chênh lệch khi SJC có thay đổi
+let latestData = null;      
+let clients = new Set();    
+let isUpdating = false;     
+let lastDifferentSjc = null;
 let cachedLastSavedXau = null; 
 let cachedYesterdaySjc = null;
 let cachedYesterdayDate = null;
-let cachedHistory = [];     // Bộ đệm mảng lịch sử tránh chọc DB liên tục
+let cachedHistory = [];     
 
-// Hàm phụ trợ fomat thời gian theo Việt Nam
 function formatTimeVN(dateObj) {
   if (!dateObj) return "--";
   const pad = n => String(n).padStart(2, '0');
@@ -49,7 +65,7 @@ function formatTimeVN(dateObj) {
 // ============================================================================
 const TG_TOKEN = process.env.TG_TOKEN;
 const TG_CHAT_ID = process.env.TG_CHAT_ID;
-const ALERT_COOLDOWN_MS = 10 * 60 * 1000; // Cooldown 10 phút chống spam tin nhắn
+const ALERT_COOLDOWN_MS = 10 * 60 * 1000; 
 const alertCooldowns = new Map();
 
 async function sendTelegram(message, alertKey) {
@@ -85,7 +101,6 @@ const HistorySchema = new mongoose.Schema({
 HistorySchema.index({ createdAt: -1, sjc: 1 });
 const History = mongoose.model("History", HistorySchema);
 
-// Hàm kéo toàn bộ DB lên RAM lúc khởi động server
 async function preloadCache() {
   try {
     const historyData = await History.find()
@@ -132,7 +147,6 @@ mongoose.connect(process.env.MONGO_URI, {
       sendTelegram("🚀 Bot Telegram đã kết nối!", "server_start");
       updateData("Khởi động Server"); 
     });
-    // Giữ kết nối HTTP sống lâu để phục vụ SSE không bị timeout
     server.keepAliveTimeout = 65000;
     server.headersTimeout = 66000;
 }).catch(err => {
@@ -146,7 +160,6 @@ mongoose.connection.on('error', (err) => {
   sendTelegram(`🔥 *MongoDB mất kết nối*\nLỗi: ${err.message}`, "mongo_runtime");
 });
 
-// Giữ nhịp đập (Heartbeat) cho mảng SSE Client không bị trình duyệt ngắt
 setInterval(() => {
   for (const c of [...clients]) {
     try { 
@@ -159,41 +172,36 @@ setInterval(() => {
 }, 40000);
 
 // ============================================================================
-// PHẦN 5: XỬ LÝ NGUỒN CÀO DATA (SCRAPING LÒNG GHÉP RETRY)
+// PHẦN 5: XỬ LÝ NGUỒN CÀO DATA
 // ============================================================================
 let cachedUsdRate = null;
 let lastUsdFetchTime = 0;
-const USD_CACHE_DURATION = 60 * 60 * 1000; // Cache USD 1 tiếng
+const USD_CACHE_DURATION = 60 * 60 * 1000; 
 
-// Kiểm tra giờ hành chính Việt Nam để hạn chế cào SJC/USD buổi đêm
 function isVietnamTradingTime() {
   const now = new Date();
   const vnTimeStr = now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" });
   const vnTime = new Date(vnTimeStr);
   const day = vnTime.getDay();
   const timeInMinutes = vnTime.getHours() * 60 + vnTime.getMinutes();
-
   if (day === 0) return false; 
   if (day >= 1 && day <= 5) return timeInMinutes >= 510 && timeInMinutes <= 1020; 
   if (day === 6) return timeInMinutes >= 510 && timeInMinutes <= 630; 
   return false;
 }
 
-// Kiểm tra phiên Forex mở cửa
 function isForexMarketOpen() {
   const now = new Date();
   const vnTimeStr = now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" });
   const vnTime = new Date(vnTimeStr);
   const day = vnTime.getDay();
   const timeInMinutes = vnTime.getHours() * 60 + vnTime.getMinutes();
-
   if (day === 0) return false;                              
   if (day === 1 && timeInMinutes < 330) return false;       
   if (day === 6 && timeInMinutes >= 300) return false;      
   return true; 
 }
 
-// Gọi API có cơ chế Retry phòng hờ mạng nghẽn
 async function fetchWithRetry(url, isJson = false, retries = 2) {
   for (let i = 0; i < retries; i++) {
     try {
@@ -211,7 +219,6 @@ async function fetchWithRetry(url, isJson = false, retries = 2) {
   }
 }
 
-// Cào Tỷ giá Vietcombank
 async function getUsdRate() {
   const now = Date.now();
   if (now - lastUsdFetchTime < USD_CACHE_DURATION && cachedUsdRate !== null) return cachedUsdRate;
@@ -231,7 +238,6 @@ async function getUsdRate() {
   return cachedUsdRate;
 }
 
-// Hàm hỗ trợ bóc tách giá SJC từ File XML
 async function getPriceFromXml(url, selector, attrName) {
   try {
     const xml = await fetchWithRetry(url, false);
@@ -247,14 +253,11 @@ async function getPriceFromXml(url, selector, attrName) {
   return 0;
 }
 
-// Cào giá SJC (Dùng cơ chế Backup: Nếu Doji sập thì đổi sang BTMC)
 async function getSjcPrice() {
   let price = await getPriceFromXml("https://giavang.doji.vn/api/giavang/?api_key=258fbd2a72ce8481089d88c678e9fe4f", 'Row[Key="dojihanoile"]', 'Sell');
   if (price > 0) return price;
-
   price = await getPriceFromXml("http://api.btmc.vn/api/BTMCAPI/getpricebtmc?key=3kd8ub1llcg9t45hnoh8hmn7t5kc2v", 'Data[row="932"]', 'ps_932');
   if (price > 0) return price;
-
   return 0;
 }
 
@@ -268,7 +271,6 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
     const isTrading = forceFetch || isVietnamTradingTime();
     const isForex = forceFetch || isForexMarketOpen();
 
-    // Chạy các lệnh Cào Data song song (Concurrency)
     const [usdRate, dataXAU, sjcPrice] = await Promise.all([
       isTrading ? getUsdRate() : Promise.resolve(null),
       isForex ? fetchWithRetry("https://api.gold-api.com/price/XAU", true) : Promise.resolve(null),
@@ -282,17 +284,14 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
     const isXauLive = !!(dataXAU && dataXAU.price);
     const isUsdLive = usdRate !== null;
 
-    // Bắn tin báo lỗi về Telegram nếu các nguồn API sập
     if (isForex && !isXauLive) sendTelegram(`⚠️ *API giá vàng thế giới (XAU) thất bại*\nKhông lấy được giá từ gold-api.com`, 'api_xau');
     if (isTrading && !isUsdLive) sendTelegram(`⚠️ *API tỷ giá USD thất bại*\nKhông lấy được tỷ giá từ Vietcombank`, 'api_usd');
     if (isTrading && !isSjcLive) sendTelegram(`⚠️ *API giá SJC thất bại*\nCả DOJI lẫn BTMC đều không trả được giá`, 'api_sjc');
 
-    // Loại bỏ hoàn toàn các con số hardcode ảo
     let sjc = isSjcLive ? sjcPrice : (lastRecord ? lastRecord.sjc : 0);
     let xau = isXauLive ? dataXAU.price : (lastRecord ? lastRecord.xau : 0); 
     let usd = isUsdLive ? usdRate : (lastRecord ? lastRecord.usd : 0); 
 
-    // Fallback: CHẶN ĐỨNG tính toán nếu thiếu bất kỳ dữ liệu cốt lõi nào
     if (sjc <= 0 || xau <= 0 || usd <= 0) {
       if (latestData) {
         latestData.status = "Delayed (Lỗi hệ thống - Thiếu dữ liệu)";
@@ -307,15 +306,13 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
           } 
         }
       }
-      return; // ⛔ THOÁT NGAY LẬP TỨC: Không tính toán gap ảo, không lưu DB rác
+      return; 
     }
 
-    // TÍNH TOÁN MARKET GAP (Chỉ chạy đến đây khi SJC, XAU, USD đều hợp lệ)
     const worldVND = xau * usd * (37.5 / 31.1035);
     const diff = sjc - worldVND; 
     const currentGap = Math.round(diff);
 
-    // Trích xuất giá đóng cửa của ngày hôm qua để tính Delta (Tăng/giảm so với hqua)
     const todayStr = new Date().toDateString();
     if (cachedYesterdayDate !== todayStr || cachedYesterdaySjc === null) {
       const yesterday = new Date();
@@ -353,7 +350,6 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
 
     const updatedTimeObj = new Date();
 
-    // Gói Payload JSON chuẩn bị trả về cho Client
     latestData = {
       updatedAt: updatedTimeObj, timeStr: formatTimeVN(updatedTimeObj),
       usd, xau, xauChange, sjc, sjcChange, oldGap: lastDifferentSjc.diff,
@@ -362,7 +358,6 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
       failedAPIs: failedAPIs
     };
 
-    // CHỈ LƯU VÀO DATABASE NẾU SJC CÓ SỰ THAY ĐỔI
     if (sjc > 0 && (!lastRecord || lastRecord.sjc !== sjc)) {
       const dbEntry = { ...latestData };
       delete dbEntry.updatedAt; delete dbEntry.timeStr; delete dbEntry.failedAPIs;
@@ -385,7 +380,6 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
       }
     }
 
-    // BẮN DATA MỚI XUỐNG TẤT CẢ CLIENT QUA KÊNH SSE
     const ssePayload = `data: ${JSON.stringify(latestData)}\n\n`;
     for (const c of [...clients]) {
       try { 
@@ -409,8 +403,11 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
 // PHẦN 7: ĐỊNH TUYẾN (API ROUTES) VÀ BẢO MẬT
 // ============================================================================
 
-// Kênh đường ống SSE (Client kết nối vào đây sẽ giữ máy chủ trả dữ liệu liên tục)
 app.get("/api/stream", (req, res) => {
+  if (clients.size >= 100) {
+    return res.status(503).json({ error: "Server đang quá tải kết nối." });
+  }
+
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -423,15 +420,11 @@ app.get("/api/stream", (req, res) => {
   }
 
   req.on("close", () => { clients.delete(res); }); 
+  req.on("error", () => { clients.delete(res); }); 
 });
 
-// Endpoint ép đồng bộ ngay lập tức từ giao diện người dùng
-app.post("/api/force-sync", async (req, res) => {
-  const now = Date.now();
-  if (now - lastForceSync < 10000) {
-    return res.status(429).json({ error: "Thao tác quá nhanh, vui lòng đợi!" });
-  }
-  lastForceSync = now;
+// Gắn limiter vào endpoint force-sync 
+app.post("/api/force-sync", syncLimiter, async (req, res) => {
   try {
     await updateData("Ép cào từ giao diện", true);
     res.json({ ok: true });
@@ -445,7 +438,6 @@ app.get("/api/gold", async (req, res) => {
   res.json(latestData || {});
 });
 
-// Endpoint lấy lịch sử (Ưu tiên lấy RAM Cache thay vì chọc thẳng MongoDB)
 app.get("/api/history", async (req, res) => {
   const limit = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 1000);
   if (cachedHistory.length > 0) return res.json(cachedHistory.slice(0, limit));
@@ -462,11 +454,14 @@ app.get("/api/history", async (req, res) => {
   }
 });
 
-// Xóa mảng lịch sử (Đã vá lỗi tính toán lại Cache RAM)
-app.post("/api/history/bulk-delete", async (req, res) => {
+// Gắn limiter và delay vào endpoint delete
+app.post("/api/history/bulk-delete", deleteLimiter, async (req, res) => {
   try {
     const { ids, secret } = req.body;
     const adminPass = process.env.ADMIN_PASS;
+
+    // Tarpitting
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     if (secret !== adminPass) {
       return res.status(403).json({ error: "Sai mật khẩu Admin!" }); 
@@ -479,12 +474,10 @@ app.post("/api/history/bulk-delete", async (req, res) => {
     await History.deleteMany({ _id: { $in: ids } });
     cachedHistory = cachedHistory.filter(item => !ids.includes(item._id.toString()));
 
-    // VÁ LỖI: Tính toán lại các biến phụ thuộc sau khi xóa
     if (cachedHistory.length > 0) {
       const last = cachedHistory[0];
       cachedLastSavedXau = last.xau;
       
-      // Tìm lại mốc SJC có chênh lệch gần nhất
       let diffRecord = cachedHistory.find(r => r.sjc !== latestData?.sjc);
       if (diffRecord) {
         lastDifferentSjc = { sjc: diffRecord.sjc, diff: diffRecord.diff };
@@ -492,14 +485,12 @@ app.post("/api/history/bulk-delete", async (req, res) => {
         lastDifferentSjc = { sjc: latestData.sjc, diff: latestData.diff };
       }
 
-      // Tìm lại giá SJC chốt phiên hôm qua
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       yesterday.setHours(23, 59, 59, 999);
       let lastDayRecord = cachedHistory.find(r => new Date(r.createdAt) <= yesterday);
       cachedYesterdaySjc = lastDayRecord ? lastDayRecord.sjc : (latestData ? latestData.sjc : null);
     } else {
-       // Reset nếu xóa sạch DB
        cachedLastSavedXau = latestData ? latestData.xau : 2350;
        lastDifferentSjc = latestData ? { sjc: latestData.sjc, diff: latestData.diff } : null;
        cachedYesterdaySjc = latestData ? latestData.sjc : null;
@@ -514,7 +505,6 @@ app.post("/api/history/bulk-delete", async (req, res) => {
 // ============================================================================
 // PHẦN 8: CRONJOB HỆ THỐNG
 // ============================================================================
-// Cứ 5 phút tự động kích hoạt cào lấy số mới nếu đang trong giờ giao dịch
 cron.schedule("*/5 * * * *", () => {
   if (isVietnamTradingTime() || isForexMarketOpen()) {
     updateData("Cronjob 5 phút");
