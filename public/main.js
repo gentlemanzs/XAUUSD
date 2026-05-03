@@ -505,7 +505,6 @@ function updateChart(fullData) {
         scales: {
           y: {
             min: yMin, max: yMax, beginAtZero: false,
-            // Bước nhảy = 1 để vẽ kẻ ngang cách nhau 1M
             ticks: { display: false, stepSize: 1 }, 
             grid: { color: 'rgba(226, 232, 240, 0.6)', drawTicks: false },
             border: { display: false }
@@ -525,12 +524,11 @@ function updateChart(fullData) {
   if (!yCanvas || typeof Chart === 'undefined') return;
 
   yCanvas.parentElement.style.height = '320px';
-  // Ép chắc chắn thẻ chứa Y rộng 60px để không bao giờ bị cắt chữ
   yCanvas.parentElement.parentElement.style.width = '60px'; 
 
   const yCtx = yCanvas.getContext('2d');
   if (window.yChartFixed) {
-    window.yChartFixed.data.labels = labels; // ĐÃ SỬA: Dùng 100% nhãn gốc để đồng bộ chiều cao
+    window.yChartFixed.data.labels = labels; 
     window.yChartFixed.data.datasets[0].data = gaps;
     window.yChartFixed.options.scales.y.min = yMin;
     window.yChartFixed.options.scales.y.max = yMax;
@@ -539,7 +537,7 @@ function updateChart(fullData) {
     window.yChartFixed = new Chart(yCtx, {
       type: 'line',
       data: { 
-        labels: labels, // ĐÃ SỬA: Đưa toàn bộ mảng labels vào để Chart.js tính chiều cao trục X khớp nhau 100%
+        labels: labels, 
         datasets: [{ data: gaps, borderColor: 'transparent', backgroundColor: 'transparent', borderWidth: 0, pointRadius: 0, pointHoverRadius: 0 }] 
       }, 
       options: {
@@ -556,17 +554,15 @@ function updateChart(fullData) {
             position: 'right', 
             min: yMin, max: yMax, beginAtZero: false,
             ticks: { 
-              mirror: true, // ĐÃ SỬA: Ép chữ hiển thị NGƯỢC VÀO TRONG khung vẽ
-              padding: 10,  // Đẩy xa lề phải 10px để chữ nằm gọn gàng giữa nền trắng
+              mirror: false, // <-- CHÌA KHÓA CHỮA BỆNH LỆCH: Tắt mirror để chữ căn giữa đường kẻ
+              padding: 5,    // Khoảng cách từ chữ đến biểu đồ chính
               stepSize: 1, 
               callback: (val) => {
                 if (val === 0) return ''; 
-                // Cứ cách 2 vạch (số chẵn) thì hiện chữ
                 if (val % 2 === 0) return val + 'M'; 
                 return ''; 
               },
-              color: '#64748b', font: { size: 11, weight: '600' },
-              z: 10
+              color: '#64748b', font: { size: 11, weight: '600' } 
             },
             grid: { display: false, drawTicks: false }, border: { display: false } 
           }
