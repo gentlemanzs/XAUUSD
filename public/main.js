@@ -505,7 +505,7 @@ function updateChart(fullData) {
         scales: {
           y: {
             min: yMin, max: yMax, beginAtZero: false,
-            // Bước nhảy = 1: Đảm bảo kẻ ngang mỗi 1M, drawTicks: false xóa râu thừa
+            // Bước nhảy = 1 để vẽ kẻ ngang cách nhau 1M
             ticks: { display: false, stepSize: 1 }, 
             grid: { color: 'rgba(226, 232, 240, 0.6)', drawTicks: false },
             border: { display: false }
@@ -525,10 +525,12 @@ function updateChart(fullData) {
   if (!yCanvas || typeof Chart === 'undefined') return;
 
   yCanvas.parentElement.style.height = '320px';
+  // Ép chắc chắn thẻ chứa Y rộng 60px để không bao giờ bị cắt chữ
+  yCanvas.parentElement.parentElement.style.width = '60px'; 
 
   const yCtx = yCanvas.getContext('2d');
   if (window.yChartFixed) {
-    window.yChartFixed.data.labels = labels;
+    window.yChartFixed.data.labels = labels; // ĐÃ SỬA: Dùng 100% nhãn gốc để đồng bộ chiều cao
     window.yChartFixed.data.datasets[0].data = gaps;
     window.yChartFixed.options.scales.y.min = yMin;
     window.yChartFixed.options.scales.y.max = yMax;
@@ -537,7 +539,7 @@ function updateChart(fullData) {
     window.yChartFixed = new Chart(yCtx, {
       type: 'line',
       data: { 
-        labels: labels, // Ép dùng chung data trục X với chart chính để khớp độ cao 100%
+        labels: labels, // ĐÃ SỬA: Đưa toàn bộ mảng labels vào để Chart.js tính chiều cao trục X khớp nhau 100%
         datasets: [{ data: gaps, borderColor: 'transparent', backgroundColor: 'transparent', borderWidth: 0, pointRadius: 0, pointHoverRadius: 0 }] 
       }, 
       options: {
@@ -547,23 +549,24 @@ function updateChart(fullData) {
         scales: {
           x: { 
             offset: true,
-            // Copy Y HỆT cấu hình X của biểu đồ chính, chỉ đổi màu thành tàng hình
             ticks: { autoSkip: true, color: 'transparent', minRotation: 45, maxRotation: 45, font: { size: 10 }, padding: 5 },
             grid: { display: false, drawTicks: false }, border: { display: false }
           },
           y: {
-            position: 'right', // Áp trục bên phải
+            position: 'right', 
             min: yMin, max: yMax, beginAtZero: false,
             ticks: { 
-              mirror: false, // Để chữ bên ngoài trục
+              mirror: true, // ĐÃ SỬA: Ép chữ hiển thị NGƯỢC VÀO TRONG khung vẽ
+              padding: 10,  // Đẩy xa lề phải 10px để chữ nằm gọn gàng giữa nền trắng
               stepSize: 1, 
-              padding: 5, // Lùi số ra xa nét kẻ 5px, do width đã tăng 60px nên không lo mất chữ M
               callback: (val) => {
                 if (val === 0) return ''; 
+                // Cứ cách 2 vạch (số chẵn) thì hiện chữ
                 if (val % 2 === 0) return val + 'M'; 
                 return ''; 
               },
-              color: '#64748b', font: { size: 11, weight: '600' } 
+              color: '#64748b', font: { size: 11, weight: '600' },
+              z: 10
             },
             grid: { display: false, drawTicks: false }, border: { display: false } 
           }
