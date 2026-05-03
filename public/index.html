@@ -10,8 +10,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js" defer></script>
 
   <!-- ÉP ĐIỆN THOẠI TẢI LẠI GIAO DIỆN BẰNG VERSION 23.0 -->
-  <link rel="stylesheet" href="style.css?v=34.0">
-  <script src="main.js?v=34.0" defer></script>
+  <link rel="stylesheet" href="style.css?v=334.0">
+  <script src="main.js?v=334.0" defer></script>
 
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
   <link rel="apple-touch-icon" href="/icon-180.png">
@@ -122,12 +122,20 @@
     </div>
 
 <!-- CẤU TRÚC MỚI: Chỉ dùng 1 khối bao quanh duy nhất -->
-    <div class="chart-card">
-      <div class="chart-scroll-container">
-        <div class="chart-inner-wrapper">
+    <div class="chart-card" style="position: relative; padding: 0; overflow: hidden;">
+      
+      <!-- LỚP DƯỚI: BIỂU ĐỒ CHÍNH CÓ THANH CUỘN -->
+      <div class="chart-scroll-container" style="overflow-x: auto; overflow-y: hidden; width: 100%;">
+        <div class="chart-inner-wrapper" style="height: 320px; padding-left: 60px;"> <!-- Cắt lề 60px để không bị chữ đè lên -->
           <canvas id="gapChart"></canvas>
         </div>
       </div>
+
+      <!-- LỚP TRÊN: TRỤC Y PHỦ ĐÈ LÊN GÓC TRÁI -->
+      <div style="position: absolute; top: 0; left: 0; width: 60px; height: 320px; background: var(--card-bg, #ffffff); z-index: 10;">
+        <canvas id="yAxisChart"></canvas>
+      </div>
+
     </div>
   </div>
 </body>
