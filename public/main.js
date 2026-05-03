@@ -392,10 +392,9 @@ async function deleteSelected() {
 }
 
 // ============================================================================
-// PHẦN 6: VẼ BIỂU ĐỒ (CHART.JS)
+// PHẦN 6: VẼ BIỂU ĐỒ (CHART.JS) - BẢN FIX CUỘN NGANG HOÀN HẢO
 // ============================================================================
 function updateChart(fullData) {
-  // Tránh lỗi nổ chart khi không đủ dữ liệu
   if (!fullData || fullData.length < 2) {
     lastChartSignature = "";
     if (myChart) {
@@ -405,11 +404,9 @@ function updateChart(fullData) {
     return;
   }
 
-  // Rút gọn chỉ hiển thị tối đa 100 điểm biểu đồ cuối
   const MAX_POINTS = 100;
   const data = fullData.slice(0, MAX_POINTS);
 
-  // So sánh Signature để tránh vẽ lại một khung hình giống hệt nhau
   const currentSignature = `${data.length}_${data[0].createdAt}_${data[data.length - 1].createdAt}`;
   if (currentSignature === lastChartSignature) return;
   lastChartSignature = currentSignature;
@@ -419,7 +416,6 @@ function updateChart(fullData) {
   const totalPoints = data.length;
   const labels = []; const gaps = [];
 
-  // Trục hoành (X) là các ngày, chỉ in nhãn nếu đổi ngày mới
   let lastDateLabel = null;
   for (let i = totalPoints - 1; i >= 0; i--) {
     const r = data[i];
@@ -433,10 +429,9 @@ function updateChart(fullData) {
     } else {
       labels.push('');
     }
-    gaps.push(r.diff / 1000000); // Quy đổi ra triệu VNĐ cho dễ nhìn
+    gaps.push(r.diff / 1000000); 
   }
 
-  // Tính toán chiều rộng động để cuộn ngang trên điện thoại
   const wrapper = chartCanvas.parentElement;
   const scrollContainer = document.querySelector('.chart-scroll-container');
   const containerWidth = scrollContainer.clientWidth || window.innerWidth;
@@ -444,7 +439,6 @@ function updateChart(fullData) {
   const maxSpacing = 55; let minSpacing = 35;
   if (totalPoints * minSpacing > 30000) minSpacing = Math.floor(30000 / totalPoints);
 
-  // Đệm thêm null vào đầu mảng nếu dữ liệu quá ít (để biểu đồ luôn căn lề phải)
   const minPointsToFill = Math.ceil(containerWidth / maxSpacing);
   if (totalPoints > 0 && totalPoints < minPointsToFill) {
     const padCount = minPointsToFill - totalPoints;
@@ -453,17 +447,15 @@ function updateChart(fullData) {
     }
   }
 
-// --- TÍNH TOÁN Y ĐỘNG & LÀM TRÒN SỐ CHẴN ---
+  // --- TÍNH TOÁN Y ĐỘNG ---
   const validGaps = gaps.filter(g => g !== null);
   if (validGaps.length === 0) return;
   const minVal = Math.min(...validGaps);
   const maxVal = Math.max(...validGaps);
   
-  // Ép đáy (yMin) về số chẵn nhỏ hơn hoặc bằng giá trị thực tế
   let yMin = Math.floor(minVal);
   if (yMin % 2 !== 0) yMin -= 1;
 
-  // Ép đỉnh (yMax) lên số chẵn lớn hơn giá trị thực tế
   let yMax = Math.ceil(maxVal);
   if (yMax % 2 !== 0) yMax += 1;
 
@@ -482,7 +474,7 @@ function updateChart(fullData) {
     }
   }
 
-  // ====== 1. BIỂU ĐỒ CHÍNH (BÊN PHẢI) ======
+  // KHỞI TẠO BIỂU ĐỒ DUY NHẤT
   if (myChart) {
     myChart.data.labels = labels; myChart.data.datasets[0].data = gaps;
     myChart.options.scales.y.min = yMin; 
@@ -500,12 +492,23 @@ function updateChart(fullData) {
       },
       options: {
         responsive: true, maintainAspectRatio: false, animation: false,
-        layout: { padding: { top: 15, bottom: 0, left: 0, right: 10 } }, 
+        layout: { padding: { left: 10, right: 10, top: 20, bottom: 0 } },
         plugins: { legend: { display: false } },
         scales: {
           y: {
+            position: 'left',
             min: yMin, max: yMax, beginAtZero: false,
-            ticks: { display: false, stepSize: 1 }, 
+            ticks: { 
+              stepSize: 1, 
+              callback: (val) => {
+                if (val === 0) return ''; 
+                if (val % 2 === 0) return val + 'M'; 
+                return ''; 
+              },
+              color: '#64748b', font: { size: 11, weight: '600' },
+              // Tính năng siêu đẳng: Luôn giữ trục Y cố định bên trái khi cuộn
+              z: 10, backdropColor: 'white', showLabelBackdrop: true, padding: 10
+            }, 
             grid: { color: 'rgba(226, 232, 240, 0.6)', drawTicks: false },
             border: { display: false }
           },
@@ -519,59 +522,11 @@ function updateChart(fullData) {
     });
   }
 
-  // ====== 2. TRỤC Y CỐ ĐỊNH (BÊN TRÁI) ======
-  const yCanvas = document.getElementById('yAxisChart');
-  if (!yCanvas || typeof Chart === 'undefined') return;
+  // CSS HACK: Dùng position: sticky để khóa trục Y của thẻ canvas khi thẻ cha cuộn ngang
+  const yAxisWidth = myChart.scales.y.width;
+  ctx.canvas.style.position = 'sticky';
+  ctx.canvas.style.left = `-${yAxisWidth}px`; 
 
-  yCanvas.parentElement.style.height = '320px';
-  yCanvas.parentElement.parentElement.style.width = '60px'; 
-
-  const yCtx = yCanvas.getContext('2d');
-  if (window.yChartFixed) {
-    window.yChartFixed.data.labels = labels; 
-    window.yChartFixed.data.datasets[0].data = gaps;
-    window.yChartFixed.options.scales.y.min = yMin;
-    window.yChartFixed.options.scales.y.max = yMax;
-    window.yChartFixed.update('none');
-  } else {
-    window.yChartFixed = new Chart(yCtx, {
-      type: 'line',
-      data: { 
-        labels: labels, 
-        datasets: [{ data: gaps, borderColor: 'transparent', backgroundColor: 'transparent', borderWidth: 0, pointRadius: 0, pointHoverRadius: 0 }] 
-      }, 
-      options: {
-        responsive: true, maintainAspectRatio: false, animation: false,
-        layout: { padding: { top: 15, bottom: 0, left: 0, right: 0 } }, 
-        plugins: { legend: { display: false }, tooltip: { enabled: false } },
-        scales: {
-          x: { 
-            offset: true,
-            ticks: { autoSkip: true, color: 'transparent', minRotation: 45, maxRotation: 45, font: { size: 10 }, padding: 5 },
-            grid: { display: false, drawTicks: false }, border: { display: false }
-          },
-          y: {
-            position: 'right', 
-            min: yMin, max: yMax, beginAtZero: false,
-            ticks: { 
-              mirror: false, // <-- CHÌA KHÓA CHỮA BỆNH LỆCH: Tắt mirror để chữ căn giữa đường kẻ
-              padding: 5,    // Khoảng cách từ chữ đến biểu đồ chính
-              stepSize: 1, 
-              callback: (val) => {
-                if (val === 0) return ''; 
-                if (val % 2 === 0) return val + 'M'; 
-                return ''; 
-              },
-              color: '#64748b', font: { size: 11, weight: '600' } 
-            },
-            grid: { display: false, drawTicks: false }, border: { display: false } 
-          }
-        }
-      }
-    });
-  }
-
-  // Tự động cuộn đến điểm dữ liệu mới nhất
   const isAtRightEdge = scrollContainer.scrollWidth - scrollContainer.clientWidth <= scrollContainer.scrollLeft + 50;
   requestAnimationFrame(() => {
     if (isAtRightEdge || data.length <= 10) {

@@ -10,8 +10,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js" defer></script>
 
   <!-- ÉP ĐIỆN THOẠI TẢI LẠI GIAO DIỆN BẰNG VERSION 23.0 -->
-  <link rel="stylesheet" href="style.css?v=34.0">
-  <script src="main.js?v=34.0" defer></script>
+  <link rel="stylesheet" href="style.css?v=343.0">
+  <script src="main.js?v=343.0" defer></script>
 
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
   <link rel="apple-touch-icon" href="/icon-180.png">
@@ -121,23 +121,14 @@
       <div style="font-size: 1.2rem; font-weight: 700;">📈 XAU-SJC Gap</div>
     </div>
 
-    <div class="chart-card" style="display: flex; position: relative; padding-left: 0;">
-  
-  <!-- KHỐI 1: Trục Y cố định -->
-  <div style="width: 60px; flex-shrink: 0; z-index: 10; background: var(--card-bg, #ffffff);">
-    <div style="height: 320px; position: relative;">
-      <canvas id="yAxisChart"></canvas>
-    </div>
-  </div>
-
-  <!-- KHỐI 2: Biểu đồ chính (Có thể cuộn) -->
-  <div class="chart-scroll-container" style="flex-grow: 1; overflow-x: auto; overflow-y: hidden;">
-    <div class="chart-inner-wrapper"> <!-- Khối này đang có height: 320px trong CSS -->
-      <canvas id="gapChart"></canvas>
+<!-- CẤU TRÚC MỚI: Chỉ dùng 1 khối bao quanh duy nhất -->
+    <div class="chart-card">
+      <div class="chart-scroll-container">
+        <div class="chart-inner-wrapper">
+          <canvas id="gapChart"></canvas>
         </div>
       </div>
     </div>
   </div>
 </body>
-
 </html>
