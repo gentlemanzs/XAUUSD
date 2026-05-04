@@ -500,89 +500,94 @@ function updateChart(fullData) {
     }
   }
 
- // Khởi tạo mới hoặc cập nhật Chart
-if (myChart) {
-  myChart.data.labels = labels;
-  myChart.data.datasets[0].data = gaps;
-  myChart.data.datasets[0].rawData = rawTooltipData;
-  myChart.options.scales.y.suggestedMin = yMin;
-  myChart.options.scales.y.suggestedMax = yMax;
-  
-  if (isChartVisible) myChart.update('none'); // Update không có animation
-} else {
-  myChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [{
-        data: gaps,
-        rawData: rawTooltipData,
-        borderColor: '#3b82f6',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        borderWidth: 2,
-        fill: true,
-        tension: 0.3,
-        pointRadius: 3
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            title: (context) => {
-              const rowData = context[0].dataset.rawData[context[0].dataIndex];
-              if (!rowData) return '';
-              return `${rowData.timeStr || '--'}`;
-            },
-            label: (context) => {
-              const rowData = context.dataset.rawData[context.dataIndex];
-              if (!rowData) return '';
-              return [` ${fmtVND.format(rowData.diff)} VNĐ`];
+  // Khởi tạo mới hoặc cập nhật Chart
+  if (myChart) {
+    myChart.data.labels = labels;
+    myChart.data.datasets[0].data = gaps;
+    myChart.data.datasets[0].rawData = rawTooltipData;
+    myChart.options.scales.y.suggestedMin = yMin;
+    myChart.options.scales.y.suggestedMax = yMax;
+
+    if (isChartVisible) myChart.update('none'); // Update không có animation
+  } else {
+    myChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: gaps,
+          rawData: rawTooltipData,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              // Tiêu đề Tooltip (Hiển thị Ngày Giờ)
+              title: (context) => {
+                const rowData = context[0].dataset.rawData[context[0].dataIndex];
+                if (!rowData) return '';
+                return `${rowData.timeStr || '--'}`;
+              },
+
+              // Nội dung Tooltip (Chỉ hiển thị giá trị Gap - diff)
+              label: (context) => {
+                const rowData = context.dataset.rawData[context.dataIndex];
+                if (!rowData) return '';
+
+                // Trả về đúng 1 dòng string, không cần trả về mảng (array)
+                return ` ${fmtVND.format(rowData.diff)} VNĐ`;
+              }
             }
           }
-        }
-      },
-      // Đã đưa scales vào trong options
-      scales: {
-        y: {
-          suggestedMin: yMin,
-          suggestedMax: yMax,
-          beginAtZero: false,
-          ticks: {
-            maxTicksLimit: 6,
-            callback: (val) => val.toFixed(1) + 'M',
-            color: '#64748b',
-            font: { size: 11 }
-          },
-          grid: { color: 'rgba(226, 232, 240, 0.6)' }
         },
-        x: {
-          offset: true,
-          ticks: {
-            autoSkip: true,
-            minRotation: 50,
-            maxRotation: 50,
-            color: '#64748b',
-            font: { size: 10 }
+        // Đã đưa scales vào trong options
+        scales: {
+          y: {
+            suggestedMin: yMin,
+            suggestedMax: yMax,
+            beginAtZero: false,
+            ticks: {
+              maxTicksLimit: 6,
+              callback: (val) => val.toFixed(1) + 'M',
+              color: '#64748b',
+              font: { size: 11 }
+            },
+            grid: { color: 'rgba(226, 232, 240, 0.6)' }
           },
-          grid: { display: false }
+          x: {
+            offset: true,
+            ticks: {
+              autoSkip: true,
+              minRotation: 50,
+              maxRotation: 50,
+              color: '#64748b',
+              font: { size: 10 }
+            },
+            grid: { display: false }
+          }
         }
-      }
-    } // Đóng options tại đây
-  }); // Đóng Chart constructor tại đây
-}
-
-// Tự động cuộn đến điểm dữ liệu mới nhất
-const isAtRightEdge = scrollContainer.scrollWidth - scrollContainer.clientWidth <= scrollContainer.scrollLeft + 50;
-requestAnimationFrame(() => {
-  if (isAtRightEdge || data.length <= 10) {
-    scrollContainer.scrollLeft = (totalPoints < minPointsToFill) ? 0 : scrollContainer.scrollWidth;
+      } // Đóng options tại đây
+    }); // Đóng Chart constructor tại đây
   }
-});
+
+  // Tự động cuộn đến điểm dữ liệu mới nhất
+  const isAtRightEdge = scrollContainer.scrollWidth - scrollContainer.clientWidth <= scrollContainer.scrollLeft + 50;
+  requestAnimationFrame(() => {
+    if (isAtRightEdge || data.length <= 10) {
+      scrollContainer.scrollLeft = (totalPoints < minPointsToFill) ? 0 : scrollContainer.scrollWidth;
+    }
+  });
 }
 
 // ============================================================================
