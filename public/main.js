@@ -532,6 +532,7 @@ function updateChart(fullData) {
         plugins: {
           legend: { display: false },
           tooltip: {
+            displayColors: false,
             callbacks: {
               // Tiêu đề Tooltip (Hiển thị Ngày Giờ)
               title: (context) => {
@@ -546,7 +547,7 @@ function updateChart(fullData) {
                 if (!rowData) return '';
 
                 // Trả về đúng 1 dòng string, không cần trả về mảng (array)
-                return ` ${fmtVND.format(rowData.diff)} VNĐ`;
+                return `${fmtVND.format(rowData.diff)} VNĐ`;
               }
             }
           }
