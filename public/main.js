@@ -300,9 +300,9 @@ function toggleFilterBox() {
   isExpanded = !isExpanded;
 
   if (isExpanded) { elements.filterBox.classList.add('show'); }
-  else { 
-    elements.filterBox.classList.remove('show'); 
-    
+  else {
+    elements.filterBox.classList.remove('show');
+
     // Tự động tắt chế độ Select khi đóng bảng
     isSelectMode = false;
     document.querySelector('.table-wrapper').classList.remove('select-mode');
@@ -413,7 +413,7 @@ function toggleSelectMode() {
   } else {
     wrapper.classList.remove('select-mode');
     btnSelect.innerText = "Select";
-    
+
     // Khi tắt chế độ Select, tự động bỏ chọn tất cả các checkbox
     const selectAllBtn = document.getElementById('selectAll');
     if (selectAllBtn) selectAllBtn.checked = false;
@@ -458,7 +458,7 @@ function updateChart(fullData) {
     } else {
       labels.push('');
     }
-    gaps.push(r.diff / 1000000); 
+    gaps.push(r.diff / 1000000);
   }
 
   const wrapper = chartCanvas.parentElement;
@@ -476,7 +476,7 @@ function updateChart(fullData) {
     }
   }
 
-   // Tự động scale trục tung (Y) dựa trên min/max thực tế
+  // Tự động scale trục tung (Y) dựa trên min/max thực tế
   const validGaps = gaps.filter(g => g !== null);
   let yMin = 0; let yMax = 0;
   if (validGaps.length === 0) return;
@@ -496,8 +496,11 @@ function updateChart(fullData) {
       wrapper.style.setProperty('min-width', '100%', 'important');
     }
   }
-
-   // Khởi tạo mới hoặc cập nhật Chart
+  // Bước 1: Lấy context và tạo Gradient từ trên xuống dưới
+  const gradient = ctx.createLinearGradient(0, 0, 0, 320);
+  gradient.addColorStop(0, 'rgba(37, 99, 235, 0.4)');   // Màu xanh đậm ở trên
+  gradient.addColorStop(1, 'rgba(37, 99, 235, 0.01)');  // Trong suốt dần ở đáy
+  // Khởi tạo mới hoặc cập nhật Chart
   if (myChart) {
     myChart.data.labels = labels; myChart.data.datasets[0].data = gaps;
     myChart.options.scales.y.suggestedMin = yMin; myChart.options.scales.y.suggestedMax = yMax;
@@ -508,8 +511,17 @@ function updateChart(fullData) {
       data: {
         labels: labels,
         datasets: [{
-          data: gaps, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          borderWidth: 2, fill: true, tension: 0.3, pointRadius: 3
+          data: gaps,
+          borderColor: '#2563eb',          // Màu xanh đậm chuẩn tài chính
+          borderWidth: 3,                  // Làm đường kẻ dày và rõ nét
+          backgroundColor: gradient,       // Áp dụng màu Gradient đã tạo[cite: 11]
+          fill: true,                      // Đổ màu vùng dưới đường kẻ[cite: 11]
+          tension: 0.4,                    // Độ cong mềm mại vừa phải[cite: 11]
+          pointRadius: 0,                  // Ẩn các chấm tròn cho sạch sẽ[cite: 11]
+          pointHoverRadius: 6,             // Hiện chấm tròn lớn khi chạm vào[cite: 11]
+          pointBackgroundColor: '#ffffff', // Lõi chấm màu trắng[cite: 11]
+          pointBorderColor: '#2563eb',     // Viền chấm màu xanh[cite: 11]
+          pointBorderWidth: 2
         }]
       },
       options: {
@@ -519,9 +531,12 @@ function updateChart(fullData) {
           y: {
             suggestedMin: yMin, suggestedMax: yMax, beginAtZero: false,
             ticks: { maxTicksLimit: 6, callback: (val) => val.toFixed(1) + 'M', color: '#64748b', font: { size: 11 } },
-            grid: { color: 'rgba(226, 232, 240, 0.6)' }
+            grid: {
+              color: 'rgba(226, 232, 240, 0.4)', // Màu xám nhạt thanh lịch[cite: 11]
+              drawTicks: false                   // Bỏ các gạch nhỏ ở rìa trục[cite: 11]
+            }
           },
-          x: { offset: true, ticks: { autoSkip: true, minRotation: 60, maxRotation: 60, color: '#64748b', font: { size: 10 } }, grid: { display: false } }
+          x: { offset: true, ticks: { autoSkip: true, minRotation: 50, maxRotation: 50, color: '#64748b', font: { size: 10 } }, grid: { display: false } }
         }
       }
     });
@@ -671,7 +686,7 @@ window.addEventListener("touchend", (e) => {
           cards.forEach(card => card.classList.remove('flash-update'));
         }, 300);
       }, 1200);
-      
+
     }).catch(() => {
       // BẠN ĐÃ QUÊN TOÀN BỘ KHỐI CATCH NÀY:
       textEl.innerText = "Lỗi kết nối!";
