@@ -34,7 +34,7 @@ body {
 
 header { 
   padding: 10px 24px; 
-  background: rgba(6, 11, 26, 0.65); /* Màu nền tối trong suốt 65% */
+  background: rgba(16, 16, 16, 1); /* Màu nền tối trong suốt 65% */
   color: white; 
   display: flex; 
   justify-content: space-between; 
