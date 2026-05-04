@@ -300,9 +300,9 @@ function toggleFilterBox() {
   isExpanded = !isExpanded;
 
   if (isExpanded) { elements.filterBox.classList.add('show'); }
-  else { 
-    elements.filterBox.classList.remove('show'); 
-    
+  else {
+    elements.filterBox.classList.remove('show');
+
     // Tự động tắt chế độ Select khi đóng bảng
     isSelectMode = false;
     document.querySelector('.table-wrapper').classList.remove('select-mode');
@@ -413,7 +413,7 @@ function toggleSelectMode() {
   } else {
     wrapper.classList.remove('select-mode');
     btnSelect.innerText = "Select";
-    
+
     // Khi tắt chế độ Select, tự động bỏ chọn tất cả các checkbox
     const selectAllBtn = document.getElementById('selectAll');
     if (selectAllBtn) selectAllBtn.checked = false;
@@ -444,6 +444,7 @@ function updateChart(fullData) {
   const ctx = chartCanvas.getContext('2d');
   const totalPoints = data.length;
   const labels = []; const gaps = [];
+  const rawTooltipData = []; // Thêm mảng này để lưu data gốc cho Tooltip
 
   let lastDateLabel = null;
   for (let i = totalPoints - 1; i >= 0; i--) {
@@ -458,7 +459,8 @@ function updateChart(fullData) {
     } else {
       labels.push('');
     }
-    gaps.push(r.diff / 1000000); 
+    gaps.push(r.diff / 1000000);
+    rawTooltipData.push(r); // Lưu lại toàn bộ dòng dữ liệu 
   }
 
   const wrapper = chartCanvas.parentElement;
@@ -473,10 +475,11 @@ function updateChart(fullData) {
     const padCount = minPointsToFill - totalPoints;
     for (let i = 0; i < padCount; i++) {
       labels.push(' '.repeat(i + 1)); gaps.push(null);
+      rawTooltipData.push(null);
     }
   }
 
-   // Tự động scale trục tung (Y) dựa trên min/max thực tế
+  // Tự động scale trục tung (Y) dựa trên min/max thực tế
   const validGaps = gaps.filter(g => g !== null);
   let yMin = 0; let yMax = 0;
   if (validGaps.length === 0) return;
@@ -497,9 +500,10 @@ function updateChart(fullData) {
     }
   }
 
-   // Khởi tạo mới hoặc cập nhật Chart
+  // Khởi tạo mới hoặc cập nhật Chart
   if (myChart) {
     myChart.data.labels = labels; myChart.data.datasets[0].data = gaps;
+    myChart.data.datasets[0].rawData = rawTooltipData;
     myChart.options.scales.y.suggestedMin = yMin; myChart.options.scales.y.suggestedMax = yMax;
     if (isChartVisible) myChart.update('none'); // Update không có animation (mượt hơn)
   } else {
@@ -508,32 +512,51 @@ function updateChart(fullData) {
       data: {
         labels: labels,
         datasets: [{
-          data: gaps, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          data: gaps, rawData: rawTooltipData, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)',
           borderWidth: 2, fill: true, tension: 0.3, pointRadius: 3
         }]
       },
       options: {
         responsive: true, maintainAspectRatio: false, animation: false,
         plugins: { legend: { display: false } },
-        scales: {
-          y: {
-            suggestedMin: yMin, suggestedMax: yMax, beginAtZero: false,
-            ticks: { maxTicksLimit: 6, callback: (val) => val.toFixed(1) + 'M', color: '#64748b', font: { size: 11 } },
-            grid: { color: 'rgba(226, 232, 240, 0.6)' }
-          },
-          x: { offset: true, ticks: { autoSkip: true, minRotation: 50, maxRotation: 50, color: '#64748b', font: { size: 10 } }, grid: { display: false } }
+        tooltip: {
+          callbacks: {
+            // Custom lại Title để hiển thị Ngày & Giờ
+            title: (context) => {
+              const rowData = context[0].dataset.rawData[context[0].dataIndex];
+              if (!rowData) return '';
+              return `${rowData.filterDateStr || '--'} | ${rowData.timeStr || '--'}`;
+            },
+            // Custom lại Label để hiển thị các chỉ số chi tiết
+            label: (context) => {
+              const rowData = context.dataset.rawData[context.dataIndex];
+              if (!rowData) return '';
+              return [
+                `Gap: ${fmtVND.format(rowData.diff)} VNĐ`
+              ];
+            }
+          }
         }
+      },
+      scales: {
+        y: {
+          suggestedMin: yMin, suggestedMax: yMax, beginAtZero: false,
+          ticks: { maxTicksLimit: 6, callback: (val) => val.toFixed(1) + 'M', color: '#64748b', font: { size: 11 } },
+          grid: { color: 'rgba(226, 232, 240, 0.6)' }
+        },
+        x: { offset: true, ticks: { autoSkip: true, minRotation: 50, maxRotation: 50, color: '#64748b', font: { size: 10 } }, grid: { display: false } }
       }
-    });
-  }
-
-  // Tự động cuộn đến điểm dữ liệu mới nhất (nằm bên phải)
-  const isAtRightEdge = scrollContainer.scrollWidth - scrollContainer.clientWidth <= scrollContainer.scrollLeft + 50;
-  requestAnimationFrame(() => {
-    if (isAtRightEdge || data.length <= 10) {
-      scrollContainer.scrollLeft = (totalPoints < minPointsToFill) ? 0 : scrollContainer.scrollWidth;
     }
-  });
+    });
+}
+
+// Tự động cuộn đến điểm dữ liệu mới nhất (nằm bên phải)
+const isAtRightEdge = scrollContainer.scrollWidth - scrollContainer.clientWidth <= scrollContainer.scrollLeft + 50;
+requestAnimationFrame(() => {
+  if (isAtRightEdge || data.length <= 10) {
+    scrollContainer.scrollLeft = (totalPoints < minPointsToFill) ? 0 : scrollContainer.scrollWidth;
+  }
+});
 }
 
 // ============================================================================
@@ -671,7 +694,7 @@ window.addEventListener("touchend", (e) => {
           cards.forEach(card => card.classList.remove('flash-update'));
         }, 300);
       }, 1200);
-      
+
     }).catch(() => {
       // BẠN ĐÃ QUÊN TOÀN BỘ KHỐI CATCH NÀY:
       textEl.innerText = "Lỗi kết nối!";
