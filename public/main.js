@@ -533,6 +533,7 @@ function updateChart(fullData) {
           legend: { display: false },
           tooltip: {
             displayColors: false,
+            titleFont: {weight: 'normal'},
             callbacks: {
               // Tiêu đề Tooltip (Hiển thị Ngày Giờ)
               title: (context) => {
