@@ -33,8 +33,8 @@ body {
 }
 
 header { 
-  padding: 1rem 2rem; 
-  background: var(--header-old); 
+  padding: 10px 24px; 
+  background: rgba(15, 23, 42, 0.65); /* Màu nền tối trong suốt 65% */
   color: white; 
   display: flex; 
   justify-content: space-between; 
