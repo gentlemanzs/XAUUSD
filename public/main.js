@@ -496,11 +496,11 @@ function updateChart(fullData) {
       wrapper.style.setProperty('min-width', '100%', 'important');
     }
   }
-  // ====== THIẾT KẾ MỚI: PULSAR BLUEPRINT ======
-  // Tạo hiệu ứng đổ bóng Tím sáng từ đỉnh xuống đáy
+// ====== THIẾT KẾ MỚI: MINIMALIST SLATE (TỐI GIẢN - LỊCH LÃM) ======
+  // Đổ bóng màu Xám Khói cực kỳ nhạt, tạo cảm giác sạch sẽ
   const fillGradient = ctx.createLinearGradient(0, 0, 0, 320);
-  fillGradient.addColorStop(0, 'rgba(139, 92, 246, 0.3)'); // Tím sáng (Purple)
-  fillGradient.addColorStop(1, 'rgba(139, 92, 246, 0.0)'); // Mờ dần vào trong suốt
+  fillGradient.addColorStop(0, 'rgba(71, 85, 105, 0.12)'); 
+  fillGradient.addColorStop(1, 'rgba(71, 85, 105, 0.0)');
 
   // Khởi tạo mới hoặc cập nhật Chart
   if (myChart) {
@@ -516,19 +516,16 @@ function updateChart(fullData) {
         labels: labels,
         datasets: [{
           data: gaps, 
-          borderColor: '#8b5cf6',          // Màu đường kẻ: Tím Pulsar Neon
-          backgroundColor: fillGradient,   // Đổ bóng nền
-          borderWidth: 3,                  // Nét vẽ dày, chắc chắn
+          borderColor: '#475569',          // Màu xám than dứt khoát
+          backgroundColor: fillGradient,   
+          borderWidth: 2,                  // Nét kẻ mỏng tinh tế
           fill: true, 
-          tension: 0.3,                    // Cong mượt dạng sóng
-          pointRadius: 4,                  // Hiện các node dữ liệu
-          pointBackgroundColor: '#ffffff', // Lõi node màu trắng
-          pointBorderColor: '#8b5cf6',     // Viền node màu tím
-          pointBorderWidth: 2,
-          pointHoverRadius: 7,             // Phóng to node khi chạm tay
-          pointHoverBackgroundColor: '#8b5cf6',
-          pointHoverBorderColor: '#ffffff',
-          pointHoverBorderWidth: 3
+          tension: 0.1,                    // Chỉ làm mềm góc 1 chút xíu, giữ vẻ góc cạnh của chart tài chính
+          pointRadius: 0,                  // Ẩn hoàn toàn các hạt
+          pointHoverRadius: 5,             // Hạt chạm tay nhỏ gọn
+          pointBackgroundColor: '#ffffff', 
+          pointBorderColor: '#0f172a',     // Viền hạt màu đen nhạt
+          pointBorderWidth: 2
         }]
       },
       options: {
@@ -540,27 +537,26 @@ function updateChart(fullData) {
             ticks: { 
               maxTicksLimit: 6, 
               callback: (val) => val.toFixed(1) + 'M', 
-              color: '#64748b', 
-              font: { size: 11, family: 'monospace', weight: 'bold' } // Font chữ Tech
+              color: '#94a3b8', 
+              font: { size: 11, weight: '500' }
             },
             grid: { 
-              color: 'rgba(148, 163, 184, 0.4)', 
-              borderDash: [5, 5], // Lưới nền đứt nét kiểu bản đồ Radar
+              color: 'rgba(226, 232, 240, 0.6)', // Kẻ ngang liền mạch, siêu mờ
               drawTicks: false 
             },
-            border: { display: false } // Xóa trục dọc cứng
+            border: { display: false }
           },
           x: { 
             offset: true, 
             ticks: { 
               autoSkip: true, 
-              minRotation: 50, 
-              maxRotation: 50, 
-              color: '#64748b', 
-              font: { size: 10, family: 'monospace', weight: 'bold' } 
+              minRotation: 60, 
+              maxRotation: 60, 
+              color: '#94a3b8', 
+              font: { size: 10 } 
             }, 
             grid: { display: false, drawTicks: false },
-            border: { display: false } // Xóa trục ngang cứng
+            border: { display: false } 
           }
         }
       }
