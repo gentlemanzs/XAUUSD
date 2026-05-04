@@ -548,7 +548,7 @@ function updateChart(fullData) {
                 if (!rowData) return '';
 
                 // Trả về đúng 1 dòng string, không cần trả về mảng (array)
-                return `${fmtVND.format(rowData.diff)} VNĐ`;
+                return `${fmtVND.format(rowData.diff)}`;
               }
             }
           }
