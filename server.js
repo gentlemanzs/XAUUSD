@@ -57,7 +57,6 @@ const PORT = process.env.PORT || 3000;
 let latestData = null;      
 let clients = new Set();    
 let isUpdating = false;     
-let lastDifferentSjc = null;
 let cachedLastSavedXau = null; 
 let cachedYesterdaySjc = null;
 let cachedYesterdayDate = null;
@@ -140,13 +139,7 @@ async function preloadCache() {
         failedAPIs: [],
         updatedAt: new Date(), timeStr: formatTimeVN(new Date())
       };
-
-      let diffRecord = historyData.find(r => r.sjc !== last.sjc);
-      if (!diffRecord) {
-        diffRecord = await History.findOne({ sjc: { $ne: last.sjc } }).select('sjc diff').sort({ createdAt: -1 }).lean();
-      }
-
-      lastDifferentSjc = diffRecord ? { sjc: diffRecord.sjc, diff: diffRecord.diff } : { sjc: last.sjc, diff: last.diff };
+     
       console.log(`📦 Đã nạp (Preload) toàn bộ ${historyData.length} dòng History lên RAM.`);
     } else {
       console.log(`⚠️ Database rỗng, chờ cào dữ liệu mới...`);
@@ -396,11 +389,16 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
     }
     const sjcChange = sjc - cachedYesterdaySjc;
 
-    if (!lastDifferentSjc) {
-      const record = await History.findOne({ sjc: { $ne: sjc } }).select('sjc diff').sort({ createdAt: -1 }).lean().catch(() => null);
-      lastDifferentSjc = record ? { sjc: record.sjc, diff: record.diff } : { sjc: sjc, diff: currentGap };
-    }
-    const gapChange = lastDifferentSjc.diff - currentGap;
+    // Xác định xem tick này có lưu vào database không
+    const willSaveToDb = sjc > 0 && (!lastRecord || lastRecord.sjc !== sjc);
+
+    // Lấy Gap Cũ để làm chuẩn (nếu lưu DB mới thì gap hiện tại chính là chuẩn)
+    const referenceDbGap = willSaveToDb 
+      ? currentGap 
+      : (cachedHistory.length > 0 ? cachedHistory[0].diff : currentGap);
+
+    // Tính toán: Cũ - Mới
+    const gapChange = referenceDbGap - currentGap;
 
     if (cachedLastSavedXau === null) {
       const latestDbRecord = await History.findOne().select('xau').sort({ createdAt: -1 }).lean().catch(() => null);
@@ -419,7 +417,7 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
 
     latestData = {
       updatedAt: updatedTimeObj, timeStr: formatTimeVN(updatedTimeObj),
-      usd, xau, xauChange, sjc, sjcChange, oldGap: lastDifferentSjc.diff,
+      usd, xau, xauChange, sjc, sjcChange, oldGap: referenceDbGap,
       gapChange, worldVND: Math.round(worldVND), diff: currentGap,
       percent: ((diff / worldVND) * 100).toFixed(2) + "%", status: currentStatus,
       failedAPIs: failedAPIs
@@ -432,7 +430,6 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
       const savedDoc = await History.create(dbEntry);
 
       cachedLastSavedXau = xau;
-      lastDifferentSjc = { sjc: sjc, diff: currentGap };
 
       const slimDoc = {
         createdAt: savedDoc.createdAt, timeStr: formatTimeVN(savedDoc.createdAt),
