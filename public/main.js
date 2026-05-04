@@ -536,12 +536,12 @@ if (myChart) {
             title: (context) => {
               const rowData = context[0].dataset.rawData[context[0].dataIndex];
               if (!rowData) return '';
-              return `${rowData.filterDateStr || '--'} | ${rowData.timeStr || '--'}`;
+              return `${rowData.timeStr || '--'}`;
             },
             label: (context) => {
               const rowData = context.dataset.rawData[context.dataIndex];
               if (!rowData) return '';
-              return [`Gap: ${fmtVND.format(rowData.diff)} VNĐ`];
+              return [` ${fmtVND.format(rowData.diff)} VNĐ`];
             }
           }
         }
