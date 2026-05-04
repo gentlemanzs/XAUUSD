@@ -300,9 +300,9 @@ function toggleFilterBox() {
   isExpanded = !isExpanded;
 
   if (isExpanded) { elements.filterBox.classList.add('show'); }
-  else {
-    elements.filterBox.classList.remove('show');
-
+  else { 
+    elements.filterBox.classList.remove('show'); 
+    
     // Tự động tắt chế độ Select khi đóng bảng
     isSelectMode = false;
     document.querySelector('.table-wrapper').classList.remove('select-mode');
@@ -413,7 +413,7 @@ function toggleSelectMode() {
   } else {
     wrapper.classList.remove('select-mode');
     btnSelect.innerText = "Select";
-
+    
     // Khi tắt chế độ Select, tự động bỏ chọn tất cả các checkbox
     const selectAllBtn = document.getElementById('selectAll');
     if (selectAllBtn) selectAllBtn.checked = false;
@@ -458,7 +458,7 @@ function updateChart(fullData) {
     } else {
       labels.push('');
     }
-    gaps.push(r.diff / 1000000);
+    gaps.push(r.diff / 1000000); 
   }
 
   const wrapper = chartCanvas.parentElement;
@@ -476,7 +476,7 @@ function updateChart(fullData) {
     }
   }
 
-  // Tự động scale trục tung (Y) dựa trên min/max thực tế
+   // Tự động scale trục tung (Y) dựa trên min/max thực tế
   const validGaps = gaps.filter(g => g !== null);
   let yMin = 0; let yMax = 0;
   if (validGaps.length === 0) return;
@@ -496,36 +496,20 @@ function updateChart(fullData) {
       wrapper.style.setProperty('min-width', '100%', 'important');
     }
   }
-// ====== THIẾT KẾ MỚI: MINIMALIST SLATE (TỐI GIẢN - LỊCH LÃM) ======
-  // Đổ bóng màu Xám Khói cực kỳ nhạt, tạo cảm giác sạch sẽ
-  const fillGradient = ctx.createLinearGradient(0, 0, 0, 320);
-  fillGradient.addColorStop(0, 'rgba(71, 85, 105, 0.12)'); 
-  fillGradient.addColorStop(1, 'rgba(71, 85, 105, 0.0)');
 
-  // Khởi tạo mới hoặc cập nhật Chart
+   // Khởi tạo mới hoặc cập nhật Chart
   if (myChart) {
-    myChart.data.labels = labels; 
-    myChart.data.datasets[0].data = gaps;
-    myChart.options.scales.y.suggestedMin = yMin; 
-    myChart.options.scales.y.suggestedMax = yMax;
-    if (isChartVisible) myChart.update('none'); 
+    myChart.data.labels = labels; myChart.data.datasets[0].data = gaps;
+    myChart.options.scales.y.suggestedMin = yMin; myChart.options.scales.y.suggestedMax = yMax;
+    if (isChartVisible) myChart.update('none'); // Update không có animation (mượt hơn)
   } else {
     myChart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: labels,
         datasets: [{
-          data: gaps, 
-          borderColor: '#475569',          // Màu xám than dứt khoát
-          backgroundColor: fillGradient,   
-          borderWidth: 2,                  // Nét kẻ mỏng tinh tế
-          fill: true, 
-          tension: 0.1,                    // Chỉ làm mềm góc 1 chút xíu, giữ vẻ góc cạnh của chart tài chính
-          pointRadius: 0,                  // Ẩn hoàn toàn các hạt
-          pointHoverRadius: 5,             // Hạt chạm tay nhỏ gọn
-          pointBackgroundColor: '#ffffff', 
-          pointBorderColor: '#0f172a',     // Viền hạt màu đen nhạt
-          pointBorderWidth: 2
+          data: gaps, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderWidth: 2, fill: true, tension: 0.3, pointRadius: 3
         }]
       },
       options: {
@@ -534,30 +518,10 @@ function updateChart(fullData) {
         scales: {
           y: {
             suggestedMin: yMin, suggestedMax: yMax, beginAtZero: false,
-            ticks: { 
-              maxTicksLimit: 6, 
-              callback: (val) => val.toFixed(1) + 'M', 
-              color: '#94a3b8', 
-              font: { size: 11, weight: '500' }
-            },
-            grid: { 
-              color: 'rgba(226, 232, 240, 0.6)', // Kẻ ngang liền mạch, siêu mờ
-              drawTicks: false 
-            },
-            border: { display: false }
+            ticks: { maxTicksLimit: 6, callback: (val) => val.toFixed(1) + 'M', color: '#64748b', font: { size: 11 } },
+            grid: { color: 'rgba(226, 232, 240, 0.6)' }
           },
-          x: { 
-            offset: true, 
-            ticks: { 
-              autoSkip: true, 
-              minRotation: 60, 
-              maxRotation: 60, 
-              color: '#94a3b8', 
-              font: { size: 10 } 
-            }, 
-            grid: { display: false, drawTicks: false },
-            border: { display: false } 
-          }
+          x: { offset: true, ticks: { autoSkip: true, minRotation: 50, maxRotation: 50, color: '#64748b', font: { size: 10 } }, grid: { display: false } }
         }
       }
     });
@@ -707,7 +671,7 @@ window.addEventListener("touchend", (e) => {
           cards.forEach(card => card.classList.remove('flash-update'));
         }, 300);
       }, 1200);
-
+      
     }).catch(() => {
       // BẠN ĐÃ QUÊN TOÀN BỘ KHỐI CATCH NÀY:
       textEl.innerText = "Lỗi kết nối!";
