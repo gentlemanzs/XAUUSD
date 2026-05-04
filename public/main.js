@@ -496,32 +496,39 @@ function updateChart(fullData) {
       wrapper.style.setProperty('min-width', '100%', 'important');
     }
   }
-  // Bước 1: Lấy context và tạo Gradient từ trên xuống dưới
-  const gradient = ctx.createLinearGradient(0, 0, 0, 320);
-  gradient.addColorStop(0, 'rgba(37, 99, 235, 0.4)');   // Màu xanh đậm ở trên
-  gradient.addColorStop(1, 'rgba(37, 99, 235, 0.01)');  // Trong suốt dần ở đáy
+  // ====== THIẾT KẾ MỚI: PULSAR BLUEPRINT ======
+  // Tạo hiệu ứng đổ bóng Tím sáng từ đỉnh xuống đáy
+  const fillGradient = ctx.createLinearGradient(0, 0, 0, 320);
+  fillGradient.addColorStop(0, 'rgba(139, 92, 246, 0.3)'); // Tím sáng (Purple)
+  fillGradient.addColorStop(1, 'rgba(139, 92, 246, 0.0)'); // Mờ dần vào trong suốt
+
   // Khởi tạo mới hoặc cập nhật Chart
   if (myChart) {
-    myChart.data.labels = labels; myChart.data.datasets[0].data = gaps;
-    myChart.options.scales.y.suggestedMin = yMin; myChart.options.scales.y.suggestedMax = yMax;
-    if (isChartVisible) myChart.update('none'); // Update không có animation (mượt hơn)
+    myChart.data.labels = labels; 
+    myChart.data.datasets[0].data = gaps;
+    myChart.options.scales.y.suggestedMin = yMin; 
+    myChart.options.scales.y.suggestedMax = yMax;
+    if (isChartVisible) myChart.update('none'); 
   } else {
     myChart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: labels,
         datasets: [{
-          data: gaps,
-          borderColor: '#2563eb',          // Màu xanh đậm chuẩn tài chính
-          borderWidth: 3,                  // Làm đường kẻ dày và rõ nét
-          backgroundColor: gradient,       // Áp dụng màu Gradient đã tạo[cite: 11]
-          fill: true,                      // Đổ màu vùng dưới đường kẻ[cite: 11]
-          tension: 0.4,                    // Độ cong mềm mại vừa phải[cite: 11]
-          pointRadius: 0,                  // Ẩn các chấm tròn cho sạch sẽ[cite: 11]
-          pointHoverRadius: 6,             // Hiện chấm tròn lớn khi chạm vào[cite: 11]
-          pointBackgroundColor: '#ffffff', // Lõi chấm màu trắng[cite: 11]
-          pointBorderColor: '#2563eb',     // Viền chấm màu xanh[cite: 11]
-          pointBorderWidth: 2
+          data: gaps, 
+          borderColor: '#8b5cf6',          // Màu đường kẻ: Tím Pulsar Neon
+          backgroundColor: fillGradient,   // Đổ bóng nền
+          borderWidth: 3,                  // Nét vẽ dày, chắc chắn
+          fill: true, 
+          tension: 0.3,                    // Cong mượt dạng sóng
+          pointRadius: 4,                  // Hiện các node dữ liệu
+          pointBackgroundColor: '#ffffff', // Lõi node màu trắng
+          pointBorderColor: '#8b5cf6',     // Viền node màu tím
+          pointBorderWidth: 2,
+          pointHoverRadius: 7,             // Phóng to node khi chạm tay
+          pointHoverBackgroundColor: '#8b5cf6',
+          pointHoverBorderColor: '#ffffff',
+          pointHoverBorderWidth: 3
         }]
       },
       options: {
@@ -530,13 +537,31 @@ function updateChart(fullData) {
         scales: {
           y: {
             suggestedMin: yMin, suggestedMax: yMax, beginAtZero: false,
-            ticks: { maxTicksLimit: 6, callback: (val) => val.toFixed(1) + 'M', color: '#64748b', font: { size: 11 } },
-            grid: {
-              color: 'rgba(226, 232, 240, 0.4)', // Màu xám nhạt thanh lịch[cite: 11]
-              drawTicks: false                   // Bỏ các gạch nhỏ ở rìa trục[cite: 11]
-            }
+            ticks: { 
+              maxTicksLimit: 6, 
+              callback: (val) => val.toFixed(1) + 'M', 
+              color: '#64748b', 
+              font: { size: 11, family: 'monospace', weight: 'bold' } // Font chữ Tech
+            },
+            grid: { 
+              color: 'rgba(148, 163, 184, 0.4)', 
+              borderDash: [5, 5], // Lưới nền đứt nét kiểu bản đồ Radar
+              drawTicks: false 
+            },
+            border: { display: false } // Xóa trục dọc cứng
           },
-          x: { offset: true, ticks: { autoSkip: true, minRotation: 50, maxRotation: 50, color: '#64748b', font: { size: 10 } }, grid: { display: false } }
+          x: { 
+            offset: true, 
+            ticks: { 
+              autoSkip: true, 
+              minRotation: 50, 
+              maxRotation: 50, 
+              color: '#64748b', 
+              font: { size: 10, family: 'monospace', weight: 'bold' } 
+            }, 
+            grid: { display: false, drawTicks: false },
+            border: { display: false } // Xóa trục ngang cứng
+          }
         }
       }
     });
