@@ -10,7 +10,7 @@ html {
 
 :root { 
   --bg-color: #f8fafc; 
-  --header-old: #0f172a; 
+  --header-old: #27282b; 
   --header-cyber: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); 
   --card-bg: #ffffff; 
   --primary-text: #1e293b; 
