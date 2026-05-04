@@ -272,12 +272,59 @@ async function getPriceFromXml(url, selector, attrName) {
   } catch (err) { }
   return 0;
 }
+async function getSjcFromWebgia() {
+  try {
+    const text = await fetchWithRetry("https://webgia.com/tools/widgets/gold/sjc_update.js", false);
+    if (!text) return 0;
+
+    // 1. Trích xuất chính xác chuỗi mảng JSON từ biến wg_gold_sjc
+    // Biểu thức này sẽ tóm gọn toàn bộ cụm: [["Hà Nội","",""],["HCM","163.600","166.600"],...]
+    const match = text.match(/var wg_gold_sjc=(\[\[.*?\]\]);/);
+    
+    if (match && match[1]) {
+      // 2. Ép kiểu chuỗi thành mảng Javascript tiêu chuẩn
+      const dataArray = JSON.parse(match[1]);
+      
+      // 3. Duyệt qua mảng để lấy giá bán ra (index 2)
+      for (const row of dataArray) {
+        const sellPriceStr = row[2]; // Lấy giá bán ra
+        
+        // Bỏ qua nếu giá rỗng (như dòng của Hà Nội hay Đà Nẵng đang bị "")
+        if (sellPriceStr && sellPriceStr.trim() !== "") {
+          // Xóa các dấu chấm/phẩy ngăn cách nghìn: "166.600" -> 166600
+          const num = parseFloat(sellPriceStr.replace(/[,.]/g, "")); 
+          
+          if (num > 0) {
+             // Đơn vị của họ là ngàn đồng (166.600 tức là 166,600,000 VNĐ)
+             // Nhân với 1000 để khớp với chuẩn chung của database bạn đang dùng
+             return num * 1000;
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("⚠️ Lỗi cào Webgia:", err.message);
+  }
+  
+  return 0;
+}
 
 async function getSjcPrice() {
-  let price = await getPriceFromXml("https://giavang.doji.vn/api/giavang/?api_key=258fbd2a72ce8481089d88c678e9fe4f", 'Row[Key="dojihanoile"]', 'Sell');
+  let price = 0;
+
+  // Ưu tiên 1: Cào trực tiếp từ Webgia
+  price = await getSjcFromWebgia();
   if (price > 0) return price;
+
+  // Ưu tiên 2: Phương án dự phòng 1 - DOJI
+  price = await getPriceFromXml("https://giavang.doji.vn/api/giavang/?api_key=258fbd2a72ce8481089d88c678e9fe4f", 'Row[Key="dojihanoile"]', 'Sell');
+  if (price > 0) return price;
+
+  // Ưu tiên 3: Phương án dự phòng 2 - BTMC
   price = await getPriceFromXml("http://api.btmc.vn/api/BTMCAPI/getpricebtmc?key=3kd8ub1llcg9t45hnoh8hmn7t5kc2v", 'Data[row="932"]', 'ps_932');
   if (price > 0) return price;
+
+  // Hết cách
   return 0;
 }
 
