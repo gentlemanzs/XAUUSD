@@ -425,6 +425,31 @@ async function updateData(triggerSource = "Tự động", forceFetch = false) {
 // ============================================================================
 
 app.get("/api/stream", (req, res) => {
+  // --- BẢO MẬT: CHẶN CÁC REQUEST TỪ NGUỒN KHÔNG HỢP LỆ ---
+  // Lấy origin hoặc referer từ Header
+  const reqOrigin = req.headers.origin || req.headers.referer || '';
+  
+  // Danh sách các domain được phép truy cập luồng SSE
+  const allowedDomains = [
+    'xauusd-production.up.railway.app', 
+    'localhost', 
+    '127.0.0.1'
+  ];
+
+  // Nếu request có Header nguồn, kiểm tra xem nó có nằm trong danh sách không
+  // (Nếu truy cập trực tiếp qua thanh địa chỉ hoặc curl, reqOrigin có thể rỗng. 
+  // Bạn có thể cân nhắc chặn luôn cả những trường hợp rỗng nếu muốn cấm tuyệt đối cURL/Postman)
+  if (reqOrigin) {
+    const isAllowed = allowedDomains.some(domain => reqOrigin.includes(domain));
+    if (!isAllowed) {
+      console.warn(`[Security] Đã chặn luồng SSE từ nguồn lạ: ${reqOrigin}`);
+      return res.status(403).json({ error: "Access Denied. Luồng này chỉ phục vụ nội bộ." });
+    }
+  } else if (process.env.NODE_ENV === 'production') {
+     // Bỏ comment dòng dưới nếu bạn muốn chặn cả việc gõ thẳng link SSE lên trình duyệt hoặc Postman
+     // return res.status(403).json({ error: "Access Denied" });
+  }
+  // ---------------------------------------------------------
   if (clients.size >= 100) {
     return res.status(503).json({ error: "Server đang quá tải kết nối." });
   }
