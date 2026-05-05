@@ -304,14 +304,15 @@ async function getSjcFromWebgia() {
 
 async function getSjcPrice() {
   let price = 0;
-
-  // Ưu tiên 1: Cào trực tiếp từ Webgia
+// Ưu tiên 1: Phương án dự phòng 1 - DOJI
+  price = await getPriceFromXml("https://giavang.doji.vn/api/giavang/?api_key=258fbd2a72ce8481089d88c678e9fe4f", 'Row[Key="dojihanoile"]', 'Sell');
+  if (price > 0) return price;
+  
+  // Ưu tiên 2: Cào trực tiếp từ Webgia
   price = await getSjcFromWebgia();
   if (price > 0) return price;
 
-  // Ưu tiên 2: Phương án dự phòng 1 - DOJI
-  price = await getPriceFromXml("https://giavang.doji.vn/api/giavang/?api_key=258fbd2a72ce8481089d88c678e9fe4f", 'Row[Key="dojihanoile"]', 'Sell');
-  if (price > 0) return price;
+  
 
   // Ưu tiên 3: Phương án dự phòng 2 - BTMC
   price = await getPriceFromXml("http://api.btmc.vn/api/BTMCAPI/getpricebtmc?key=3kd8ub1llcg9t45hnoh8hmn7t5kc2v", 'Data[row="932"]', 'ps_932');
